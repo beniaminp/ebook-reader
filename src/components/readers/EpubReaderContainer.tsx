@@ -26,10 +26,8 @@ import { arrowBack, bookmarkOutline, bookmark, searchOutline, chevronBack, chevr
 
 import { EpubReader } from './EpubReader';
 import { EpubControls } from './EpubControls';
-import { PageTransition } from '../reader-ui/PageTransition';
 import { useTapZones } from '../../hooks/useTapZones';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
-import { useThemeStore } from '../../stores/useThemeStore';
 import type {
   EpubChapter,
   EpubTheme,
@@ -41,7 +39,6 @@ import type {
   EpubSearchResult,
 } from '../../types';
 import { EPUB_THEMES } from '../../types';
-import type { PageDirection } from '../reader-ui/PageTransition';
 
 interface EpubReaderContainerProps {
   book: Book;
@@ -73,12 +70,7 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   const [metadata, setMetadata] = useState<EpubMetadata | null>(null);
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
 
-  // Page transition state
-  const [pageKey, setPageKey] = useState<number>(0);
-  const [pageDirection, setPageDirection] = useState<PageDirection>('forward');
   const [toolbarVisible, setToolbarVisible] = useState<boolean>(true);
-
-  const { pageTransitionType } = useThemeStore();
 
   const [fontSize, setFontSize] = useState<number>(16);
   const [fontFamily, setFontFamily] = useState<string>('serif');
@@ -110,8 +102,6 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   const handleProgressChange = useCallback((cfi: EpubCfi, pct: number) => {
     setCurrentLocation(cfi);
     setPercentage(pct);
-    // Bump page key to trigger transition animation
-    setPageKey((k) => k + 1);
 
     // Estimate current page
     if (totalPages > 0) {
@@ -123,12 +113,10 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   }, [totalPages, onProgressChange]);
 
   const handleNext = useCallback(() => {
-    setPageDirection('forward');
     readerRef.current?.next();
   }, []);
 
   const handlePrev = useCallback(() => {
-    setPageDirection('backward');
     readerRef.current?.prev();
   }, []);
 
@@ -274,21 +262,15 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
           onTouchMove={swipeHandlers.onTouchMove}
           onTouchEnd={(e) => { swipeHandlers.onTouchEnd(e); tapHandlers.onTouchEnd(e); }}
         >
-          <PageTransition
-            pageKey={pageKey}
-            animationType={pageTransitionType}
-            direction={pageDirection}
-          >
-            <EpubReader
-              ref={readerRef}
-              bookData={bookData}
-              initialLocation={initialLocation}
-              onProgressChange={handleProgressChange}
-              onChapterChange={handleChapterChange}
-              onLoadComplete={handleLoadComplete}
-              onError={handleError}
-            />
-          </PageTransition>
+          <EpubReader
+            ref={readerRef}
+            bookData={bookData}
+            initialLocation={initialLocation}
+            onProgressChange={handleProgressChange}
+            onChapterChange={handleChapterChange}
+            onLoadComplete={handleLoadComplete}
+            onError={handleError}
+          />
         </div>
       </IonContent>
 

@@ -26,31 +26,58 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
+  const loadedBookIdRef = useRef<string | null>(null);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [chapters, setChapters] = useState<EpubChapter[]>([]);
 
-  // Initialize EPUB book
+  // Store callbacks in refs so the effect doesn't re-run when they change
+  const onProgressChangeRef = useRef(onProgressChange);
+  const onChapterChangeRef = useRef(onChapterChange);
+  const onLoadCompleteRef = useRef(onLoadComplete);
+  const onErrorRef = useRef(onError);
+  onProgressChangeRef.current = onProgressChange;
+  onChapterChangeRef.current = onChapterChange;
+  onLoadCompleteRef.current = onLoadComplete;
+  onErrorRef.current = onError;
+
+  // Initialize EPUB book — only runs when the actual book identity changes
   useEffect(() => {
     if (!bookData) return;
+
+    const bookId = bookData.book?.id || '';
+
+    // Skip if this book is already loaded
+    if (loadedBookIdRef.current === bookId && bookRef.current) {
+      return;
+    }
+
+    // Cleanup previous book if any
+    if (bookRef.current) {
+      bookRef.current.destroy();
+      bookRef.current = null;
+      renditionRef.current = null;
+    }
+
+    let destroyed = false;
 
     const loadBook = async () => {
       try {
         let book: Book;
 
         if (bookData.arrayBuffer) {
-          // Load from ArrayBuffer
           book = ePub(bookData.arrayBuffer);
         } else if (bookData.fileUri) {
-          // Load from file URI
           book = ePub(bookData.fileUri);
         } else {
           throw new Error('No valid book data provided');
         }
 
-        bookRef.current = book;
+        if (destroyed) { book.destroy(); return; }
 
-        // Initialize rendition
+        bookRef.current = book;
+        loadedBookIdRef.current = bookId;
+
         if (viewerRef.current) {
           const rendition = book.renderTo(viewerRef.current, {
             width: '100%',
@@ -58,14 +85,17 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             spread: 'auto',
           });
 
+          if (destroyed) { book.destroy(); return; }
+
           renditionRef.current = rendition;
 
-          // Display book
           await rendition.display(initialLocation || undefined);
+
+          if (destroyed) return;
 
           // Get metadata
           const metadata = await book.loaded.metadata;
-          onLoadComplete?.({
+          onLoadCompleteRef.current?.({
             title: metadata.title || 'Unknown Title',
             author: metadata.creator,
             description: metadata.description,
@@ -91,32 +121,37 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           rendition.on('relocated', (location: any) => {
             const cfi = location.start.cfi;
             const percentage = location.start.percentage * 100;
-            onProgressChange?.(cfi, percentage);
+            onProgressChangeRef.current?.(cfi, percentage);
 
-            // Find current chapter
             const currentChapter = findChapterByCfi(tocChapters, cfi);
             if (currentChapter) {
-              onChapterChange?.(currentChapter.chapter, currentChapter.index);
+              onChapterChangeRef.current?.(currentChapter.chapter, currentChapter.index);
             }
           });
 
           setIsLoaded(true);
         }
       } catch (error) {
+        if (destroyed) return;
         console.error('Failed to load EPUB:', error);
-        onError?.(error instanceof Error ? error.message : 'Failed to load book');
+        onErrorRef.current?.(error instanceof Error ? error.message : 'Failed to load book');
       }
     };
 
     loadBook();
 
     return () => {
-      // Cleanup
+      destroyed = true;
       if (bookRef.current) {
         bookRef.current.destroy();
+        bookRef.current = null;
+        renditionRef.current = null;
+        loadedBookIdRef.current = null;
       }
     };
-  }, [bookData, initialLocation]);
+    // Only re-run when the actual book identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookData.book?.id, bookData.arrayBuffer, bookData.fileUri]);
 
   // Expose methods via ref
   useImperativeHandle(
