@@ -26,8 +26,6 @@ import { arrowBack, bookmarkOutline, bookmark, searchOutline, chevronBack, chevr
 
 import { EpubReader } from './EpubReader';
 import { EpubControls } from './EpubControls';
-import { useTapZones } from '../../hooks/useTapZones';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type {
   EpubChapter,
   EpubTheme,
@@ -123,19 +121,6 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   const handleToggleToolbar = useCallback(() => {
     setToolbarVisible((v) => !v);
   }, []);
-
-  // Swipe gesture handlers
-  const swipeHandlers = useSwipeGesture({
-    onSwipeLeft: handleNext,
-    onSwipeRight: handlePrev,
-  });
-
-  // Tap zone handlers
-  const tapHandlers = useTapZones({
-    onNext: handleNext,
-    onPrev: handlePrev,
-    onToggleToolbar: handleToggleToolbar,
-  });
 
   const handleChapterChange = useCallback((chapter: EpubChapter, index: number) => {
     setCurrentChapterIndex(index);
@@ -258,12 +243,7 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
       )}
 
       <IonContent className="epub-reader-content" scrollY={false}>
-        <div
-          className="epub-reader-wrapper"
-          onTouchStart={(e) => { swipeHandlers.onTouchStart(e); tapHandlers.onTouchStart(e); }}
-          onTouchMove={swipeHandlers.onTouchMove}
-          onTouchEnd={(e) => { swipeHandlers.onTouchEnd(e); tapHandlers.onTouchEnd(e); }}
-        >
+        <div className="epub-reader-wrapper">
           <EpubReader
             ref={readerRef}
             bookData={bookData}
@@ -272,6 +252,9 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
             onChapterChange={handleChapterChange}
             onLoadComplete={handleLoadComplete}
             onError={handleError}
+            onTapLeft={handlePrev}
+            onTapCenter={handleToggleToolbar}
+            onTapRight={handleNext}
           />
         </div>
       </IonContent>

@@ -18,10 +18,13 @@ export interface EpubReaderProps {
   onChapterChange?: (chapter: EpubChapter, index: number) => void;
   onLoadComplete?: (metadata: EpubMetadata) => void;
   onError?: (error: string) => void;
+  onTapLeft?: () => void;
+  onTapCenter?: () => void;
+  onTapRight?: () => void;
 }
 
 export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref) => {
-  const { bookData, initialLocation, onProgressChange, onChapterChange, onLoadComplete, onError } = props;
+  const { bookData, initialLocation, onProgressChange, onChapterChange, onLoadComplete, onError, onTapLeft, onTapCenter, onTapRight } = props;
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Book | null>(null);
@@ -36,10 +39,16 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
   const onChapterChangeRef = useRef(onChapterChange);
   const onLoadCompleteRef = useRef(onLoadComplete);
   const onErrorRef = useRef(onError);
+  const onTapLeftRef = useRef(onTapLeft);
+  const onTapCenterRef = useRef(onTapCenter);
+  const onTapRightRef = useRef(onTapRight);
   onProgressChangeRef.current = onProgressChange;
   onChapterChangeRef.current = onChapterChange;
   onLoadCompleteRef.current = onLoadComplete;
   onErrorRef.current = onError;
+  onTapLeftRef.current = onTapLeft;
+  onTapCenterRef.current = onTapCenter;
+  onTapRightRef.current = onTapRight;
 
   // Initialize EPUB book — only runs when the actual book identity changes
   useEffect(() => {
@@ -126,6 +135,60 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             const currentChapter = findChapterByCfi(tocChapters, cfi);
             if (currentChapter) {
               onChapterChangeRef.current?.(currentChapter.chapter, currentChapter.index);
+            }
+          });
+
+          // Handle taps inside the epub.js iframe
+          // Track touch start to distinguish taps from swipes/selections
+          let touchStart: { x: number; y: number; time: number } | null = null;
+
+          rendition.on('touchstart', (e: TouchEvent) => {
+            const touch = e.changedTouches[0];
+            touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+          });
+
+          rendition.on('touchend', (e: TouchEvent) => {
+            if (!touchStart) return;
+            const touch = e.changedTouches[0];
+            const dx = Math.abs(touch.clientX - touchStart.x);
+            const dy = Math.abs(touch.clientY - touchStart.y);
+            const elapsed = Date.now() - touchStart.time;
+            touchStart = null;
+
+            // Only treat as tap if minimal movement and quick touch
+            if (dx > 10 || dy > 10 || elapsed > 300) return;
+
+            // Prevent text selection on tap
+            const sel = (e.target as any)?.ownerDocument?.getSelection?.();
+            if (sel && sel.toString().length > 0) return;
+
+            const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
+            const relX = touch.clientX / containerWidth;
+
+            if (relX < 0.33) {
+              onTapLeftRef.current?.();
+            } else if (relX > 0.67) {
+              onTapRightRef.current?.();
+            } else {
+              onTapCenterRef.current?.();
+            }
+          });
+
+          // Also handle mouse clicks for desktop
+          rendition.on('click', (e: MouseEvent) => {
+            // Ignore if text is selected
+            const sel = (e.target as any)?.ownerDocument?.getSelection?.();
+            if (sel && sel.toString().length > 0) return;
+
+            const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
+            const relX = e.clientX / containerWidth;
+
+            if (relX < 0.33) {
+              onTapLeftRef.current?.();
+            } else if (relX > 0.67) {
+              onTapRightRef.current?.();
+            } else {
+              onTapCenterRef.current?.();
             }
           });
 
