@@ -18,13 +18,10 @@ export interface EpubReaderProps {
   onChapterChange?: (chapter: EpubChapter, index: number) => void;
   onLoadComplete?: (metadata: EpubMetadata) => void;
   onError?: (error: string) => void;
-  onTapLeft?: () => void;
-  onTapCenter?: () => void;
-  onTapRight?: () => void;
 }
 
 export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref) => {
-  const { bookData, initialLocation, onProgressChange, onChapterChange, onLoadComplete, onError, onTapLeft, onTapCenter, onTapRight } = props;
+  const { bookData, initialLocation, onProgressChange, onChapterChange, onLoadComplete, onError } = props;
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Book | null>(null);
@@ -39,16 +36,10 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
   const onChapterChangeRef = useRef(onChapterChange);
   const onLoadCompleteRef = useRef(onLoadComplete);
   const onErrorRef = useRef(onError);
-  const onTapLeftRef = useRef(onTapLeft);
-  const onTapCenterRef = useRef(onTapCenter);
-  const onTapRightRef = useRef(onTapRight);
   onProgressChangeRef.current = onProgressChange;
   onChapterChangeRef.current = onChapterChange;
   onLoadCompleteRef.current = onLoadComplete;
   onErrorRef.current = onError;
-  onTapLeftRef.current = onTapLeft;
-  onTapCenterRef.current = onTapCenter;
-  onTapRightRef.current = onTapRight;
 
   // Initialize EPUB book — only runs when the actual book identity changes
   useEffect(() => {
@@ -98,12 +89,6 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           if (destroyed) { book.destroy(); return; }
 
           renditionRef.current = rendition;
-
-          // Disable text selection by default — only long press enables it
-          rendition.themes.register('no-select', {
-            'body, body *': { '-webkit-user-select': 'none', 'user-select': 'none' },
-          });
-          rendition.themes.select('no-select');
 
           await rendition.display(initialLocation || undefined);
 
@@ -171,96 +156,6 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
               const currentPage = Math.round(pct * locationsTotal);
               onProgressChangeRef.current?.(lastRelocateCfi, pct * 100, Math.max(1, currentPage), locationsTotal);
             }
-          });
-
-          // Handle taps inside the epub.js iframe
-          let touchStart: { x: number; y: number; time: number } | null = null;
-          let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-          let isLongPress = false;
-          let touchHandledAt = 0; // Prevent click from double-firing after touchend
-
-          const handleTapZone = (clientX: number, sourceDoc?: Document) => {
-            // Get the width from the iframe's window if available,
-            // otherwise fall back to the outer window
-            const width = sourceDoc?.defaultView?.innerWidth
-              || viewerRef.current?.offsetWidth
-              || window.innerWidth;
-            const relX = clientX / width;
-
-            if (relX < 0.25) {
-              onTapLeftRef.current?.();
-            } else if (relX > 0.75) {
-              onTapRightRef.current?.();
-            } else {
-              onTapCenterRef.current?.();
-            }
-          };
-
-          rendition.on('touchstart', (e: TouchEvent) => {
-            const touch = e.changedTouches[0];
-            touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-            isLongPress = false;
-
-            // After 500ms, enable text selection for long press
-            longPressTimer = setTimeout(() => {
-              isLongPress = true;
-              rendition.themes.register('no-select', {
-                'body, body *': { '-webkit-user-select': 'text', 'user-select': 'text' },
-              });
-              rendition.themes.select('no-select');
-            }, 500);
-          });
-
-          rendition.on('touchmove', () => {
-            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-          });
-
-          rendition.on('touchend', (e: TouchEvent) => {
-            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-
-            if (isLongPress) {
-              isLongPress = false;
-              setTimeout(() => {
-                const sel = (e.target as any)?.ownerDocument?.getSelection?.();
-                if (!sel || sel.toString().length === 0) {
-                  rendition.themes.register('no-select', {
-                    'body, body *': { '-webkit-user-select': 'none', 'user-select': 'none' },
-                  });
-                  rendition.themes.select('no-select');
-                }
-              }, 3000);
-              return;
-            }
-
-            if (!touchStart) return;
-            const touch = e.changedTouches[0];
-            const dx = Math.abs(touch.clientX - touchStart.x);
-            const dy = Math.abs(touch.clientY - touchStart.y);
-            const elapsed = Date.now() - touchStart.time;
-            touchStart = null;
-
-            if (dx > 10 || dy > 10 || elapsed > 300) return;
-
-            // Clear any accidental selection
-            const sel = (e.target as any)?.ownerDocument?.getSelection?.();
-            if (sel) sel.removeAllRanges();
-
-            // Mark as handled so the subsequent click event is ignored
-            touchHandledAt = Date.now();
-            const doc = (e.target as any)?.ownerDocument as Document | undefined;
-            handleTapZone(touch.clientX, doc);
-          });
-
-          // Mouse clicks for desktop — skip if touch just handled it
-          rendition.on('click', (e: MouseEvent) => {
-            // On mobile, a click fires ~300ms after touchend — ignore it
-            if (Date.now() - touchHandledAt < 500) return;
-
-            const sel = (e.target as any)?.ownerDocument?.getSelection?.();
-            if (sel && sel.toString().length > 0) return;
-
-            const doc = (e.target as any)?.ownerDocument as Document | undefined;
-            handleTapZone(e.clientX, doc);
           });
 
           setIsLoaded(true);

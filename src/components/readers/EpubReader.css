@@ -20,6 +20,23 @@
   height: 100%;
 }
 
+/* Transparent tap overlay — captures taps above the epub.js iframe */
+.epub-tap-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  /* Transparent — lets user see the book content underneath */
+  background: transparent;
+}
+
+/* When in passthrough mode (long press for text selection), disable overlay */
+.epub-tap-overlay.passthrough {
+  pointer-events: none;
+}
+
 /* Fullscreen mode — hide safe-area padding and use entire viewport */
 .epub-reader-fullscreen ion-content {
   --padding-top: 0;

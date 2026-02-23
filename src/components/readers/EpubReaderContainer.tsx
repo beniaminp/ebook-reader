@@ -119,6 +119,77 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
     setToolbarVisible((v) => !v);
   }, []);
 
+  // Overlay-based tap zone handling (reliable coordinates from parent document)
+  const overlayTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [overlayPassthrough, setOverlayPassthrough] = useState(false);
+
+  const handleOverlayTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    overlayTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+
+    // Start long press timer — after 500ms, hide overlay so touch goes to iframe
+    longPressTimerRef.current = setTimeout(() => {
+      setOverlayPassthrough(true);
+    }, 500);
+  }, []);
+
+  const handleOverlayTouchMove = useCallback(() => {
+    // Cancel long press if finger moves
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleOverlayTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    // If overlay is in passthrough mode (long press), restore it after delay
+    if (overlayPassthrough) {
+      setTimeout(() => setOverlayPassthrough(false), 3000);
+      return;
+    }
+
+    if (!overlayTouchRef.current) return;
+    const touch = e.changedTouches[0];
+    const dx = Math.abs(touch.clientX - overlayTouchRef.current.x);
+    const dy = Math.abs(touch.clientY - overlayTouchRef.current.y);
+    const elapsed = Date.now() - overlayTouchRef.current.time;
+    overlayTouchRef.current = null;
+
+    // Only treat as tap if minimal movement and quick touch
+    if (dx > 10 || dy > 10 || elapsed > 300) return;
+
+    const screenWidth = window.innerWidth;
+    const relX = touch.clientX / screenWidth;
+
+    if (relX < 0.25) {
+      handlePrev();
+    } else if (relX > 0.75) {
+      handleNext();
+    } else {
+      handleToggleToolbar();
+    }
+  }, [overlayPassthrough, handlePrev, handleNext, handleToggleToolbar]);
+
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    // For desktop mouse clicks
+    const screenWidth = window.innerWidth;
+    const relX = e.clientX / screenWidth;
+
+    if (relX < 0.25) {
+      handlePrev();
+    } else if (relX > 0.75) {
+      handleNext();
+    } else {
+      handleToggleToolbar();
+    }
+  }, [handlePrev, handleNext, handleToggleToolbar]);
+
   const handleChapterChange = useCallback((chapter: EpubChapter, index: number) => {
     setCurrentChapterIndex(index);
   }, []);
@@ -249,9 +320,14 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
             onChapterChange={handleChapterChange}
             onLoadComplete={handleLoadComplete}
             onError={handleError}
-            onTapLeft={handlePrev}
-            onTapCenter={handleToggleToolbar}
-            onTapRight={handleNext}
+          />
+          {/* Transparent overlay for tap zones — sits on top of the iframe */}
+          <div
+            className={`epub-tap-overlay${overlayPassthrough ? ' passthrough' : ''}`}
+            onTouchStart={handleOverlayTouchStart}
+            onTouchMove={handleOverlayTouchMove}
+            onTouchEnd={handleOverlayTouchEnd}
+            onClick={handleOverlayClick}
           />
         </div>
       </IonContent>
