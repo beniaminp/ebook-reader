@@ -238,22 +238,24 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   }, [searchResults, currentSearchIndex]);
 
   return (
-    <IonPage className="epub-reader-page">
-      <IonHeader>
-        <IonToolbar color="light">
-          <IonButtons slot="start">
-            <IonButton onClick={onBack}>
-              <IonIcon icon={arrowBack} />
-            </IonButton>
-          </IonButtons>
-          <IonTitle>{metadata?.title || book.title}</IonTitle>
-          <IonButtons slot="end">
-            <IonButton onClick={() => setSearchOpen(true)}>
-              <IonIcon icon={searchOutline} />
-            </IonButton>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+    <IonPage className={`epub-reader-page${toolbarVisible ? '' : ' epub-reader-fullscreen'}`}>
+      {toolbarVisible && (
+        <IonHeader>
+          <IonToolbar color="light">
+            <IonButtons slot="start">
+              <IonButton onClick={onBack}>
+                <IonIcon icon={arrowBack} />
+              </IonButton>
+            </IonButtons>
+            <IonTitle>{metadata?.title || book.title}</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setSearchOpen(true)}>
+                <IonIcon icon={searchOutline} />
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+      )}
 
       <IonContent className="epub-reader-content" scrollY={false}>
         <div
