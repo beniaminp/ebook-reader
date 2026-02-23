@@ -213,9 +213,9 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
             const relX = touch.clientX / containerWidth;
 
-            if (relX < 0.33) {
+            if (relX < 0.2) {
               onTapLeftRef.current?.();
-            } else if (relX > 0.67) {
+            } else if (relX > 0.8) {
               onTapRightRef.current?.();
             } else {
               onTapCenterRef.current?.();
@@ -230,9 +230,9 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
             const relX = e.clientX / containerWidth;
 
-            if (relX < 0.33) {
+            if (relX < 0.2) {
               onTapLeftRef.current?.();
-            } else if (relX > 0.67) {
+            } else if (relX > 0.8) {
               onTapRightRef.current?.();
             } else {
               onTapCenterRef.current?.();
