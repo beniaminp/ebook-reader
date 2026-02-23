@@ -36,6 +36,7 @@ import {
   IonBadge,
   IonModal,
   IonFooter,
+  IonToast,
 } from '@ionic/react';
 import {
   gridOutline,
@@ -51,7 +52,6 @@ import {
   checkmarkCircleOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
 import { webFileStorage } from '../../services/webFileStorage';
@@ -90,6 +90,8 @@ const Library: React.FC = () => {
   const [showBookDetails, setShowBookDetails] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastColor, setToastColor] = useState<string>('danger');
 
   // Advanced filter state
   const [filters, setFilters] = useState<ActiveFilters>(DEFAULT_FILTERS);
@@ -270,39 +272,77 @@ const Library: React.FC = () => {
     setShowActionSheet(true);
   };
 
+  const [importingCount, setImportingCount] = useState(0);
+
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    for (const file of Array.from(files)) {
-      await importBook(file);
+    const fileList = Array.from(files);
+    setImportingCount(fileList.length);
+
+    let imported = 0;
+    const errors: string[] = [];
+
+    for (const file of fileList) {
+      try {
+        await importBook(file);
+        imported++;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error importing file:', file.name, error);
+        errors.push(`${file.name}: ${msg}`);
+      }
     }
 
+    setImportingCount(0);
     // Reset input to allow importing the same file again
     setFileInputKey(prev => prev + 1);
     await loadBooks();
+
+    if (errors.length > 0) {
+      setToastColor('danger');
+      setToastMessage(`Failed to import: ${errors.join('; ')}`);
+    } else if (imported > 0) {
+      setToastColor('success');
+      setToastMessage(`Imported ${imported} book${imported > 1 ? 's' : ''} successfully`);
+    }
+  };
+
+  /** Race a promise against a timeout. Returns null if the timeout fires first. */
+  const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> => {
+    return Promise.race([
+      promise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+    ]);
   };
 
   const extractEpubMetadata = async (
-    file: File
-  ): Promise<{ title: string; author: string; coverDataUrl?: string }> => {
+    arrayBuffer: ArrayBuffer
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
     try {
-      // Dynamically import epub.js only when needed
       const ePub = (await import('epubjs')).default;
-      const fileUrl = URL.createObjectURL(file);
+      const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' });
+      const fileUrl = URL.createObjectURL(blob);
       const book = ePub(fileUrl);
-      await book.ready;
 
-      const metadata = await book.loaded.metadata;
-      let title = (metadata as any).title || file.name.replace(/\.[^/.]+$/, '');
-      let author = (metadata as any).creator || 'Unknown';
+      // Timeout after 8s — epub.js can hang on some files or mobile browsers
+      const ready = await withTimeout(book.ready, 8000);
+      if (!ready) {
+        try { book.destroy(); } catch { /* ignore */ }
+        URL.revokeObjectURL(fileUrl);
+        return null;
+      }
 
-      // Try to extract cover
+      const metadata = await withTimeout(book.loaded.metadata, 5000);
+      const title = (metadata as any)?.title || '';
+      const author = (metadata as any)?.creator || '';
+
       let coverDataUrl: string | undefined;
       try {
-        const coverUrl = await book.coverUrl();
+        const coverUrl = await withTimeout(book.coverUrl(), 5000);
         if (coverUrl) {
-          coverDataUrl = coverUrl;
+          coverDataUrl = coverUrl as string;
         }
       } catch {
         // Cover extraction is optional
@@ -311,31 +351,35 @@ const Library: React.FC = () => {
       book.destroy();
       URL.revokeObjectURL(fileUrl);
 
-      return { title, author, coverDataUrl };
-    } catch {
-      return { title: file.name.replace(/\.[^/.]+$/, ''), author: 'Unknown' };
+      return {
+        title: title || '',
+        author: author || 'Unknown',
+        coverDataUrl,
+      };
+    } catch (err) {
+      console.error('EPUB metadata extraction failed:', err);
+      return null;
     }
   };
 
   const extractPdfMetadata = async (
-    file: File
-  ): Promise<{ title: string; author: string }> => {
+    arrayBuffer: ArrayBuffer
+  ): Promise<{ title: string; author: string } | null> => {
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      // Dynamically import pdfjs-dist only when needed
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
       const metadata = await pdf.getMetadata();
       const info = metadata.info as any;
 
-      const title = info?.Title || file.name.replace(/\.[^/.]+$/, '');
-      const author = info?.Author || 'Unknown';
-
-      return { title, author };
-    } catch {
-      return { title: file.name.replace(/\.[^/.]+$/, ''), author: 'Unknown' };
+      return {
+        title: info?.Title || '',
+        author: info?.Author || 'Unknown',
+      };
+    } catch (err) {
+      console.error('PDF metadata extraction failed:', err);
+      return null;
     }
   };
 
@@ -353,34 +397,37 @@ const Library: React.FC = () => {
       format = 'fb2';
     }
 
-    // Extract metadata for known formats
+    const bookId = `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Read the file into an ArrayBuffer first — this is the critical step
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Store the file data in IndexedDB (web) so it persists across navigations/reloads
+    await webFileStorage.storeFile(bookId, arrayBuffer);
+    const filePath = `indexeddb://${bookId}/${file.name}`;
+
+    // Extract metadata (best-effort, with timeout — don't block import on failure)
     let title = file.name.replace(/\.[^/.]+$/, '');
     let author = 'Unknown';
     let coverPath: string | undefined;
 
-    if (format === 'epub') {
-      const meta = await extractEpubMetadata(file);
-      title = meta.title;
-      author = meta.author;
-      coverPath = meta.coverDataUrl;
-    } else if (format === 'pdf') {
-      const meta = await extractPdfMetadata(file);
-      title = meta.title;
-      author = meta.author;
-    }
-
-    const bookId = `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    // On web: store file data in IndexedDB so it persists across navigations/reloads.
-    // Use a stable identifier as filePath instead of an ephemeral blob URL.
-    let filePath: string;
-    if (!Capacitor.isNativePlatform()) {
-      const arrayBuffer = await file.arrayBuffer();
-      await webFileStorage.storeFile(bookId, arrayBuffer);
-      // Use a custom scheme so Reader.tsx knows to load from IndexedDB
-      filePath = `indexeddb://${bookId}/${file.name}`;
-    } else {
-      filePath = URL.createObjectURL(file);
+    try {
+      if (format === 'epub') {
+        const meta = await extractEpubMetadata(arrayBuffer);
+        if (meta) {
+          title = meta.title || title;
+          author = meta.author || author;
+          coverPath = meta.coverDataUrl;
+        }
+      } else if (format === 'pdf') {
+        const meta = await extractPdfMetadata(arrayBuffer);
+        if (meta) {
+          title = meta.title || title;
+          author = meta.author || author;
+        }
+      }
+    } catch (err) {
+      console.error('Metadata extraction failed, using filename:', err);
     }
 
     const newBook: Book = {
@@ -390,7 +437,7 @@ const Library: React.FC = () => {
       filePath,
       coverPath,
       format,
-      totalPages: 100, // Default, will be updated when opened
+      totalPages: 100,
       currentPage: 0,
       progress: 0,
       lastRead: new Date(),
@@ -399,11 +446,7 @@ const Library: React.FC = () => {
       downloaded: true,
     };
 
-    try {
-      await databaseService.addBook(newBook);
-    } catch (error) {
-      console.error('Error importing book:', error);
-    }
+    await databaseService.addBook(newBook);
   };
 
   const handleDeleteBook = async () => {
@@ -853,6 +896,13 @@ const Library: React.FC = () => {
           )}
         </div>
 
+        {importingCount > 0 && (
+          <div className="loading-state" style={{ paddingBottom: 0 }}>
+            <IonSpinner name="crescent" />
+            <p>Importing {importingCount} book{importingCount > 1 ? 's' : ''}...</p>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="loading-state">
             <IonSpinner name="crescent" />
@@ -977,6 +1027,15 @@ const Library: React.FC = () => {
             handler: handleDeleteBook,
           },
         ]}
+      />
+
+      <IonToast
+        isOpen={!!toastMessage}
+        message={toastMessage}
+        duration={4000}
+        color={toastColor}
+        position="bottom"
+        onDidDismiss={() => setToastMessage('')}
       />
     </IonPage>
   );

@@ -13,7 +13,6 @@ import {
 } from '@ionic/react';
 import { arrowBack } from 'ionicons/icons';
 
-import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
 import { calibreWebService } from '../../services/calibreWebService';
@@ -170,8 +169,8 @@ const Reader: React.FC = () => {
       try {
         let buffer: ArrayBuffer | null = null;
 
-        // On web, load from IndexedDB if the file was stored there
-        if (!Capacitor.isNativePlatform() && resolvedFilePath.startsWith('indexeddb://')) {
+        // Load from IndexedDB if the file was stored there (web file imports)
+        if (resolvedFilePath.startsWith('indexeddb://')) {
           buffer = await webFileStorage.getFile(foundBook.id);
           if (!buffer) {
             throw new Error('Book file not found in local storage. Please re-import the book.');
