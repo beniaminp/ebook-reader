@@ -92,6 +92,7 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             width: '100%',
             height: '100%',
             spread: 'auto',
+            allowScriptedContent: false,
           });
 
           if (destroyed) { book.destroy(); return; }
@@ -154,6 +155,20 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           let touchStart: { x: number; y: number; time: number } | null = null;
           let longPressTimer: ReturnType<typeof setTimeout> | null = null;
           let isLongPress = false;
+          let touchHandledAt = 0; // Prevent click from double-firing after touchend
+
+          const handleTapZone = (clientX: number) => {
+            const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
+            const relX = clientX / containerWidth;
+
+            if (relX < 0.2) {
+              onTapLeftRef.current?.();
+            } else if (relX > 0.8) {
+              onTapRightRef.current?.();
+            } else {
+              onTapCenterRef.current?.();
+            }
+          };
 
           rendition.on('touchstart', (e: TouchEvent) => {
             const touch = e.changedTouches[0];
@@ -163,7 +178,6 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             // After 500ms, enable text selection for long press
             longPressTimer = setTimeout(() => {
               isLongPress = true;
-              // Re-enable text selection
               rendition.themes.register('no-select', {
                 'body, body *': { '-webkit-user-select': 'text', 'user-select': 'text' },
               });
@@ -172,18 +186,14 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           });
 
           rendition.on('touchmove', () => {
-            // Cancel long press if finger moves
             if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
           });
 
           rendition.on('touchend', (e: TouchEvent) => {
             if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
 
-            // If it was a long press, re-disable selection after a short delay
-            // (allow the selection UI to appear first)
             if (isLongPress) {
               isLongPress = false;
-              // Keep selection enabled briefly so user can interact with it
               setTimeout(() => {
                 const sel = (e.target as any)?.ownerDocument?.getSelection?.();
                 if (!sel || sel.toString().length === 0) {
@@ -203,40 +213,26 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             const elapsed = Date.now() - touchStart.time;
             touchStart = null;
 
-            // Only treat as tap if minimal movement and quick touch
             if (dx > 10 || dy > 10 || elapsed > 300) return;
 
             // Clear any accidental selection
             const sel = (e.target as any)?.ownerDocument?.getSelection?.();
             if (sel) sel.removeAllRanges();
 
-            const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
-            const relX = touch.clientX / containerWidth;
-
-            if (relX < 0.2) {
-              onTapLeftRef.current?.();
-            } else if (relX > 0.8) {
-              onTapRightRef.current?.();
-            } else {
-              onTapCenterRef.current?.();
-            }
+            // Mark as handled so the subsequent click event is ignored
+            touchHandledAt = Date.now();
+            handleTapZone(touch.clientX);
           });
 
-          // Also handle mouse clicks for desktop
+          // Mouse clicks for desktop — skip if touch just handled it
           rendition.on('click', (e: MouseEvent) => {
+            // On mobile, a click fires ~300ms after touchend — ignore it
+            if (Date.now() - touchHandledAt < 500) return;
+
             const sel = (e.target as any)?.ownerDocument?.getSelection?.();
             if (sel && sel.toString().length > 0) return;
 
-            const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
-            const relX = e.clientX / containerWidth;
-
-            if (relX < 0.2) {
-              onTapLeftRef.current?.();
-            } else if (relX > 0.8) {
-              onTapRightRef.current?.();
-            } else {
-              onTapCenterRef.current?.();
-            }
+            handleTapZone(e.clientX);
           });
 
           setIsLoaded(true);
