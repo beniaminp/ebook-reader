@@ -133,21 +133,43 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           }));
           setChapters(tocChapters);
 
-          // Generate locations for page counting (roughly 1024 chars per "page")
-          await book.locations.generate(1024);
-          const totalPages = book.locations.length();
+          // Track whether locations have been generated
+          let locationsReady = false;
+          let locationsTotal = 0;
+          let lastRelocateCfi: string | null = null;
 
-          // Set up progress tracking
+          // Set up progress tracking immediately so it works before locations load
           rendition.on('relocated', (location: any) => {
             const cfi = location.start.cfi;
-            const pct = book.locations.percentageFromCfi(cfi);
-            const currentPage = Math.round(pct * totalPages);
-            const percentage = pct * 100;
-            onProgressChangeRef.current?.(cfi, percentage, Math.max(1, currentPage), totalPages);
+            lastRelocateCfi = cfi;
+
+            if (locationsReady) {
+              const pct = book.locations.percentageFromCfi(cfi);
+              const currentPage = Math.round(pct * locationsTotal);
+              onProgressChangeRef.current?.(cfi, pct * 100, Math.max(1, currentPage), locationsTotal);
+            } else {
+              // Before locations are ready, report percentage from epub.js directly
+              const pct = location.start.percentage ?? 0;
+              onProgressChangeRef.current?.(cfi, pct * 100, 0, 0);
+            }
 
             const currentChapter = findChapterByCfi(tocChapters, cfi);
             if (currentChapter) {
               onChapterChangeRef.current?.(currentChapter.chapter, currentChapter.index);
+            }
+          });
+
+          // Generate locations in the background for page counting
+          book.locations.generate(1024).then(() => {
+            if (destroyed) return;
+            locationsReady = true;
+            locationsTotal = book.locations.length();
+
+            // Re-emit progress with page numbers now that locations are ready
+            if (lastRelocateCfi) {
+              const pct = book.locations.percentageFromCfi(lastRelocateCfi);
+              const currentPage = Math.round(pct * locationsTotal);
+              onProgressChangeRef.current?.(lastRelocateCfi, pct * 100, Math.max(1, currentPage), locationsTotal);
             }
           });
 
