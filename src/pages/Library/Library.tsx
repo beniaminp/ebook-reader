@@ -51,8 +51,10 @@ import {
   checkmarkCircleOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
+import { webFileStorage } from '../../services/webFileStorage';
 import type { Book, Collection } from '../../types/index';
 import './Library.css';
 
@@ -351,8 +353,6 @@ const Library: React.FC = () => {
       format = 'fb2';
     }
 
-    const fileUrl = URL.createObjectURL(file);
-
     // Extract metadata for known formats
     let title = file.name.replace(/\.[^/.]+$/, '');
     let author = 'Unknown';
@@ -369,11 +369,25 @@ const Library: React.FC = () => {
       author = meta.author;
     }
 
+    const bookId = `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // On web: store file data in IndexedDB so it persists across navigations/reloads.
+    // Use a stable identifier as filePath instead of an ephemeral blob URL.
+    let filePath: string;
+    if (!Capacitor.isNativePlatform()) {
+      const arrayBuffer = await file.arrayBuffer();
+      await webFileStorage.storeFile(bookId, arrayBuffer);
+      // Use a custom scheme so Reader.tsx knows to load from IndexedDB
+      filePath = `indexeddb://${bookId}/${file.name}`;
+    } else {
+      filePath = URL.createObjectURL(file);
+    }
+
     const newBook: Book = {
-      id: `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: bookId,
       title,
       author,
-      filePath: fileUrl,
+      filePath,
       coverPath,
       format,
       totalPages: 100, // Default, will be updated when opened

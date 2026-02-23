@@ -13,6 +13,7 @@ import {
   getAllSeedStatements,
 } from './schema';
 import type { Book, ReadingProgress, Collection, Bookmark, Highlight } from '../types/index';
+import { webFileStorage } from './webFileStorage';
 
 // Initialize SQLite connection
 const sqliteConnection = new SQLiteConnection(CapacitorSQLite);
@@ -327,6 +328,8 @@ export async function deleteBook(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     webBooks = webBooks.filter(b => b.id !== id);
     saveWebData();
+    // Clean up the file from IndexedDB
+    webFileStorage.deleteFile(id).catch(() => {});
     return true;
   }
 

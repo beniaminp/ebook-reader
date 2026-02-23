@@ -13,10 +13,12 @@ import {
 } from '@ionic/react';
 import { arrowBack } from 'ionicons/icons';
 
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
 import { calibreWebService } from '../../services/calibreWebService';
 import { useCalibreWebStore } from '../../stores/calibreWebStore';
+import { webFileStorage } from '../../services/webFileStorage';
 import { EpubReaderContainer } from '../../components/readers/EpubReaderContainer';
 import { PdfReader } from '../../components/readers/PdfReader';
 import { TextReader } from '../../components/readers/TextReader';
@@ -166,19 +168,37 @@ const Reader: React.FC = () => {
       }
 
       try {
-        const response = await fetch(resolvedFilePath);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+        let buffer: ArrayBuffer | null = null;
+
+        // On web, load from IndexedDB if the file was stored there
+        if (!Capacitor.isNativePlatform() && resolvedFilePath.startsWith('indexeddb://')) {
+          buffer = await webFileStorage.getFile(foundBook.id);
+          if (!buffer) {
+            throw new Error('Book file not found in local storage. Please re-import the book.');
+          }
         }
 
-        if (fmt === 'txt' || fmt === 'html' || fmt === 'htm' || fmt === 'md' || fmt === 'markdown') {
-          // Text-based formats: decode to string
-          const text = await response.text();
-          setTextContent(text);
+        if (buffer) {
+          // We already have the ArrayBuffer from IndexedDB
+          if (fmt === 'txt' || fmt === 'html' || fmt === 'htm' || fmt === 'md' || fmt === 'markdown') {
+            const decoder = new TextDecoder();
+            setTextContent(decoder.decode(buffer));
+          } else {
+            setFileData(buffer);
+          }
         } else {
-          // Binary formats: keep as ArrayBuffer
-          const buffer = await response.arrayBuffer();
-          setFileData(buffer);
+          // Fetch from URL (native file path or blob URL)
+          const response = await fetch(resolvedFilePath);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+          }
+
+          if (fmt === 'txt' || fmt === 'html' || fmt === 'htm' || fmt === 'md' || fmt === 'markdown') {
+            const text = await response.text();
+            setTextContent(text);
+          } else {
+            setFileData(await response.arrayBuffer());
+          }
         }
 
         setLoadState('loaded');
