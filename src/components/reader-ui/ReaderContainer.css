@@ -1,0 +1,302 @@
+/**
+ * Reader Container Styles
+ */
+
+.reader-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Main reader container */
+.reader-container {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: all 0.3s ease;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Theme-specific styles */
+.theme-light {
+  --reader-bg: #ffffff;
+  --reader-text: #1a1a1a;
+  --reader-secondary: #555555;
+  --reader-accent: #007bff;
+  --reader-link: #0066cc;
+}
+
+.theme-dark {
+  --reader-bg: #1a1a1a;
+  --reader-text: #e0e0e0;
+  --reader-secondary: #a0a0a0;
+  --reader-accent: #4da3ff;
+  --reader-link: #66b3ff;
+}
+
+.theme-sepia {
+  --reader-bg: #f4ecd8;
+  --reader-text: #5c4b37;
+  --reader-secondary: #7d6b54;
+  --reader-accent: #8b4513;
+  --reader-link: #a0522d;
+}
+
+/* Apply theme colors */
+.reader-container {
+  background-color: var(--reader-bg);
+  color: var(--reader-text);
+}
+
+.reader-container a {
+  color: var(--reader-link);
+  text-decoration: underline;
+}
+
+.reader-container a:hover {
+  opacity: 0.8;
+}
+
+/* Font families */
+.font-serif {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+.font-sans-serif {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.font-mono {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.font-bookerly {
+  font-family: 'Bookerly', Georgia, serif;
+}
+
+.font-literata {
+  font-family: 'Literata', Georgia, serif;
+}
+
+.font-open-dyslexic {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', cursive, sans-serif;
+  letter-spacing: 0.05em;
+}
+
+/* Text alignment */
+.align-left {
+  text-align: left;
+}
+
+.align-center {
+  text-align: center;
+}
+
+.align-justify {
+  text-align: justify;
+}
+
+.align-right {
+  text-align: right;
+}
+
+/* Margin sizes */
+.margin-small {
+  padding: 12px 16px;
+  max-width: 900px;
+}
+
+.margin-medium {
+  padding: 16px 24px;
+  max-width: 800px;
+}
+
+.margin-large {
+  padding: 24px 32px;
+  max-width: 700px;
+}
+
+/* Reading ruler */
+.reading-ruler-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.reading-ruler-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--reader-accent);
+  box-shadow: 0 0 8px var(--reader-accent), 0 0 16px var(--reader-accent);
+  transition: top 0.05s ease-out;
+}
+
+.reading-ruler-line::before,
+.reading-ruler-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 0, 0, 0.05)
+  );
+  pointer-events: none;
+}
+
+.reading-ruler-line::before {
+  bottom: 100%;
+}
+
+.reading-ruler-line::after {
+  top: 100%;
+  background: linear-gradient(
+    to top,
+    transparent,
+    rgba(0, 0, 0, 0.05)
+  );
+}
+
+/* Blue light filter */
+.blue-light-filter-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: background-color 0.3s ease;
+}
+
+/* Bionic reading */
+.bionic-reading .word {
+  display: inline-block;
+}
+
+.bionic-reading .word-bold {
+  font-weight: 700;
+}
+
+.bionic-reading .word-regular {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Content styling */
+.reader-container p {
+  margin: 1em 0;
+  line-height: inherit;
+}
+
+.reader-container h1,
+.reader-container h2,
+.reader-container h3,
+.reader-container h4,
+.reader-container h5,
+.reader-container h6 {
+  margin: 1.5em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.reader-container blockquote {
+  margin: 1.5em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--reader-secondary);
+  background-color: rgba(128, 128, 128, 0.1);
+  font-style: italic;
+}
+
+.reader-container code {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: rgba(128, 128, 128, 0.15);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.reader-container pre {
+  background-color: rgba(128, 128, 128, 0.1);
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.reader-container pre code {
+  background: none;
+  padding: 0;
+}
+
+.reader-container img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+}
+
+.reader-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.reader-container th,
+.reader-container td {
+  border: 1px solid var(--reader-secondary);
+  padding: 0.5em;
+}
+
+.reader-container th {
+  background-color: rgba(128, 128, 128, 0.1);
+  font-weight: 600;
+}
+
+/* Smooth scrolling */
+.reader-container {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for desktop */
+@media (hover: hover) and (pointer: fine) {
+  .reader-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .reader-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .reader-container::-webkit-scrollbar-thumb {
+    background: var(--reader-secondary);
+    border-radius: 4px;
+    opacity: 0.5;
+  }
+
+  .reader-container::-webkit-scrollbar-thumb:hover {
+    background: var(--reader-accent);
+    opacity: 0.8;
+  }
+}
+
+/* Print styles */
+@media print {
+  .reading-ruler-container,
+  .blue-light-filter-overlay {
+    display: none !important;
+  }
+
+  .reader-container {
+    background: white !important;
+    color: black !important;
+  }
+}

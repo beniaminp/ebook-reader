@@ -1,2 +1,250 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+/**
+ * Theme Variables for Ebook Reader
+ * CSS Custom Properties for theming system
+ */
+
+:root {
+  /* Light Theme (Default) */
+  --reader-bg-color: #ffffff;
+  --reader-text-color: #1a1a1a;
+  --reader-secondary-color: #555555;
+  --reader-accent-color: #007bff;
+  --reader-link-color: #0066cc;
+  --reader-quote-bg: #f5f5f5;
+  --reader-quote-border: #ddd;
+  --reader-highlight-yellow: #fff4b8;
+  --reader-highlight-green: #c8f7c5;
+  --reader-highlight-blue: #c5e8f7;
+  --reader-highlight-pink: #f7c5e8;
+  --reader-margin-size: 20px;
+  --reader-padding: 16px;
+  --reader-shadow: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --reader-bg-color: #1a1a1a;
+  --reader-text-color: #e0e0e0;
+  --reader-secondary-color: #a0a0a0;
+  --reader-accent-color: #4da3ff;
+  --reader-link-color: #66b3ff;
+  --reader-quote-bg: #2a2a2a;
+  --reader-quote-border: #444;
+  --reader-highlight-yellow: #5c4d1c;
+  --reader-highlight-green: #1c4d2e;
+  --reader-highlight-blue: #1c3d4d;
+  --reader-highlight-pink: #4d1c3d;
+  --reader-margin-size: 20px;
+  --reader-padding: 16px;
+  --reader-shadow: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="sepia"] {
+  --reader-bg-color: #f4ecd8;
+  --reader-text-color: #5c4b37;
+  --reader-secondary-color: #7d6b54;
+  --reader-accent-color: #8b4513;
+  --reader-link-color: #a0522d;
+  --reader-quote-bg: #ebe3d1;
+  --reader-quote-border: #d4cba8;
+  --reader-highlight-yellow: #e8dfc4;
+  --reader-highlight-green: #d4e8d0;
+  --reader-highlight-blue: #d0e4e8;
+  --reader-highlight-pink: #e8d4e4;
+  --reader-margin-size: 20px;
+  --reader-padding: 16px;
+  --reader-shadow: rgba(92, 75, 55, 0.1);
+}
+
+[data-theme="eye-comfort"] {
+  --reader-bg-color: #214e34;
+  --reader-text-color: #d4e4d4;
+  --reader-secondary-color: #a8c8a8;
+  --reader-accent-color: #7dc8a8;
+  --reader-link-color: #98d8b8;
+  --reader-quote-bg: #1a3d29;
+  --reader-quote-border: #2d5a40;
+  --reader-highlight-yellow: #3d5a34;
+  --reader-highlight-green: #2a4d38;
+  --reader-highlight-blue: #2a4d4a;
+  --reader-highlight-pink: #4a2d40;
+  --reader-margin-size: 20px;
+  --reader-padding: 16px;
+  --reader-shadow: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="night"] {
+  --reader-bg-color: #0d0d0d;
+  --reader-text-color: #c0c0c0;
+  --reader-secondary-color: #808080;
+  --reader-accent-color: #4080ff;
+  --reader-link-color: #6090ff;
+  --reader-quote-bg: #141414;
+  --reader-quote-border: #333;
+  --reader-highlight-yellow: #403520;
+  --reader-highlight-green: #204030;
+  --reader-highlight-blue: #203040;
+  --reader-highlight-pink: #402035;
+  --reader-margin-size: 20px;
+  --reader-padding: 16px;
+  --reader-shadow: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="invert"] {
+  --reader-bg-color: #000000;
+  --reader-text-color: #ffffff;
+  --reader-secondary-color: #cccccc;
+  --reader-accent-color: #ff9500;
+  --reader-link-color: #ff6b35;
+  --reader-quote-bg: #1a1a1a;
+  --reader-quote-border: #333;
+  --reader-highlight-yellow: #403000;
+  --reader-highlight-green: #003000;
+  --reader-highlight-blue: #002030;
+  --reader-highlight-pink: #300020;
+  --reader-margin-size: 20px;
+  --reader-padding: 16px;
+  --reader-shadow: rgba(255, 255, 255, 0.1);
+}
+
+/* Reader container styles */
+.reader-container {
+  background-color: var(--reader-bg-color);
+  color: var(--reader-text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.reader-content {
+  font-family: var(--reader-font-family, Georgia, serif);
+  font-size: var(--reader-font-size, 16px);
+  line-height: var(--reader-line-height, 1.6);
+  text-align: var(--reader-text-align, justify);
+  padding: var(--reader-padding);
+  margin: var(--reader-margin-size);
+}
+
+/* Link styles */
+.reader-content a {
+  color: var(--reader-link-color);
+  text-decoration: underline;
+}
+
+/* Quote styles */
+.reader-content blockquote {
+  background-color: var(--reader-quote-bg);
+  border-left: 4px solid var(--reader-quote-border);
+  padding: 1em 1.5em;
+  margin: 1.5em 0;
+  font-style: italic;
+}
+
+/* Highlight colors */
+.highlight-yellow {
+  background-color: var(--reader-highlight-yellow);
+}
+
+.highlight-green {
+  background-color: var(--reader-highlight-green);
+}
+
+.highlight-blue {
+  background-color: var(--reader-highlight-blue);
+}
+
+.highlight-pink {
+  background-color: var(--reader-highlight-pink);
+}
+
+/* Blue light filter overlay */
+.blue-light-filter {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 120, 0, 0.15);
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.3s ease;
+}
+
+/* Reading ruler */
+.reading-ruler {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--reader-accent-color);
+  box-shadow: 0 0 4px var(--reader-accent-color);
+  z-index: 100;
+  transition: top 0.1s ease-out;
+  pointer-events: none;
+}
+
+/* Bionic reading - bold first half of words */
+.bionic-reading .word {
+  display: inline-block;
+}
+
+.bionic-reading .word-bold {
+  font-weight: 700;
+}
+
+.bionic-reading .word-regular {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Margin sizes */
+.margin-small {
+  --reader-margin-size: 12px;
+}
+
+.margin-medium {
+  --reader-margin-size: 20px;
+}
+
+.margin-large {
+  --reader-margin-size: 32px;
+}
+
+/* Text alignment */
+.text-left {
+  --reader-text-align: left;
+}
+
+.text-center {
+  --reader-text-align: center;
+}
+
+.text-justify {
+  --reader-text-align: justify;
+}
+
+.text-right {
+  --reader-text-align: right;
+}
+
+/* Font families */
+.font-serif {
+  --reader-font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+.font-sans-serif {
+  --reader-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.font-mono {
+  --reader-font-family: 'Courier New', Courier, monospace;
+}
+
+.font-bookerly {
+  --reader-font-family: 'Bookerly', Georgia, serif;
+}
+
+.font-literata {
+  --reader-font-family: 'Literata', Georgia, serif;
+}
+
+.font-open-dyslexic {
+  --reader-font-family: 'OpenDyslexic', 'Comic Sans MS', cursive, sans-serif;
+}

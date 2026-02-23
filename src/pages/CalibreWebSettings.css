@@ -1,0 +1,102 @@
+.calibre-web-settings {
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+}
+
+.calibre-web-settings .status-card {
+  margin: 16px;
+  --background: var(--ion-color-success-tint);
+}
+
+.calibre-web-settings .status-card ion-card-title {
+  color: var(--ion-color-success-shade);
+}
+
+.calibre-web-settings .add-server-card {
+  margin: 16px;
+}
+
+.calibre-web-settings .server-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.calibre-web-settings .server-item .server-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.calibre-web-settings .info-card {
+  margin: 16px;
+}
+
+.calibre-web-settings .info-card ion-card-title {
+  font-size: 18px;
+}
+
+.calibre-web-settings .info-card p {
+  color: var(--ion-color-medium-shade);
+  line-height: 1.5;
+}
+
+.calibre-web-settings .modal-actions {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calibre-web-settings .success-card {
+  --background: var(--ion-color-success-tint);
+  margin: 16px;
+}
+
+.calibre-web-settings .success-card .result-content {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+}
+
+.calibre-web-settings .success-card ion-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.calibre-web-settings .error-card {
+  --background: var(--ion-color-danger-tint);
+  margin: 16px;
+}
+
+.calibre-web-settings .error-card .result-content {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+}
+
+.calibre-web-settings .error-card ion-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.calibre-web-settings .progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--ion-color-light);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.calibre-web-settings .progress-fill {
+  height: 100%;
+  background: var(--ion-color-primary);
+  transition: width 0.3s ease;
+}
+
+.calibre-web-settings .progress-text {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  margin-top: 4px;
+  text-align: right;
+}

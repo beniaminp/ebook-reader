@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moon+ Reader Clone — React + Ionic Feasibility Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700;900&family=Source+Sans+3:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --surface-alt: #f3f1ec;
+    --border: #e2dfd8;
+    --text: #3d3a35;
+    --text-dim: #7d7871;
+    --heading: #1a1815;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --green-border: #bbf7d0;
+    --yellow: #ca8a04;
+    --yellow-bg: #fefce8;
+    --yellow-border: #fef08a;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --red-border: #fecaca;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border: #bfdbfe;
+    --accent: #6d28d9;
+    --ionic-blue: #3880ff;
+    --react-cyan: #61dafb;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 15.5px;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+    color: white;
+    padding: 72px 40px 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 48px;
+    background: var(--bg);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+  .hero-inner { max-width: 960px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero .tech-badges { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .hero .tech-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+  }
+  .badge-react { background: rgba(97,218,251,0.15); color: #61dafb; border: 1px solid rgba(97,218,251,0.3); }
+  .badge-ionic { background: rgba(56,128,255,0.15); color: #93bbff; border: 1px solid rgba(56,128,255,0.3); }
+  .badge-capacitor { background: rgba(56,128,255,0.1); color: #7eb5ff; border: 1px solid rgba(56,128,255,0.2); }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+  .hero .subtitle {
+    font-size: 1.1rem;
+    opacity: 0.75;
+    max-width: 680px;
+    font-weight: 300;
+  }
+
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+
+  /* Verdict Banner */
+  .verdict {
+    background: var(--surface);
+    border: 2px solid var(--yellow-border);
+    border-radius: 16px;
+    padding: 36px 40px;
+    margin: 48px auto;
+    max-width: 900px;
+    position: relative;
+  }
+  .verdict::before {
+    content: 'TL;DR';
+    position: absolute;
+    top: -13px; left: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: var(--yellow);
+    color: white;
+    padding: 3px 14px;
+    border-radius: 6px;
+    letter-spacing: 0.08em;
+  }
+  .verdict h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--heading);
+    margin-bottom: 12px;
+  }
+  .verdict p { color: var(--text-dim); font-size: 0.95rem; }
+
+  .verdict-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .verdict-stat {
+    text-align: center;
+    padding: 16px 8px;
+    border-radius: 10px;
+  }
+  .verdict-stat .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    display: block;
+    line-height: 1.1;
+  }
+  .verdict-stat .label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    display: block;
+  }
+  .stat-green { background: var(--green-bg); }
+  .stat-green .num { color: var(--green); }
+  .stat-yellow { background: var(--yellow-bg); }
+  .stat-yellow .num { color: var(--yellow); }
+  .stat-red { background: var(--red-bg); }
+  .stat-red .num { color: var(--red); }
+  .stat-blue { background: var(--blue-bg); }
+  .stat-blue .num { color: var(--blue); }
+
+  /* Sections */
+  .section { margin: 56px 0; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    color: var(--heading);
+    margin-bottom: 12px;
+  }
+  .section-intro {
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    max-width: 780px;
+    font-size: 0.95rem;
+  }
+
+  /* Feasibility Cards */
+  .feasibility-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .f-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: 64px 1fr 180px;
+    align-items: start;
+    gap: 20px;
+    transition: box-shadow 0.2s;
+  }
+  .f-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+  .f-status {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+  .f-status.doable { background: var(--green-bg); border: 1px solid var(--green-border); }
+  .f-status.partial { background: var(--yellow-bg); border: 1px solid var(--yellow-border); }
+  .f-status.hard { background: var(--red-bg); border: 1px solid var(--red-border); }
+
+  .f-body h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin-bottom: 4px;
+  }
+  .f-body p {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+  .f-body .lib-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    margin-right: 4px;
+    color: var(--text);
+  }
+
+  .f-meta {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+  .f-meta .effort {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .effort-low { color: var(--green); }
+  .effort-med { color: var(--yellow); }
+  .effort-high { color: var(--red); }
+
+  /* Architecture */
+  .arch-box {
+    background: #1e1b4b;
+    color: #c7d2fe;
+    border-radius: 14px;
+    padding: 36px;
+    margin: 28px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.9;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .arch-box .highlight { color: #a5b4fc; font-weight: 600; }
+  .arch-box .dim { color: #6366f1; }
+  .arch-box .accent { color: #c084fc; }
+  .arch-box .green { color: #86efac; }
+
+  /* Info Boxes */
+  .info-box {
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    font-size: 0.9rem;
+    border-left: 4px solid;
+  }
+  .info-box.warn { background: var(--yellow-bg); border-color: var(--yellow); }
+  .info-box.danger { background: var(--red-bg); border-color: var(--red); }
+  .info-box.tip { background: var(--green-bg); border-color: var(--green); }
+  .info-box.info { background: var(--blue-bg); border-color: var(--blue); }
+  .info-box strong { color: var(--heading); }
+
+  /* Library Table */
+  .lib-table-wrap {
+    overflow-x: auto;
+    margin: 20px 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .lib-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 700px;
+  }
+  .lib-table th {
+    text-align: left;
+    padding: 14px 18px;
+    background: var(--surface-alt);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+  .lib-table td {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .lib-table tr:last-child td { border-bottom: none; }
+  .lib-table .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+
+  .check { color: var(--green); font-weight: 700; }
+  .partial-mark { color: var(--yellow); font-weight: 700; }
+  .cross { color: var(--red); font-weight: 700; }
+
+  /* Roadmap */
+  .roadmap {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .phase-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .phase h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    color: var(--heading);
+    margin-bottom: 6px;
+  }
+  .phase .duration {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .phase ul {
+    list-style: none;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+  .phase li {
+    padding: 3px 0;
+    padding-left: 16px;
+    position: relative;
+  }
+  .phase li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .phase-1 .phase-num { color: var(--green); }
+  .phase-2 .phase-num { color: var(--yellow); }
+  .phase-3 .phase-num { color: var(--red); }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 32px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    margin-top: 64px;
+  }
+
+  @media (max-width: 900px) {
+    .hero h1 { font-size: 2rem; }
+    .f-card { grid-template-columns: 48px 1fr; }
+    .f-meta { display: none; }
+    .verdict-stats { grid-template-columns: repeat(2, 1fr); }
+    .roadmap { grid-template-columns: 1fr; }
+    .hero { padding: 48px 20px 48px; }
+    .container { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="tech-badges">
+      <span class="tech-badge badge-react">⚛ React 18+</span>
+      <span class="tech-badge badge-ionic">⚡ Ionic 7+</span>
+      <span class="tech-badge badge-capacitor">📱 Capacitor 6+</span>
+    </div>
+    <h1>Moon+ Reader Clone:<br>React + Ionic Feasibility</h1>
+    <p class="subtitle">A feature-by-feature analysis of what can be implemented, what requires workarounds, and what hits hard limits — with recommended libraries, architecture, and a phased roadmap.</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- VERDICT -->
+  <div class="verdict">
+    <h2>Yes, with caveats — roughly 70–80% feature parity is achievable</h2>
+    <p>React + Ionic (via Capacitor) can replicate the majority of Moon+ Reader's functionality. EPUB rendering, library management, theming, cloud sync, annotations, and OPDS are all fully doable. PDF annotation, TTS, and some hardware-level controls (volume key mapping, shake detection, tilt-to-turn) require Capacitor native plugins or custom native bridge code. A handful of features — like realistic page-curl animations and deep system-level integration — will be harder to match at Moon+'s polish level.</p>
+    <div class="verdict-stats">
+      <div class="verdict-stat stat-green">
+        <span class="num">22</span>
+        <span class="label">Fully Achievable</span>
+      </div>
+      <div class="verdict-stat stat-yellow">
+        <span class="num">10</span>
+        <span class="label">Partial / Workaround</span>
+      </div>
+      <div class="verdict-stat stat-red">
+        <span class="num">4</span>
+        <span class="label">Very Difficult</span>
+      </div>
+      <div class="verdict-stat stat-blue">
+        <span class="num">~6 mo</span>
+        <span class="label">Est. MVP Timeline</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION: ARCHITECTURE -->
+  <div class="section">
+    <div class="section-label">Architecture</div>
+    <h2>Recommended Technology Stack</h2>
+    <p class="section-intro">The stack leverages Ionic's UI components with React for the application shell, Capacitor for native device access, and specialized JS libraries for format rendering.</p>
+
+    <div class="arch-box"><span class="dim">┌──────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="highlight">APPLICATION SHELL — React 18 + Ionic 7 + Capacitor 6</span>                <span class="dim">│</span>
+<span class="dim">├──────────────────────────────────────────────────────────────────────┤</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│</span>  <span class="accent">UI Layer</span>                 <span class="accent">State</span>                <span class="accent">Storage</span>             <span class="dim">│</span>
+<span class="dim">│</span>  Ionic React Components   Zustand / Redux       SQLite (Capacitor)  <span class="dim">│</span>
+<span class="dim">│</span>  Custom CSS Theming       React Context          Capacitor Filesystem<span class="dim">│</span>
+<span class="dim">│</span>  Gesture Handler (Ionic)  React Query (sync)     Capacitor Preferences<span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">├──────────────────────────────────────────────────────────────────────┤</span>
+<span class="dim">│</span>  <span class="green">FORMAT RENDERING ENGINES</span>                                            <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│</span>  ┌─────────────┐  ┌──────────────┐  ┌───────────┐  ┌────────────┐  <span class="dim">│</span>
+<span class="dim">│</span>  │ <span class="highlight">epub.js</span>     │  │ <span class="highlight">PDF.js</span>       │  │ <span class="highlight">libarchive</span>│  │ <span class="highlight">marked.js</span> │  <span class="dim">│</span>
+<span class="dim">│</span>  │ react-reader│  │ react-pdf    │  │ CBZ / CBR │  │ Markdown   │  <span class="dim">│</span>
+<span class="dim">│</span>  │ EPUB, MOBI* │  │ + highlighter│  │ Comic view│  │ HTML, TXT  │  <span class="dim">│</span>
+<span class="dim">│</span>  └─────────────┘  └──────────────┘  └───────────┘  └────────────┘  <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">├──────────────────────────────────────────────────────────────────────┤</span>
+<span class="dim">│</span>  <span class="green">CAPACITOR NATIVE PLUGINS</span>                                            <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│</span>  Filesystem    Text-to-Speech    Screen Orientation   Status Bar     <span class="dim">│</span>
+<span class="dim">│</span>  Device        App (lifecycle)   Screen Brightness    Keep Awake     <span class="dim">│</span>
+<span class="dim">│</span>  Haptics       Motion (tilt)     Local Notifications  Bluetooth*     <span class="dim">│</span>
+<span class="dim">│</span>  Browser       Share              Splash Screen       Biometrics*    <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">├──────────────────────────────────────────────────────────────────────┤</span>
+<span class="dim">│</span>  <span class="green">CLOUD & SYNC</span>                                                        <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">│</span>  Dropbox JS SDK    WebDav Client (webdav npm)    Firebase/Supabase  <span class="dim">│</span>
+<span class="dim">│</span>  Google Drive API  OPDS Parser (custom/opds.js)  App Lifecycle Sync <span class="dim">│</span>
+<span class="dim">│</span>                                                                      <span class="dim">│</span>
+<span class="dim">└──────────────────────────────────────────────────────────────────────┘</span>
+  <span class="dim">* MOBI via conversion (mobi.js); Bluetooth via community plugin</span></div>
+  </div>
+
+  <!-- SECTION: Feature-by-feature feasibility -->
+  <div class="section">
+    <div class="section-label">Feature Analysis</div>
+    <h2>Feature-by-Feature Feasibility</h2>
+    <p class="section-intro">Each Moon+ Reader feature assessed for React + Ionic implementation. Green = fully achievable, Yellow = achievable with workarounds or reduced fidelity, Red = very difficult or not possible in web view.</p>
+
+    <!-- FORMAT SUPPORT -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">File Format Support</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>EPUB / EPUB3 Rendering</h3>
+          <p>Excellent support via epub.js (the most mature JS epub engine). Handles reflowable text, CSS styling, table of contents, pagination, and scrolled mode. EPUB3 multimedia (audio/video) works in WebView. Popup footnotes achievable via epub.js hooks. react-reader provides a ready-made React wrapper.</p>
+          <span class="lib-tag">epub.js</span><span class="lib-tag">react-reader</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Well-established</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>PDF Viewing</h3>
+          <p>PDF.js (by Mozilla) is the gold standard for browser-based PDF rendering. Works well in Ionic WebView. Supports text selection, search, zoom, rotation, form display, and link annotations. react-pdf or @react-pdf-viewer provide React wrappers.</p>
+          <span class="lib-tag">PDF.js</span><span class="lib-tag">react-pdf</span><span class="lib-tag">@react-pdf-viewer</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Mature ecosystem</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>MOBI / AZW3 / PRC</h3>
+          <p>No mature JS library for MOBI rendering. Strategy: convert MOBI → EPUB on-device using a JS conversion library (mobi.js or kf8-parser), then render with epub.js. Adds processing time. AZW3 (KF8) is closer to EPUB internally but still needs conversion.</p>
+          <span class="lib-tag">mobi.js</span><span class="lib-tag">custom converter</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Conversion step needed</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>TXT / HTML / Markdown / RTF</h3>
+          <p>TXT and HTML are trivially renderable in WebView. Markdown via marked.js or remark. RTF requires conversion (rtf.js or rtf-parser). All very straightforward.</p>
+          <span class="lib-tag">marked.js</span><span class="lib-tag">remark</span><span class="lib-tag">rtf.js</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Trivial</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>FB2 / CHM / DJVU / UMD</h3>
+          <p>Niche formats with limited JS support. FB2 can be parsed from XML (it's XML-based). CHM needs decompression (chm-lib). DJVU has djvujs but it's heavy. UMD has no JS parser — would need a custom implementation or native plugin. These are lower-priority formats.</p>
+          <span class="lib-tag">djvu.js</span><span class="lib-tag">custom XML parser (FB2)</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-high">High effort</span>Limited JS ecosystem</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>CBZ / CBR (Comic Formats)</h3>
+          <p>CBZ is a ZIP of images — use JSZip to extract, then render images in a swipeable gallery. CBR is RAR-based — use libunrar.js or unrar.js for extraction. Both straightforward after decompression.</p>
+          <span class="lib-tag">JSZip</span><span class="lib-tag">unrar.js</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Image gallery</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>DOCX / ODT</h3>
+          <p>DOCX rendering via mammoth.js (converts to HTML). ODT is XML-based and can be parsed similarly. Both produce reflowable HTML output that can be themed and styled.</p>
+          <span class="lib-tag">mammoth.js</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>HTML conversion</div>
+      </div>
+    </div>
+
+    <!-- READING ENGINE -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Reading Engine & Display</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Typography Controls (Font, Size, Spacing, Bold, Italic, Alignment)</h3>
+          <p>All achievable via CSS injection into epub.js rendition or custom WebView styles. Font loading from device storage via Capacitor Filesystem + CSS @font-face. Justified text and hyphenation via CSS <code>text-align: justify</code> and <code>hyphens: auto</code>.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Pure CSS</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Page Turn Animations (5 types including paper curl)</h3>
+          <p>Simple slide/fade/flip animations are easy with CSS transitions or Framer Motion. The realistic paper-curl (skeuomorphic page turn) that Moon+ does is significantly harder — requires WebGL or canvas-based rendering (turn.js library or custom shader). Won't match native performance easily.</p>
+          <span class="lib-tag">turn.js</span><span class="lib-tag">Framer Motion</span><span class="lib-tag">CSS transitions</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Curl is hard</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Day / Night Mode & 10+ Themes</h3>
+          <p>CSS custom properties (variables) make theming trivial. Store themes in JSON, apply via React context. Dark mode, sepia, custom background colors/images all achievable. Theme switching is instant.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>CSS variables</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Dual-Page Mode (Landscape)</h3>
+          <p>epub.js supports spread rendering natively (manager: "continuous", spread: "always"). For PDF, render two pages side-by-side. Detect orientation with Capacitor Screen Orientation plugin and toggle automatically.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Built-in to epub.js</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Reading Ruler / Focus Tools</h3>
+          <p>CSS overlay with a semi-transparent mask leaving a "focus strip" visible. The v10.3 bionic-reading style (highlight first letters) is achievable by post-processing text nodes with JS. All pure frontend work.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>CSS overlay + JS</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Blue Light Filter (up to 95%)</h3>
+          <p>Apply a CSS filter overlay: <code>filter: sepia(X%) saturate(Y%)</code> or a semi-transparent amber-colored div on top of the reader. Adjustable intensity via a slider. Simple and effective.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>CSS filter</div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION & CONTROLS -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Navigation & Input Controls</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Touch Screen Paging & Tap Zones</h3>
+          <p>Define tap zones (left third, right third, center) via standard touch event listeners. Map each zone to configurable actions. Ionic Gesture API provides swipe detection. Fully customizable.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Touch events</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Swipe Gestures (24 custom operations)</h3>
+          <p>Ionic's gesture system or Hammer.js handles multi-directional swipes. Build a configurable gesture→action mapping system. 15 events (bookmark, search, theme switch, etc.) are all app-level actions you control.</p>
+          <span class="lib-tag">@ionic/react (Gesture)</span><span class="lib-tag">Hammer.js</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Config system</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Hardware Key Mapping (Volume, Camera, Search keys)</h3>
+          <p>WebView does not natively capture hardware volume keys. Requires a custom Capacitor plugin (native Android code) to intercept volume key events and forward them to the web layer. Camera/search keys similarly need native interception. Achievable but requires native bridge code.</p>
+          <span class="lib-tag">Custom Capacitor plugin</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-high">High effort</span>Native bridge</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Brightness Gesture (Left Edge Slide)</h3>
+          <p>Detect vertical swipe on the left edge of the screen via touch events. Use Capacitor's Screen Brightness plugin (community) to adjust system brightness. Smooth and responsive.</p>
+          <span class="lib-tag">@capacitor-community/screen-brightness</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Community plugin</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Tilt-to-Turn Page</h3>
+          <p>Capacitor's Motion API (accelerometer) can detect device tilt angle. Map tilt threshold to page-turn actions. Works, but may feel less responsive than Moon+'s native implementation. Battery impact needs consideration.</p>
+          <span class="lib-tag">@capacitor/motion</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Accelerometer</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Headset & Bluetooth Key Control</h3>
+          <p>Media session API can intercept play/pause from headsets. Full Bluetooth key mapping (next/prev) requires a native plugin. The Web Media Session API handles basic cases; complex remapping needs native code.</p>
+          <span class="lib-tag">Media Session API</span><span class="lib-tag">Custom native plugin</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Partial via web API</div>
+      </div>
+    </div>
+
+    <!-- TTS & AUTO-SCROLL -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Auto-Scroll & Text-to-Speech</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Auto-Scroll (5 modes)</h3>
+          <p>Pixel-by-pixel, line-by-line, and page-by-page scrolling via <code>requestAnimationFrame</code> + <code>scrollBy()</code>. Rolling blind (teleprompter) mode is a CSS clip-path animation. Speed control via a state variable. All pure JS/CSS.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>JS animation</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Text-to-Speech (TTS)</h3>
+          <p>Two approaches: (1) Web Speech API (<code>SpeechSynthesis</code>) works in Android WebView with system voices — zero plugin needed. (2) Capacitor community TTS plugin for more reliable background playback. Sentence highlighting during speech is achievable by syncing utterance events to text positions.</p>
+          <span class="lib-tag">Web Speech API</span><span class="lib-tag">@capacitor-community/text-to-speech</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Good web support</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Shake-to-Speak</h3>
+          <p>Use Capacitor Motion API to detect shake gesture (accelerometer spike pattern). Trigger TTS on detected shake. Works but shake detection thresholds need tuning per device.</p>
+          <span class="lib-tag">@capacitor/motion</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Accelerometer</div>
+      </div>
+    </div>
+
+    <!-- ANNOTATIONS -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Annotations & Reference Tools</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>EPUB Highlights & Annotations</h3>
+          <p>epub.js has a built-in annotations API. react-reader exposes it. Store highlights by CFI (Canonical Fragment Identifier) in SQLite. Multiple highlight colors, inline notes, and bookmarks all supported. Export as JSON or plain text.</p>
+          <span class="lib-tag">epub.js annotations API</span><span class="lib-tag">SQLite</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Built-in API</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>PDF Highlights, Annotations & Handwriting</h3>
+          <p>PDF.js only supports viewing annotations, not creating them. For creation: use react-pdf-highlighter (text highlights only) or a commercial SDK like PSPDFKit/Nutrient for full annotation + handwriting + form fill. Handwriting specifically requires a canvas overlay. Saving annotations back to the PDF binary requires pdf-lib.</p>
+          <span class="lib-tag">react-pdf-highlighter</span><span class="lib-tag">pdf-lib</span><span class="lib-tag">PSPDFKit (commercial)</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-high">High effort</span>Needs custom/commercial</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Dictionary Lookup</h3>
+          <p>On text selection, open a popup with a dictionary API call (Free Dictionary API, Wiktionary API, or integrate with device dictionary via Android Intent through Capacitor). Offline dictionary possible with a bundled SQLite word database.</p>
+          <span class="lib-tag">Free Dictionary API</span><span class="lib-tag">SQLite offline dict</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>API + optional offline</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Translation & Share</h3>
+          <p>Translation via Google Translate API or libre-translate. Share via Capacitor Share plugin (uses Android share sheet). Both straightforward.</p>
+          <span class="lib-tag">@capacitor/share</span><span class="lib-tag">Translate API</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Standard APIs</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Full-Text Search</h3>
+          <p>epub.js provides chapter-level search. For cross-book search, index content into SQLite with FTS5 (full-text search). PDF.js has built-in text search. Fast and reliable.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>FTS5 in SQLite</div>
+      </div>
+    </div>
+
+    <!-- LIBRARY -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Library & File Management</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Bookshelf (Grid/List, Categories, Filters, Custom Covers)</h3>
+          <p>Standard React UI with Ionic components (IonGrid, IonList, IonSearchbar). Book metadata stored in SQLite. Filter by read status, tags, authors. Custom covers via Capacitor camera or file picker. Bookshelf visual styles (wood shelf, grid, list) are CSS variations.</p>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Standard CRUD</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>File Manager / Auto-Scan Folders</h3>
+          <p>Capacitor Filesystem API for browsing device storage. Auto-scan: use Capacitor Background Task or a periodic foreground check for new files in designated directories. Import via file picker or drag-and-drop in web context.</p>
+          <span class="lib-tag">@capacitor/filesystem</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Native filesystem</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>OPDS Catalog Browser</h3>
+          <p>OPDS is an Atom/XML feed. Parse with a standard XML parser (fast-xml-parser), display catalog in an Ionic list with search. Download books to device storage. Add custom catalog URLs. Calibre server compatible.</p>
+          <span class="lib-tag">fast-xml-parser</span><span class="lib-tag">axios</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>XML parsing</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Home Screen Widget Shelf</h3>
+          <p>Android home screen widgets are NOT possible from Ionic/Capacitor WebView. Requires a fully native Android widget written in Kotlin/Java, communicating with the Ionic app via shared storage. Significant native development effort. Consider this a post-MVP feature.</p>
+          <span class="lib-tag">Native Android widget (Kotlin)</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-high">High effort</span>Pure native required</div>
+      </div>
+    </div>
+
+    <!-- CLOUD & SYNC -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Cloud Sync & Backup</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Dropbox / Google Drive Sync</h3>
+          <p>Dropbox JS SDK and Google Drive API both work in Capacitor apps. Sync reading positions, highlights, and notes as JSON files in a designated cloud folder. Trigger sync on app lifecycle events (pause/resume) via Capacitor App plugin.</p>
+          <span class="lib-tag">dropbox (npm)</span><span class="lib-tag">googleapis</span><span class="lib-tag">@capacitor/app</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>SDK integration</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>WebDav Sync</h3>
+          <p>The <code>webdav</code> npm package provides a full WebDav client that works in browser contexts. Upload/download position files, annotations, and books to self-hosted WebDav servers.</p>
+          <span class="lib-tag">webdav (npm)</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>npm package</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Full Backup / Restore</h3>
+          <p>Export entire SQLite database + settings as a ZIP file. Store on cloud or device. Import by unzipping and replacing the local DB. Straightforward with JSZip + Capacitor Filesystem.</p>
+          <span class="lib-tag">JSZip</span><span class="lib-tag">SQLite</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>DB export</div>
+      </div>
+    </div>
+
+    <!-- SECURITY & MISC -->
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--heading); margin:32px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border);">Security, Statistics & Miscellaneous</h3>
+
+    <div class="feasibility-grid">
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Password / Biometric Lock</h3>
+          <p>Capacitor community Biometrics plugin for fingerprint/face unlock. PIN/password lock via a custom modal screen shown on app resume.</p>
+          <span class="lib-tag">capacitor-native-biometric</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-low">Low effort</span>Community plugin</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>Reading Statistics</h3>
+          <p>Track pages read, time spent (using timestamps on page-change events), reading speed (words per minute), daily/weekly charts. Store in SQLite, display with a charting library (Chart.js, Recharts).</p>
+          <span class="lib-tag">SQLite</span><span class="lib-tag">Recharts</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Event tracking</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status doable">✅</div>
+        <div class="f-body">
+          <h3>40+ Language Localization</h3>
+          <p>Use react-i18next or react-intl for internationalization. Bundle translation JSON files. RTL support via CSS <code>direction: rtl</code>. Standard practice.</p>
+          <span class="lib-tag">react-i18next</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-med">Medium effort</span>Translation work</div>
+      </div>
+
+      <div class="f-card">
+        <div class="f-status partial">⚠️</div>
+        <div class="f-body">
+          <h3>Softkey Backlight Control</h3>
+          <p>Controlling the navigation bar backlight is an Android system API not exposed to WebView. Requires a custom Capacitor native plugin. Low priority — most modern Android phones use gesture navigation.</p>
+          <span class="lib-tag">Custom native plugin</span>
+        </div>
+        <div class="f-meta"><span class="effort effort-high">High effort</span>Niche feature</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY LIBRARY REFERENCE -->
+  <div class="section">
+    <div class="section-label">Dependencies</div>
+    <h2>Key Library Reference</h2>
+
+    <div class="lib-table-wrap">
+      <table class="lib-table">
+        <thead>
+          <tr><th>Library</th><th>Purpose</th><th>License</th><th>Maturity</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">epub.js</td><td>EPUB rendering engine</td><td>BSD</td><td>⭐⭐⭐⭐</td><td>De facto standard. iframe-based. Chapter-level pagination only.</td></tr>
+          <tr><td class="mono">react-reader</td><td>React wrapper for epub.js</td><td>MIT</td><td>⭐⭐⭐⭐</td><td>Provides location tracking, TOC, RTL. Ready to use.</td></tr>
+          <tr><td class="mono">PDF.js (pdfjs-dist)</td><td>PDF rendering</td><td>Apache 2.0</td><td>⭐⭐⭐⭐⭐</td><td>Mozilla project. Canvas + text layer + annotation layer.</td></tr>
+          <tr><td class="mono">react-pdf</td><td>React wrapper for PDF.js</td><td>MIT</td><td>⭐⭐⭐⭐</td><td>Simple page rendering. No annotation editing.</td></tr>
+          <tr><td class="mono">react-pdf-highlighter</td><td>PDF text highlighting</td><td>MIT</td><td>⭐⭐⭐</td><td>Text + area highlights. No handwriting/freeform.</td></tr>
+          <tr><td class="mono">pdf-lib</td><td>PDF modification</td><td>MIT</td><td>⭐⭐⭐⭐</td><td>Create/modify PDFs. Write annotations back to file.</td></tr>
+          <tr><td class="mono">mammoth.js</td><td>DOCX → HTML</td><td>BSD</td><td>⭐⭐⭐⭐</td><td>Reliable. Semantic HTML output.</td></tr>
+          <tr><td class="mono">JSZip</td><td>ZIP/CBZ handling</td><td>MIT</td><td>⭐⭐⭐⭐⭐</td><td>Well-maintained. Fast decompression.</td></tr>
+          <tr><td class="mono">marked.js</td><td>Markdown rendering</td><td>MIT</td><td>⭐⭐⭐⭐⭐</td><td>Fast, spec-compliant.</td></tr>
+          <tr><td class="mono">webdav (npm)</td><td>WebDav client</td><td>MIT</td><td>⭐⭐⭐</td><td>Browser-compatible. PROPFIND, GET, PUT.</td></tr>
+          <tr><td class="mono">fast-xml-parser</td><td>OPDS / FB2 parsing</td><td>MIT</td><td>⭐⭐⭐⭐</td><td>Fastest JS XML parser. Works for OPDS Atom feeds.</td></tr>
+          <tr><td class="mono">@capacitor/filesystem</td><td>Device file access</td><td>MIT</td><td>⭐⭐⭐⭐⭐</td><td>Official Capacitor. Read/write/stat files.</td></tr>
+          <tr><td class="mono">@capacitor/app</td><td>App lifecycle events</td><td>MIT</td><td>⭐⭐⭐⭐⭐</td><td>Pause/resume for sync triggers.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HARD LIMITS -->
+  <div class="section">
+    <div class="section-label">Limitations</div>
+    <h2>Hard Limits & Dealbreakers</h2>
+    <p class="section-intro">Features that are very difficult or impossible to replicate with React + Ionic due to fundamental WebView constraints.</p>
+
+    <div class="info-box danger">
+      <strong>🚫 Android Home Screen Widgets</strong> — Ionic/Capacitor apps run inside a WebView. Android home screen widgets require native Views written in Kotlin/Java. You'd need a separate native module that reads from shared storage and renders independently from the WebView app.
+    </div>
+    <div class="info-box danger">
+      <strong>🚫 Native-Quality Page Curl Animation</strong> — Moon+ uses native canvas rendering for its paper-curl page turn. WebView-based turn.js exists but performance is notably worse on mid-range devices. Consider CSS slide/fade animations as acceptable alternatives.
+    </div>
+    <div class="info-box danger">
+      <strong>🚫 Volume Key / Hardware Key Interception</strong> — WebView cannot capture volume up/down key events. This requires a custom Capacitor native plugin that overrides <code>dispatchKeyEvent</code> in the Android Activity. Not hard to write but is native Kotlin code.
+    </div>
+    <div class="info-box warn">
+      <strong>⚠️ PDF Handwriting & Full Annotation Suite</strong> — PDF.js is read-only. Implementing freehand drawing + highlight + text notes + save-back-to-PDF requires either a commercial SDK (PSPDFKit/Nutrient ~$thousands/year) or a substantial custom implementation using pdf-lib + canvas overlay.
+    </div>
+    <div class="info-box warn">
+      <strong>⚠️ DJVU / UMD / CHM Formats</strong> — Minimal JS ecosystem support. DJVU has djvu.js (heavy, ~2MB). UMD has zero JS support. CHM is partially parseable. If these are required, consider server-side conversion to EPUB/PDF.
+    </div>
+    <div class="info-box tip">
+      <strong>✅ Cross-Platform Bonus</strong> — Unlike Moon+ (Android-only), a React + Ionic app automatically works on iOS, Android, and as a PWA in the browser. This is a significant advantage over the original app.
+    </div>
+  </div>
+
+  <!-- ROADMAP -->
+  <div class="section">
+    <div class="section-label">Roadmap</div>
+    <h2>Recommended Implementation Phases</h2>
+
+    <div class="roadmap">
+      <div class="phase phase-1">
+        <div class="phase-num">Phase 1 — MVP</div>
+        <h3>Core Reader</h3>
+        <div class="duration">8–10 weeks · 2–3 devs</div>
+        <ul>
+          <li>EPUB rendering (epub.js)</li>
+          <li>PDF viewing (PDF.js)</li>
+          <li>TXT / HTML / Markdown</li>
+          <li>Basic bookshelf (list/grid)</li>
+          <li>Day/Night themes (3–4)</li>
+          <li>Typography controls</li>
+          <li>Touch paging + swipe</li>
+          <li>Bookmarks & highlights (EPUB)</li>
+          <li>Basic search in-book</li>
+          <li>Capacitor Filesystem integration</li>
+        </ul>
+      </div>
+      <div class="phase phase-2">
+        <div class="phase-num">Phase 2 — Feature Rich</div>
+        <h3>Full Experience</h3>
+        <div class="duration">8–12 weeks · 2–3 devs</div>
+        <ul>
+          <li>MOBI/AZW3 via conversion</li>
+          <li>CBZ/CBR comic reader</li>
+          <li>DOCX/ODT support</li>
+          <li>OPDS catalog browser</li>
+          <li>Cloud sync (Dropbox/WebDav)</li>
+          <li>TTS with sentence tracking</li>
+          <li>Auto-scroll (5 modes)</li>
+          <li>Dictionary & translation</li>
+          <li>Reading statistics</li>
+          <li>10+ themes + custom fonts</li>
+          <li>Blue light filter</li>
+          <li>Reading ruler / focus tools</li>
+          <li>Biometric lock</li>
+          <li>Full backup/restore</li>
+        </ul>
+      </div>
+      <div class="phase phase-3">
+        <div class="phase-num">Phase 3 — Polish</div>
+        <h3>Power User Features</h3>
+        <div class="duration">6–8 weeks · 2–3 devs</div>
+        <ul>
+          <li>PDF annotation + handwriting</li>
+          <li>PDF form filling</li>
+          <li>Page curl animations</li>
+          <li>Hardware key mapping (native)</li>
+          <li>Tilt-to-turn page</li>
+          <li>Headset/BT controls</li>
+          <li>Shake-to-speak</li>
+          <li>Home screen widget (native)</li>
+          <li>FB2/CHM/DJVU support</li>
+          <li>Name replacement / role reversal</li>
+          <li>i18n (40 languages)</li>
+          <li>Auto-scan folders</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-box info">
+      <strong>Total estimated timeline:</strong> ~6 months with a team of 2–3 full-stack developers experienced in React + Ionic + Capacitor. Phase 1 delivers a usable, shippable reader. Phase 3 features can be selectively included based on user demand. The native widget and hardware key features are the only items requiring dedicated Android native development experience.
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>Moon+ Reader → React + Ionic Feasibility Analysis — February 2026 — For implementation team planning</p>
+  <p style="margin-top:6px;">Based on research of epub.js, PDF.js, Capacitor APIs, community plugins, and current Ionic 7 capabilities</p>
+</footer>
+
+</body>
+</html>

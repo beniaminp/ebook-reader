@@ -1,0 +1,77 @@
+/**
+ * Reading Toolbar Styles
+ */
+
+.reading-toolbar {
+  --background: var(--ion-background-color, #fff);
+  --border-width: 0 0 1px 0;
+  --border-color: var(--ion-color-light-shade);
+  transition: background-color 0.3s ease;
+  padding: 4px 0;
+}
+
+.reading-toolbar ion-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 14px;
+}
+
+.reading-toolbar .font-adjust {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.reading-toolbar .theme-name {
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+/* Theme Popover */
+.theme-popover-content {
+  padding: 8px;
+  min-width: 200px;
+}
+
+.theme-popover-content ion-segment {
+  --background: var(--ion-color-light);
+}
+
+.theme-popover-content ion-segment-button {
+  --min-height: 48px;
+}
+
+.theme-popover-content ion-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+/* Tools Popover */
+.tools-popover-content {
+  padding: 8px 0;
+  min-width: 160px;
+}
+
+.tools-popover-content ion-button {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  height: 44px;
+  text-align: left;
+}
+
+.tools-popover-content ion-button ion-icon {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+/* Dark mode adjustments */
+.reading-toolbar.dark {
+  --background: var(--ion-color-dark-shade);
+  --border-color: var(--ion-color-dark-tint);
+}
+
+/* Sepia mode adjustments */
+.reading-toolbar.sepia {
+  --background: #f4ecd8;
+  --border-color: #d4cba8;
+}

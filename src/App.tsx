@@ -10,10 +10,14 @@ import {
   setupIonicReact
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { ellipse, square, triangle } from 'ionicons/icons';
-import Tab1 from './pages/Tab1';
-import Tab2 from './pages/Tab2';
-import Tab3 from './pages/Tab3';
+import { book, library, settings, globeOutline } from 'ionicons/icons';
+import Library from './pages/Library/Library';
+import Reader from './pages/Reader/Reader';
+import Settings from './pages/Settings/Settings';
+import CalibreWebSettings from './pages/CalibreWebSettings';
+import Statistics from './pages/Statistics/Statistics';
+import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
+import { useAppStore } from './stores/useAppStore';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -47,41 +51,59 @@ import './theme/variables.css';
 
 setupIonicReact();
 
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonTabs>
-        <IonRouterOutlet>
-          <Route exact path="/tab1">
-            <Tab1 />
-          </Route>
-          <Route exact path="/tab2">
-            <Tab2 />
-          </Route>
-          <Route path="/tab3">
-            <Tab3 />
-          </Route>
-          <Route exact path="/">
-            <Redirect to="/tab1" />
-          </Route>
-        </IonRouterOutlet>
-        <IonTabBar slot="bottom">
-          <IonTabButton tab="tab1" href="/tab1">
-            <IonIcon aria-hidden="true" icon={triangle} />
-            <IonLabel>Tab 1</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab2" href="/tab2">
-            <IonIcon aria-hidden="true" icon={ellipse} />
-            <IonLabel>Tab 2</IonLabel>
-          </IonTabButton>
-          <IonTabButton tab="tab3" href="/tab3">
-            <IonIcon aria-hidden="true" icon={square} />
-            <IonLabel>Tab 3</IonLabel>
-          </IonTabButton>
-        </IonTabBar>
-      </IonTabs>
-    </IonReactRouter>
-  </IonApp>
-);
+const App: React.FC = () => {
+  const currentBook = useAppStore((state) => state.currentBook);
+  const readerHref = currentBook ? `/reader/${currentBook.id}` : undefined;
+
+  return (
+    <IonApp>
+      <IonReactRouter>
+        <IonTabs>
+          <IonRouterOutlet>
+            <Route exact path="/library">
+              <Library />
+            </Route>
+            <Route exact path="/reader/:bookId">
+              <Reader />
+            </Route>
+            <Route exact path="/settings">
+              <Settings />
+            </Route>
+            <Route exact path="/calibre-web-settings">
+              <CalibreWebSettings />
+            </Route>
+            <Route exact path="/statistics">
+              <Statistics />
+            </Route>
+            <Route exact path="/opds">
+              <OpdsCatalog />
+            </Route>
+            <Route exact path="/">
+              <Redirect to="/library" />
+            </Route>
+          </IonRouterOutlet>
+          <IonTabBar slot="bottom">
+            <IonTabButton tab="library" href="/library">
+              <IonIcon aria-hidden="true" icon={library} />
+              <IonLabel>Library</IonLabel>
+            </IonTabButton>
+            <IonTabButton tab="reader" href={readerHref} disabled={!currentBook}>
+              <IonIcon aria-hidden="true" icon={book} />
+              <IonLabel>Reader</IonLabel>
+            </IonTabButton>
+            <IonTabButton tab="opds" href="/opds">
+              <IonIcon aria-hidden="true" icon={globeOutline} />
+              <IonLabel>Catalogs</IonLabel>
+            </IonTabButton>
+            <IonTabButton tab="settings" href="/settings">
+              <IonIcon aria-hidden="true" icon={settings} />
+              <IonLabel>Settings</IonLabel>
+            </IonTabButton>
+          </IonTabBar>
+        </IonTabs>
+      </IonReactRouter>
+    </IonApp>
+  );
+};
 
 export default App;

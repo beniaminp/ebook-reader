@@ -1,0 +1,133 @@
+/**
+ * Reading Settings Panel Styles
+ */
+
+.reading-settings-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Theme option cards */
+.theme-option {
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.theme-option.active {
+  border-color: currentColor;
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+.theme-preview {
+  height: 40px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.preview-line {
+  height: 4px;
+  background: currentColor;
+  border-radius: 2px;
+  width: 80%;
+  margin: 0 auto;
+  opacity: 0.6;
+}
+
+.preview-line.short {
+  width: 50%;
+}
+
+.theme-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Segment styling for text alignment */
+ion-segment {
+  --background: rgba(var(--ion-color-medium-rgb, 0.2), 0.1);
+  border-radius: 8px;
+}
+
+ion-segment-button {
+  --min-height: 32px;
+  font-size: 13px;
+}
+
+/* Range slider styling */
+ion-range {
+  padding: 8px 0;
+}
+
+/* Toggle items */
+ion-toggle {
+  --background: var(--ion-color-light);
+  --background-checked: var(--ion-color-primary);
+}
+
+/* Settings item styling */
+ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 16px;
+}
+
+/* Preview text for settings */
+.preview-text {
+  padding: 16px;
+  border-radius: 8px;
+  margin: 8px 16px;
+  line-height: 1.6;
+}
+
+.preview-text.sample {
+  background: var(--ion-color-light);
+  border: 1px solid var(--ion-color-light-shade);
+}
+
+/* Color swatches */
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.active {
+  border-color: var(--ion-color-dark);
+  box-shadow: 0 0 0 2px var(--ion-color-light);
+}
+
+/* Settings panel animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.reading-settings-panel {
+  animation: slideUp 0.3s ease-out;
+}

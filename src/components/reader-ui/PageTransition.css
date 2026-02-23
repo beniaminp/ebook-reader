@@ -1,0 +1,63 @@
+/**
+ * PageTransition Styles
+ */
+
+.page-transition {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Fade animation ──────────────────────────────────────────────────────── */
+.page-transition--fade {
+  animation: page-fade-in var(--page-transition-duration, 250ms) ease-in-out;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Slide left (forward) animation ─────────────────────────────────────── */
+.page-transition--slide-left {
+  animation: page-slide-in-left var(--page-transition-duration, 250ms) ease-in-out;
+}
+
+@keyframes page-slide-in-left {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Slide right (backward) animation ───────────────────────────────────── */
+.page-transition--slide-right {
+  animation: page-slide-in-right var(--page-transition-duration, 250ms) ease-in-out;
+}
+
+@keyframes page-slide-in-right {
+  from {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition--fade,
+  .page-transition--slide-left,
+  .page-transition--slide-right {
+    animation: none;
+  }
+}
