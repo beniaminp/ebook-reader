@@ -97,18 +97,15 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
     setShowToast(true);
   }, []);
 
-  const handleProgressChange = useCallback((cfi: EpubCfi, pct: number) => {
+  const handleProgressChange = useCallback((cfi: EpubCfi, pct: number, page: number, total: number) => {
     setCurrentLocation(cfi);
     setPercentage(pct);
-
-    // Estimate current page
-    if (totalPages > 0) {
-      setCurrentPage(Math.round(totalPages * pct));
-    }
+    setCurrentPage(page);
+    setTotalPages(total);
 
     // Propagate to parent for persistence
     onProgressChange?.(cfi, pct);
-  }, [totalPages, onProgressChange]);
+  }, [onProgressChange]);
 
   const handleNext = useCallback(() => {
     readerRef.current?.next();

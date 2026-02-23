@@ -14,7 +14,7 @@ import './EpubReader.css';
 export interface EpubReaderProps {
   bookData: BookDataForReader;
   initialLocation?: EpubCfi;
-  onProgressChange?: (cfi: EpubCfi, percentage: number) => void;
+  onProgressChange?: (cfi: EpubCfi, percentage: number, currentPage: number, totalPages: number) => void;
   onChapterChange?: (chapter: EpubChapter, index: number) => void;
   onLoadComplete?: (metadata: EpubMetadata) => void;
   onError?: (error: string) => void;
@@ -132,11 +132,17 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           }));
           setChapters(tocChapters);
 
+          // Generate locations for page counting (roughly 1024 chars per "page")
+          await book.locations.generate(1024);
+          const totalPages = book.locations.length();
+
           // Set up progress tracking
           rendition.on('relocated', (location: any) => {
             const cfi = location.start.cfi;
-            const percentage = location.start.percentage * 100;
-            onProgressChangeRef.current?.(cfi, percentage);
+            const pct = book.locations.percentageFromCfi(cfi);
+            const currentPage = Math.round(pct * totalPages);
+            const percentage = pct * 100;
+            onProgressChangeRef.current?.(cfi, percentage, Math.max(1, currentPage), totalPages);
 
             const currentChapter = findChapterByCfi(tocChapters, cfi);
             if (currentChapter) {
