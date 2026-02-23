@@ -1,4 +1,4 @@
-import { Redirect, Route } from 'react-router-dom';
+import { Redirect, Route, useLocation } from 'react-router-dom';
 import {
   IonApp,
   IonIcon,
@@ -51,56 +51,64 @@ import './theme/variables.css';
 
 setupIonicReact();
 
-const App: React.FC = () => {
+const AppTabs: React.FC = () => {
   const currentBook = useAppStore((state) => state.currentBook);
   const readerHref = currentBook ? `/reader/${currentBook.id}` : undefined;
+  const location = useLocation();
+  const isReaderRoute = location.pathname.startsWith('/reader/');
 
+  return (
+    <IonTabs>
+      <IonRouterOutlet>
+        <Route exact path="/library">
+          <Library />
+        </Route>
+        <Route exact path="/reader/:bookId">
+          <Reader />
+        </Route>
+        <Route exact path="/settings">
+          <Settings />
+        </Route>
+        <Route exact path="/calibre-web-settings">
+          <CalibreWebSettings />
+        </Route>
+        <Route exact path="/statistics">
+          <Statistics />
+        </Route>
+        <Route exact path="/opds">
+          <OpdsCatalog />
+        </Route>
+        <Route exact path="/">
+          <Redirect to="/library" />
+        </Route>
+      </IonRouterOutlet>
+      <IonTabBar slot="bottom" style={isReaderRoute ? { display: 'none' } : undefined}>
+        <IonTabButton tab="library" href="/library">
+          <IonIcon aria-hidden="true" icon={library} />
+          <IonLabel>Library</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="reader" href={readerHref} disabled={!currentBook}>
+          <IonIcon aria-hidden="true" icon={book} />
+          <IonLabel>Reader</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="opds" href="/opds">
+          <IonIcon aria-hidden="true" icon={globeOutline} />
+          <IonLabel>Catalogs</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="settings" href="/settings">
+          <IonIcon aria-hidden="true" icon={settings} />
+          <IonLabel>Settings</IonLabel>
+        </IonTabButton>
+      </IonTabBar>
+    </IonTabs>
+  );
+};
+
+const App: React.FC = () => {
   return (
     <IonApp>
       <IonReactRouter>
-        <IonTabs>
-          <IonRouterOutlet>
-            <Route exact path="/library">
-              <Library />
-            </Route>
-            <Route exact path="/reader/:bookId">
-              <Reader />
-            </Route>
-            <Route exact path="/settings">
-              <Settings />
-            </Route>
-            <Route exact path="/calibre-web-settings">
-              <CalibreWebSettings />
-            </Route>
-            <Route exact path="/statistics">
-              <Statistics />
-            </Route>
-            <Route exact path="/opds">
-              <OpdsCatalog />
-            </Route>
-            <Route exact path="/">
-              <Redirect to="/library" />
-            </Route>
-          </IonRouterOutlet>
-          <IonTabBar slot="bottom">
-            <IonTabButton tab="library" href="/library">
-              <IonIcon aria-hidden="true" icon={library} />
-              <IonLabel>Library</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="reader" href={readerHref} disabled={!currentBook}>
-              <IonIcon aria-hidden="true" icon={book} />
-              <IonLabel>Reader</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="opds" href="/opds">
-              <IonIcon aria-hidden="true" icon={globeOutline} />
-              <IonLabel>Catalogs</IonLabel>
-            </IonTabButton>
-            <IonTabButton tab="settings" href="/settings">
-              <IonIcon aria-hidden="true" icon={settings} />
-              <IonLabel>Settings</IonLabel>
-            </IonTabButton>
-          </IonTabBar>
-        </IonTabs>
+        <AppTabs />
       </IonReactRouter>
     </IonApp>
   );

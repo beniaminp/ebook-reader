@@ -98,6 +98,12 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
 
           renditionRef.current = rendition;
 
+          // Disable text selection by default — only long press enables it
+          rendition.themes.register('no-select', {
+            'body, body *': { '-webkit-user-select': 'none', 'user-select': 'none' },
+          });
+          rendition.themes.select('no-select');
+
           await rendition.display(initialLocation || undefined);
 
           if (destroyed) return;
@@ -139,15 +145,51 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           });
 
           // Handle taps inside the epub.js iframe
-          // Track touch start to distinguish taps from swipes/selections
           let touchStart: { x: number; y: number; time: number } | null = null;
+          let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+          let isLongPress = false;
 
           rendition.on('touchstart', (e: TouchEvent) => {
             const touch = e.changedTouches[0];
             touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+            isLongPress = false;
+
+            // After 500ms, enable text selection for long press
+            longPressTimer = setTimeout(() => {
+              isLongPress = true;
+              // Re-enable text selection
+              rendition.themes.register('no-select', {
+                'body, body *': { '-webkit-user-select': 'text', 'user-select': 'text' },
+              });
+              rendition.themes.select('no-select');
+            }, 500);
+          });
+
+          rendition.on('touchmove', () => {
+            // Cancel long press if finger moves
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
           });
 
           rendition.on('touchend', (e: TouchEvent) => {
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+
+            // If it was a long press, re-disable selection after a short delay
+            // (allow the selection UI to appear first)
+            if (isLongPress) {
+              isLongPress = false;
+              // Keep selection enabled briefly so user can interact with it
+              setTimeout(() => {
+                const sel = (e.target as any)?.ownerDocument?.getSelection?.();
+                if (!sel || sel.toString().length === 0) {
+                  rendition.themes.register('no-select', {
+                    'body, body *': { '-webkit-user-select': 'none', 'user-select': 'none' },
+                  });
+                  rendition.themes.select('no-select');
+                }
+              }, 3000);
+              return;
+            }
+
             if (!touchStart) return;
             const touch = e.changedTouches[0];
             const dx = Math.abs(touch.clientX - touchStart.x);
@@ -158,9 +200,9 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             // Only treat as tap if minimal movement and quick touch
             if (dx > 10 || dy > 10 || elapsed > 300) return;
 
-            // Prevent text selection on tap
+            // Clear any accidental selection
             const sel = (e.target as any)?.ownerDocument?.getSelection?.();
-            if (sel && sel.toString().length > 0) return;
+            if (sel) sel.removeAllRanges();
 
             const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
             const relX = touch.clientX / containerWidth;
@@ -176,7 +218,6 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
 
           // Also handle mouse clicks for desktop
           rendition.on('click', (e: MouseEvent) => {
-            // Ignore if text is selected
             const sel = (e.target as any)?.ownerDocument?.getSelection?.();
             if (sel && sel.toString().length > 0) return;
 
