@@ -5,7 +5,7 @@
  * Integrates the reader, controls, progress tracking, and theming
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   IonPage,
   IonContent,
@@ -95,12 +95,12 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   const [currentSearchIndex, setCurrentSearchIndex] = useState<number>(0);
   const [searching, setSearching] = useState<boolean>(false);
 
-  const bookData: BookDataForReader = {
+  const bookData: BookDataForReader = useMemo(() => ({
     book,
     fileUri,
     arrayBuffer,
     initialLocation,
-  };
+  }), [book.id, fileUri, arrayBuffer, initialLocation]);
 
   const showToastMessage = useCallback((message: string) => {
     setToastMessage(message);

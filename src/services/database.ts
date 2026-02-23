@@ -83,9 +83,21 @@ const getDefaultCollections = (): WebCollection[] => [
   },
 ];
 
+let webInitialized = false;
+
 function saveWebData() {
   localStorage.setItem('ebook_books', JSON.stringify(webBooks));
   localStorage.setItem('ebook_collections', JSON.stringify(webCollections));
+}
+
+/** Ensure the web database (localStorage) has been loaded into memory. */
+function ensureWebInit() {
+  if (webInitialized) return;
+  const storedBooks = localStorage.getItem('ebook_books');
+  const storedCollections = localStorage.getItem('ebook_collections');
+  webBooks = storedBooks ? JSON.parse(storedBooks) : [];
+  webCollections = storedCollections ? JSON.parse(storedCollections) : getDefaultCollections();
+  webInitialized = true;
 }
 
 // ============================================================================
@@ -139,12 +151,7 @@ export async function initDatabase(): Promise<boolean> {
 
 async function initWebDatabase(): Promise<boolean> {
   try {
-    const storedBooks = localStorage.getItem('ebook_books');
-    const storedCollections = localStorage.getItem('ebook_collections');
-
-    webBooks = storedBooks ? JSON.parse(storedBooks) : [];
-    webCollections = storedCollections ? JSON.parse(storedCollections) : getDefaultCollections();
-
+    ensureWebInit();
     console.log('Web database initialized');
     return true;
   } catch (error) {
@@ -159,6 +166,7 @@ async function initWebDatabase(): Promise<boolean> {
 
 export async function getAllBooks(): Promise<Book[]> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     return webBooks.map(webBookToBook);
   }
 
@@ -177,6 +185,7 @@ export async function getAllBooks(): Promise<Book[]> {
 
 export async function getBookById(id: string): Promise<Book | null> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const found = webBooks.find(b => b.id === id);
     return found ? webBookToBook(found) : null;
   }
@@ -204,6 +213,7 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
   const now = Date.now();
 
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const webBook: WebBook = {
       ...book,
       dateAdded: new Date(now),
@@ -265,6 +275,7 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
 
 export async function updateBook(id: string, updates: Partial<Book>): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const index = webBooks.findIndex(b => b.id === id);
     if (index !== -1) {
       webBooks[index] = { ...webBooks[index], ...updates, updatedAt: Date.now() };
@@ -326,6 +337,7 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
 
 export async function deleteBook(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     webBooks = webBooks.filter(b => b.id !== id);
     saveWebData();
     // Clean up the file from IndexedDB
@@ -348,6 +360,7 @@ export async function deleteBook(id: string): Promise<boolean> {
 
 export async function searchBooks(query: string): Promise<Book[]> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const lowerQuery = query.toLowerCase();
     return webBooks
       .filter(b => b.title.toLowerCase().includes(lowerQuery) || b.author.toLowerCase().includes(lowerQuery))
@@ -374,6 +387,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
 
 export async function getBooksByFormat(formats: string[]): Promise<Book[]> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     return webBooks
       .filter(b => formats.includes(b.format))
       .map(webBookToBook);
@@ -402,6 +416,7 @@ export async function getBooksByFormat(formats: string[]): Promise<Book[]> {
 
 export async function getAllCollections(): Promise<Collection[]> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     return webCollections.map(webCollectionToCollection);
   }
 
@@ -455,8 +470,8 @@ function webBookToBook(webBook: WebBook): Book {
     totalPages: webBook.totalPages,
     currentPage: webBook.currentPage,
     progress: webBook.progress,
-    lastRead: webBook.lastRead,
-    dateAdded: webBook.dateAdded,
+    lastRead: new Date(webBook.lastRead),
+    dateAdded: new Date(webBook.dateAdded),
     source: webBook.source,
     sourceId: webBook.sourceId,
     sourceUrl: webBook.sourceUrl,
@@ -489,6 +504,7 @@ export async function upsertReadingProgress(
   progress: Omit<ReadingProgress, 'id' | 'bookId' | 'createdAt' | 'updatedAt'>
 ): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     // Web fallback: update book directly
     const book = webBooks.find(b => b.id === bookId);
     if (book) {
@@ -542,6 +558,7 @@ export async function upsertReadingProgress(
 
 export async function getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const book = webBooks.find(b => b.id === bookId);
     if (book) {
       return {
@@ -550,8 +567,8 @@ export async function getReadingProgress(bookId: string): Promise<ReadingProgres
         currentPage: book.currentPage,
         totalPages: book.totalPages,
         percentage: book.progress,
-        lastReadAt: Math.floor(book.lastRead.getTime() / 1000),
-        createdAt: Math.floor(book.dateAdded.getTime() / 1000),
+        lastReadAt: Math.floor(new Date(book.lastRead).getTime() / 1000),
+        createdAt: Math.floor(new Date(book.dateAdded).getTime() / 1000),
         updatedAt: Math.floor(Date.now() / 1000),
       };
     }
@@ -1030,6 +1047,7 @@ export async function getTotalReadingSummary(): Promise<{
   const defaultSummary = { totalBooksRead: 0, totalPagesRead: 0, totalTimeSpent: 0, averageSessionTime: 0 };
 
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     // Web fallback: derive from webBooks
     const booksWithProgress = webBooks.filter(b => b.progress > 0);
     return {
@@ -1317,6 +1335,7 @@ export async function createCollection(
   collection: Omit<Collection, 'id'>
 ): Promise<Collection | null> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const newCollection: Collection = {
       ...collection,
       id: `collection-${Date.now()}`,
@@ -1352,6 +1371,7 @@ export async function updateCollection(
   updates: Partial<Omit<Collection, 'id'>>
 ): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     const index = webCollections.findIndex(c => c.id === id);
     if (index !== -1) {
       webCollections[index] = { ...webCollections[index], ...updates };
@@ -1401,6 +1421,7 @@ export async function updateCollection(
 
 export async function deleteCollection(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
     webCollections = webCollections.filter(c => c.id !== id);
     saveWebData();
     return true;
