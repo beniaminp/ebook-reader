@@ -1,0 +1,7 @@
+{
+  "name": "ebook-reader-temp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}
