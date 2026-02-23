@@ -157,13 +157,17 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
           let isLongPress = false;
           let touchHandledAt = 0; // Prevent click from double-firing after touchend
 
-          const handleTapZone = (clientX: number) => {
-            const containerWidth = viewerRef.current?.offsetWidth || window.innerWidth;
-            const relX = clientX / containerWidth;
+          const handleTapZone = (clientX: number, sourceDoc?: Document) => {
+            // Get the width from the iframe's window if available,
+            // otherwise fall back to the outer window
+            const width = sourceDoc?.defaultView?.innerWidth
+              || viewerRef.current?.offsetWidth
+              || window.innerWidth;
+            const relX = clientX / width;
 
-            if (relX < 0.2) {
+            if (relX < 0.25) {
               onTapLeftRef.current?.();
-            } else if (relX > 0.8) {
+            } else if (relX > 0.75) {
               onTapRightRef.current?.();
             } else {
               onTapCenterRef.current?.();
@@ -221,7 +225,8 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
 
             // Mark as handled so the subsequent click event is ignored
             touchHandledAt = Date.now();
-            handleTapZone(touch.clientX);
+            const doc = (e.target as any)?.ownerDocument as Document | undefined;
+            handleTapZone(touch.clientX, doc);
           });
 
           // Mouse clicks for desktop — skip if touch just handled it
@@ -232,7 +237,8 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
             const sel = (e.target as any)?.ownerDocument?.getSelection?.();
             if (sel && sel.toString().length > 0) return;
 
-            handleTapZone(e.clientX);
+            const doc = (e.target as any)?.ownerDocument as Document | undefined;
+            handleTapZone(e.clientX, doc);
           });
 
           setIsLoaded(true);
