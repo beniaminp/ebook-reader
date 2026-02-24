@@ -17,6 +17,7 @@ import Settings from './pages/Settings/Settings';
 import CalibreWebSettings from './pages/CalibreWebSettings';
 import Statistics from './pages/Statistics/Statistics';
 import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
+import CloudSyncSettings from './pages/CloudSyncSettings/CloudSyncSettings';
 import { useAppStore } from './stores/useAppStore';
 
 /* Core CSS required for Ionic components to work properly */
@@ -77,6 +78,9 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/opds">
           <OpdsCatalog />
+        </Route>
+        <Route exact path="/cloud-sync-settings">
+          <CloudSyncSettings />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

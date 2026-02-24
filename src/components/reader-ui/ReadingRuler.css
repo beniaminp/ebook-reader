@@ -1,0 +1,55 @@
+/**
+ * Reading Ruler Styles
+ */
+
+.reading-ruler-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: opacity 0.2s ease-out, top 0.05s ease-out, height 0.2s ease;
+  border-radius: 2px;
+}
+
+.reading-ruler-line::before,
+.reading-ruler-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
+  pointer-events: none;
+}
+
+.reading-ruler-line::before {
+  bottom: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--reading-ruler-color, rgba(0, 123, 255, 0.1))
+  );
+}
+
+.reading-ruler-line::after {
+  top: 100%;
+  background: linear-gradient(
+    to top,
+    transparent,
+    var(--reading-ruler-color, rgba(0, 123, 255, 0.1))
+  );
+}
+
+/* Animated glow effect */
+@keyframes rulerPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.reading-ruler-line.visible {
+  animation: rulerPulse 2s ease-in-out infinite;
+}

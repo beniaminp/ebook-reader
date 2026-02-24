@@ -26,6 +26,8 @@ export const TABLES = {
   NOTES: 'notes',
   SEARCH_HISTORY: 'search_history',
   DICTIONARY_LOOKUPS: 'dictionary_lookups',
+  TRANSLATION_SETTINGS: 'translation_settings',
+  TRANSLATION_HISTORY: 'translation_history',
   SYNC_STATUS: 'sync_status',
   MIGRATIONS: 'migrations',
 } as const;
@@ -40,7 +42,7 @@ export const CREATE_TABLES = {
       file_path TEXT NOT NULL UNIQUE,
       file_name TEXT NOT NULL,
       file_size INTEGER NOT NULL DEFAULT 0,
-      format TEXT NOT NULL CHECK(format IN ('EPUB', 'PDF', 'TXT', 'HTML', 'MD', 'MOBI', 'AZW3', 'CBZ', 'CBR', 'DOCX', 'FB2')),
+      format TEXT NOT NULL CHECK(format IN ('EPUB', 'PDF', 'TXT', 'HTML', 'MD', 'MOBI', 'AZW3', 'CBZ', 'CBR', 'DOCX', 'FB2', 'CHM')),
       cover_path TEXT,
       total_pages INTEGER,
       language TEXT,
@@ -105,6 +107,7 @@ export const CREATE_TABLES = {
       color TEXT DEFAULT '#ffff00',
       note TEXT,
       page_number INTEGER,
+      rects TEXT,
       chapter_id TEXT,
       chapter_title TEXT,
       created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -255,6 +258,30 @@ export const CREATE_TABLES = {
     );
   `,
 
+  [TABLES.TRANSLATION_SETTINGS]: `
+    CREATE TABLE IF NOT EXISTS ${TABLES.TRANSLATION_SETTINGS} (
+      id TEXT PRIMARY KEY,
+      key TEXT NOT NULL UNIQUE,
+      value TEXT NOT NULL,
+      category TEXT,
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+    );
+  `,
+
+  [TABLES.TRANSLATION_HISTORY]: `
+    CREATE TABLE IF NOT EXISTS ${TABLES.TRANSLATION_HISTORY} (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      source_text TEXT NOT NULL,
+      translated_text TEXT NOT NULL,
+      source_lang TEXT NOT NULL,
+      target_lang TEXT NOT NULL,
+      location TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+      FOREIGN KEY (book_id) REFERENCES ${TABLES.BOOKS}(id) ON DELETE CASCADE
+    );
+  `,
+
   [TABLES.SYNC_STATUS]: `
     CREATE TABLE IF NOT EXISTS ${TABLES.SYNC_STATUS} (
       id TEXT PRIMARY KEY,
@@ -319,6 +346,13 @@ export const CREATE_INDEXES = [
 
   `CREATE INDEX IF NOT EXISTS idx_dictionary_word ON ${TABLES.DICTIONARY_LOOKUPS}(word COLLATE NOCASE);`,
   `CREATE INDEX IF NOT EXISTS idx_dictionary_lookup_count ON ${TABLES.DICTIONARY_LOOKUPS}(lookup_count DESC);`,
+
+  `CREATE INDEX IF NOT EXISTS idx_translation_settings_key ON ${TABLES.TRANSLATION_SETTINGS}(key);`,
+  `CREATE INDEX IF NOT EXISTS idx_translation_settings_category ON ${TABLES.TRANSLATION_SETTINGS}(category);`,
+
+  `CREATE INDEX IF NOT EXISTS idx_translation_history_book_id ON ${TABLES.TRANSLATION_HISTORY}(book_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_translation_history_created_at ON ${TABLES.TRANSLATION_HISTORY}(created_at DESC);`,
+  `CREATE INDEX IF NOT EXISTS idx_translation_history_langs ON ${TABLES.TRANSLATION_HISTORY}(source_lang, target_lang);`,
 ];
 
 // Default data seeding
@@ -414,6 +448,24 @@ export const SEED_DATA = {
       value: '"auto"',
       category: 'reader',
     },
+    {
+      id: 'setting-translation-target-lang',
+      key: 'translation.targetLanguage',
+      value: '"en"',
+      category: 'translation',
+    },
+    {
+      id: 'setting-translation-auto-detect',
+      key: 'translation.autoDetect',
+      value: 'true',
+      category: 'translation',
+    },
+    {
+      id: 'setting-translation-save-history',
+      key: 'translation.saveHistory',
+      value: 'true',
+      category: 'translation',
+    },
   ],
   collections: [
     {
@@ -458,6 +510,13 @@ export const SEED_SQL = {
     ('setting-keep-screen-on', 'reader.keepScreenOn', 'true', 'reader'),
     ('setting-orientation', 'reader.orientation', '"auto"', 'reader');
   `,
+  translationSettings: `
+    INSERT OR IGNORE INTO ${TABLES.TRANSLATION_SETTINGS} (id, key, value, category)
+    VALUES
+    ('setting-translation-target-lang', 'translation.targetLanguage', '"en"', 'translation'),
+    ('setting-translation-auto-detect', 'translation.autoDetect', 'true', 'translation'),
+    ('setting-translation-save-history', 'translation.saveHistory', 'true', 'translation');
+  `,
   collections: `
     INSERT OR IGNORE INTO ${TABLES.COLLECTIONS} (id, name, description, sort_order)
     VALUES
@@ -470,6 +529,14 @@ export const SEED_SQL = {
 // Migration files
 export const MIGRATIONS: Record<number, string> = {
   1: 'Initial database schema',
+  2: 'Add rects column to highlights table for PDF bounding rectangles',
+};
+
+// SQL statements for migrations
+export const MIGRATION_SQL = {
+  2: `
+    ALTER TABLE ${TABLES.HIGHLIGHTS} ADD COLUMN rects TEXT;
+  `,
 };
 
 // Helper function to get all table creation statements

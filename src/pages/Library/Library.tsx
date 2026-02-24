@@ -55,6 +55,8 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
 import { webFileStorage } from '../../services/webFileStorage';
+import { fb2Service } from '../../services/fb2Service';
+import { chmService } from '../../services/chmService';
 import type { Book, Collection } from '../../types/index';
 import './Library.css';
 
@@ -396,6 +398,32 @@ const Library: React.FC = () => {
     }
   };
 
+  const extractFb2Metadata = async (
+    arrayBuffer: ArrayBuffer
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
+    try {
+      const decoder = new TextDecoder();
+      const xmlContent = decoder.decode(arrayBuffer);
+
+      // Validate that it's FB2
+      if (!fb2Service.isValidFb2(xmlContent)) {
+        return null;
+      }
+
+      const metadata = fb2Service.extractFb2Metadata(xmlContent);
+      const coverBase64 = fb2Service.extractCover(xmlContent);
+
+      return {
+        title: metadata.title || '',
+        author: metadata.author || 'Unknown',
+        coverDataUrl: coverBase64,
+      };
+    } catch (err) {
+      console.error('FB2 metadata extraction failed:', err);
+      return null;
+    }
+  };
+
   const importBook = async (file: File): Promise<void> => {
     // Validate File object to prevent crashes
     if (!file || !file.name) {
@@ -413,6 +441,12 @@ const Library: React.FC = () => {
       format = 'mobi';
     } else if (fileName.endsWith('.fb2')) {
       format = 'fb2';
+    } else if (fileName.endsWith('.chm')) {
+      throw new Error(chmService.getUnsupportedReason());
+    } else if (fileName.endsWith('.html') || fileName.endsWith('.htm')) {
+      format = 'html';
+    } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown')) {
+      format = 'md';
     }
 
     const bookId = `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -442,6 +476,13 @@ const Library: React.FC = () => {
         if (meta) {
           title = meta.title || title;
           author = meta.author || author;
+        }
+      } else if (format === 'fb2') {
+        const meta = await extractFb2Metadata(arrayBuffer);
+        if (meta) {
+          title = meta.title || title;
+          author = meta.author || author;
+          coverPath = meta.coverDataUrl;
         }
       }
     } catch (err) {
@@ -964,7 +1005,7 @@ const Library: React.FC = () => {
         id="file-input"
         type="file"
         key={fileInputKey}
-        accept=".epub,.pdf,.mobi,.fb2,.txt"
+        accept=".epub,.pdf,.mobi,.fb2,.cbz,.txt,.html,.htm,.md"
         style={{ display: 'none' }}
         onChange={handleFileImport}
         multiple

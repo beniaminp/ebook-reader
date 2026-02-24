@@ -3,12 +3,14 @@
  * Applies theme settings to reader content and provides reading tools
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useThemeStore } from '../../stores/useThemeStore';
-import { themeService } from '../../services/themeService';
 import { useTapZones } from '../../hooks/useTapZones';
+import { useBionicReading } from '../../hooks/useBionicReading';
 import type { TapZoneConfig } from '../../hooks/useTapZones';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
+import { ReadingRuler } from './ReadingRuler';
+import { FocusMode } from './FocusMode';
 import './ReaderContainer.css';
 
 export interface ReaderContainerProps {
@@ -27,39 +29,14 @@ export interface ReaderContainerProps {
   tapZonesEnabled?: boolean;
   /** Disable swipe gestures entirely */
   swipeEnabled?: boolean;
+  /** IonContent ref for scroll tracking */
+  ionContentRef?: React.RefObject<HTMLIonContentElement>;
 }
 
 /**
  * Reading Ruler Component
  * Shows a highlighted line following reading position
  */
-const ReadingRuler: React.FC<{ visible: boolean }> = ({ visible }) => {
-  const [position, setPosition] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!visible || !containerRef.current) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      setPosition(y);
-    };
-
-    const container = containerRef.current;
-    container.addEventListener('mousemove', handleMouseMove);
-    return () => container.removeEventListener('mousemove', handleMouseMove);
-  }, [visible]);
-
-  if (!visible) return null;
-
-  return (
-    <div ref={containerRef} className="reading-ruler-container">
-      <div className="reading-ruler-line" style={{ top: `${position}px` }} />
-    </div>
-  );
-};
 
 /**
  * Blue Light Filter Component
@@ -90,6 +67,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
   tapZoneConfig,
   tapZonesEnabled = true,
   swipeEnabled = true,
+  ionContentRef,
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const {
@@ -102,8 +80,20 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     blueLightFilter,
     blueLightIntensity,
     readingRuler,
+    readingRulerSettings,
     bionicReading,
+    focusMode,
+    focusModeSettings,
   } = useThemeStore();
+
+  // Bionic reading hook
+  const bionicHook = useBionicReading({
+    enabled: bionicReading,
+    boldFraction: 0.5,
+    boldClassName: 'word-bold',
+    regularClassName: 'word-regular',
+    wordClassName: 'word',
+  });
 
   // Swipe gesture handlers
   const swipeHandlers = useSwipeGesture({
@@ -159,78 +149,6 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
   }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize]);
 
   // Apply bionic reading to text content
-  useEffect(() => {
-    if (!contentRef.current || !bionicReading) return;
-
-    const applyBionicReading = () => {
-      const container = contentRef.current;
-      if (!container) return;
-
-      // Find all text nodes and wrap them
-      const walker = document.createTreeWalker(
-        container,
-        NodeFilter.SHOW_TEXT,
-        {
-          acceptNode: (node) => {
-            // Skip empty nodes and nodes inside script/style
-            if (!node.textContent?.trim()) return NodeFilter.FILTER_REJECT;
-            const parent = node.parentElement;
-            if (!parent) return NodeFilter.FILTER_REJECT;
-            const tagName = parent.tagName.toLowerCase();
-            if (['script', 'style', 'code', 'pre'].includes(tagName)) {
-              return NodeFilter.FILTER_REJECT;
-            }
-            return NodeFilter.FILTER_ACCEPT;
-          },
-        }
-      );
-
-      const textNodes: Text[] = [];
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        textNodes.push(node as Text);
-      }
-
-      // Process each text node
-      textNodes.forEach((textNode) => {
-        const text = textNode.textContent || '';
-        const words = text.split(/(\s+)/);
-
-        if (words.length > 1) {
-          const fragment = document.createDocumentFragment();
-
-          words.forEach((word) => {
-            if (word.trim().length === 0) {
-              fragment.appendChild(document.createTextNode(word));
-              return;
-            }
-
-            const boldLength = Math.ceil(word.length / 2);
-            const span = document.createElement('span');
-            span.className = 'word';
-
-            const boldPart = document.createElement('span');
-            boldPart.className = 'word-bold';
-            boldPart.textContent = word.substring(0, boldLength);
-
-            const regularPart = document.createElement('span');
-            regularPart.className = 'word-regular';
-            regularPart.textContent = word.substring(boldLength);
-
-            span.appendChild(boldPart);
-            span.appendChild(regularPart);
-            fragment.appendChild(span);
-          });
-
-          textNode.parentNode?.replaceChild(fragment, textNode);
-        }
-      });
-    };
-
-    // Small delay to ensure content is rendered
-    const timeoutId = setTimeout(applyBionicReading, 100);
-    return () => clearTimeout(timeoutId);
-  }, [bionicReading, children]);
 
   // Notify parent of content ref
   useEffect(() => {
@@ -251,6 +169,16 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     .filter(Boolean)
     .join(' ');
 
+  // Check if any reading features are enabled
+  const hasReadingFeatures = readingRuler || readingRulerSettings.enabled || focusMode || focusModeSettings.enabled;
+
+  // Sync content ref with bionic reading hook
+  useEffect(() => {
+    if (contentRef.current && bionicHook.containerRef) {
+      (bionicHook.containerRef as React.MutableRefObject<HTMLDivElement | null>).current = contentRef.current;
+    }
+  }, [bionicHook.containerRef]);
+
   return (
     <div
       className="reader-wrapper"
@@ -259,7 +187,18 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       <BlueLightFilter visible={blueLightFilter} intensity={blueLightIntensity} />
-      <ReadingRuler visible={readingRuler} />
+      {hasReadingFeatures && (
+        <>
+          <ReadingRuler
+            containerRef={contentRef}
+            ionContentRef={ionContentRef}
+          />
+          <FocusMode
+            containerRef={contentRef}
+            ionContentRef={ionContentRef}
+          />
+        </>
+      )}
       <div
         ref={contentRef}
         className={containerClasses}

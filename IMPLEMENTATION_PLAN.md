@@ -308,12 +308,16 @@ After installing, import and use. Vite handles bundling automatically. For heavy
 - [x] Custom catalog URLs
 - [x] Download from OPDS
 
-### 2.5 Calibre-Web Integration
+### 2.5 Dictionary & Translation — COMPLETE
+- [x] Dictionary lookup (Free Dictionary API + offline cache + vocabulary list)
+- [x] Translation integration (LibreTranslate + 26 languages)
 
-#### 2.5.1 Already Complete
+### 2.6 Calibre-Web Integration
+
+#### 2.6.1 Already Complete
 - [x] Authentication, metadata fetch, sync, lazy download, cover caching, multi-server
 
-#### 2.5.2 Sync Reading Progress Back to Calibre-Web
+#### 2.6.2 Sync Reading Progress Back to Calibre-Web
 - [ ] **Add** to `src/services/calibreWebService.ts`:
   - Method `syncProgressToServer(calibreBookId: number, progress: number, currentPage?: number): Promise<boolean>`
   - Calibre-Web API: `PUT /api/book/{id}` or `POST /api/book/{id}/read` (check Calibre-Web API docs for exact endpoint — may need to use `kobo_reading_state` endpoint or custom bookmark sync)
@@ -335,12 +339,17 @@ After installing, import and use. Vite handles bundling automatically. For heavy
   - Download button: calls `calibreWebService.downloadBook()` → adds to local library via `useAppStore.addBook()`
   - Navigation from `CalibreWebSettings.tsx`: add "Browse Library" button
 
-### 2.6 Enhanced Theming
+### 2.7 Reading Tools — COMPLETE
+- [x] Reading ruler (horizontal highlight line, adjustable height/opacity/color)
+- [x] Focus mode (dims text outside current paragraph)
+- [x] Bionic reading (bolds first half of each word)
 
-#### 2.6.1 Already Complete
+### 2.8 Enhanced Theming
+
+#### 2.8.1 Already Complete
 - [x] 11 built-in themes
 
-#### 2.6.2 Custom Font Loading
+#### 2.8.2 Custom Font Loading
 - [ ] **Create** `src/services/fontService.ts`:
   - Export `loadCustomFont(fontName: string, fontFileUri: string): Promise<void>`:
     1. Read font file: `Filesystem.readFile({ path: fontFileUri })` → get base64 data
@@ -360,7 +369,7 @@ After installing, import and use. Vite handles bundling automatically. For heavy
   - Add delete (swipe-to-delete) for custom fonts
 - [ ] **Load** custom fonts on app startup: in `src/App.tsx` `useEffect`, call `fontService.getCustomFonts()` → `fontService.loadCustomFont()` for each
 
-#### 2.6.3 Custom Background Colors/Images
+#### 2.8.3 Custom Background Colors/Images
 - [ ] **Update** `src/stores/useThemeStore.ts`:
   - Add to state: `customBackgroundColor?: string`, `customBackgroundImage?: string` (base64 data URI or file URI)
   - Add actions: `setCustomBackgroundColor(color)`, `setCustomBackgroundImage(imageUri)`, `clearCustomBackground()`
@@ -374,9 +383,15 @@ After installing, import and use. Vite handles bundling automatically. For heavy
   - Apply custom background: if `customBackgroundImage` set, use `backgroundImage: url(${image}); background-size: cover;` — else if `customBackgroundColor` set, use it — else use theme default
   - Ensure text remains readable: if custom background is dark and text color is dark, add semi-transparent overlay
 
-### 2.7 Security
+### 2.9 Cloud Sync — COMPLETE
+- [x] Dropbox integration (OAuth, upload/download books, sync progress/bookmarks/highlights)
+- [x] WebDAV integration (Nextcloud, ownCloud, generic WebDAV)
+- [x] Conflict resolution (last-write-wins, server wins, client wins, manual)
+- [x] Cloud sync settings page with authentication and sync controls
 
-#### 2.7.1 Biometric Lock
+### 2.10 Security
+
+#### 2.10.1 Biometric Lock
 - [ ] **Install:** `npm install capacitor-native-biometric`
 - [ ] **Create** `src/services/authService.ts`:
   - Export `isBiometricAvailable(): Promise<boolean>` — `NativeBiometric.isAvailable()`, return `result.isAvailable`
@@ -394,7 +409,7 @@ After installing, import and use. Vite handles bundling automatically. For heavy
   - On mount: check `authService.isLockEnabled()` → if enabled, show `<LockScreen>`
   - Listen for `App.addListener('appStateChange', ({ isActive }) => { if (isActive && lockEnabled) setIsLocked(true) })` — re-lock when app returns from background
 
-#### 2.7.2 PIN/Password Lock
+#### 2.10.2 PIN/Password Lock
 - [ ] **Extend** `src/services/authService.ts`:
   - Export `setPIN(pin: string): Promise<void>` — hash with `crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin + salt))` → store hash in `@capacitor/preferences` under `pin_hash`, store random salt under `pin_salt`
   - Export `verifyPIN(pin: string): Promise<boolean>` — hash input with stored salt → compare to stored hash
@@ -407,7 +422,7 @@ After installing, import and use. Vite handles bundling automatically. For heavy
   - If selecting Biometric: check availability first, show error if not supported
   - If selecting PIN: prompt to set new PIN via modal dialog
 
-### 2.8 Library Management — COMPLETE
+### 2.11 Library Management — COMPLETE
 - [x] Categories/collections (CRUD, default collections seeded)
 - [x] Tags (junction table, CRUD, color support)
 - [x] Advanced filters (multi-tag, collection, read status, combined with search + sort)
@@ -416,24 +431,21 @@ After installing, import and use. Vite handles bundling automatically. For heavy
 
 ## Phase 3: Polish & Power User Features
 
-### 3.1 Advanced PDF Features
+### 3.1 Advanced PDF Features — PARTIAL
 
-#### 3.1.1 PDF Text Highlighting
-- [ ] **Install:** `npm install react-pdf-highlighter` (or implement manually if the library doesn't fit)
-- [ ] **Manual approach** (preferred — more control):
-  - In `PdfReader.tsx`, add a text layer overlay on each canvas using `pdfPage.getTextContent()` → render `<span>` elements absolutely positioned to match text coordinates
-  - On text selection in the overlay layer: capture `window.getSelection()` range → compute bounding rects → store highlight as `{ bookId, pageNumber, rects: Array<{x,y,w,h}>, text, color, note?, createdAt }`
-  - Render highlights as colored `<div>`s with `position: absolute; background: rgba(color, 0.3); pointer-events: none` overlaid on the text layer
-  - Store highlights via `databaseService.addHighlight()` (existing function — add `pageNumber` and `rects` fields to highlight type)
-- [ ] **Update** `src/types/index.ts`: extend `Highlight` type with optional `pageNumber?: number` and `rects?: Array<{ x: number; y: number; width: number; height: number }>`
-- [ ] **Add** highlight panel to PdfReader: reuse `<HighlightsPanel>` component, filter by current book
+#### 3.1.1 PDF Text Highlighting — COMPLETE
+- [x] Text layer overlay with text selection support
+- [x] Highlight creation from text selection with color picker
+- [x] Highlight rendering as colored overlays
+- [x] Storage via database service with pageNumber and rects
+- [x] Highlight panel for viewing/managing PDF highlights
 
-#### 3.1.2 PDF Annotation Saving
-- [ ] **Install:** `npm install pdf-lib`
-- [ ] **Add** to `src/services/pdfService.ts`:
-  - Export `saveAnnotationsToPdf(pdfArrayBuffer: ArrayBuffer, highlights: PdfHighlight[]): Promise<ArrayBuffer>` — use `PDFDocument.load(arrayBuffer)` → for each highlight, add `page.drawRectangle({ ...rect, color: rgb(), opacity: 0.3, borderColor: rgb() })` → `pdfDoc.save()` returns modified ArrayBuffer
-  - Export `exportAnnotatedPdf(bookId: string): Promise<void>` — load original PDF + highlights → `saveAnnotationsToPdf()` → write to filesystem with `_annotated` suffix via `Filesystem.writeFile()`
-- [ ] **Add** "Export Annotated PDF" button in PdfReader toolbar menu
+#### 3.1.2 PDF Annotation Saving — COMPLETE
+- [x] pdf-lib integration for embedding highlights
+- [x] Export annotated PDF with highlights burned in
+- [x] Export button in PDF reader toolbar
+
+#### 3.1.3 PDF Form Filling
 
 #### 3.1.3 PDF Form Filling
 - [ ] **Add** basic form support to `PdfReader.tsx` using `pdf-lib`:
@@ -525,28 +537,19 @@ After installing, import and use. Vite handles bundling automatically. For heavy
 - [ ] **Update** `useThemeStore`: extend `PageTransitionType` to include `'flip' | 'zoom' | 'cover' | 'curl'`
 - [ ] **Update** `ReadingSettingsPanel.tsx`: show all animation options in a selector
 
-### 3.4 Niche Formats
+### 3.4 Niche Formats — PARTIAL
 
-#### 3.4.1 FB2 Support
-- [ ] **Create** `src/services/fb2Service.ts`:
-  - Export `convertFb2ToHtml(xmlContent: string): string` — parse FB2 XML with `fast-xml-parser` (already installed)
-  - FB2 structure: `<FictionBook><body><section><p>...</p></section></body></FictionBook>`
-  - Map: `<section>` → `<div class="chapter">`, `<p>` → `<p>`, `<emphasis>` → `<em>`, `<strong>` → `<strong>`, `<image>` → `<img>` with base64 from `<binary>` elements
-  - Extract metadata from `<description><title-info>`: `<book-title>`, `<author><first-name> <last-name>`, `<genre>`, `<lang>`, `<coverpage><image>`
-  - Export `extractFb2Metadata(xmlContent: string): { title, author, genre, language, coverBase64 }`
-  - Singleton: `export const fb2Service = { convertFb2ToHtml, extractFb2Metadata }`
-- [ ] **Update** `Reader.tsx`: add `'fb2'` case → `fb2Service.convertFb2ToHtml(textContent)` → `<HtmlReader>`
-- [ ] **Update** Library import: add `.fb2` to accept, extract FB2 metadata
-- [ ] **Update** types + schema CHECK constraint if needed
+#### 3.4.1 FB2 Support — COMPLETE
+- [x] Created `src/services/fb2Service.ts` with metadata extraction and HTML conversion
+- [x] Added FB2 format to Reader.tsx (uses foliate-js for rendering)
+- [x] Updated Library import to accept .fb2 files and extract metadata
+- [x] Added fb2, chm, html, htm, md to Book format type
+- [x] Updated database schema CHECK constraint
 
-#### 3.4.2 CHM Support
-- [ ] **Install:** `npm install chm-lib` (or `chmlib-wasm` if available)
-- [ ] **Create** `src/services/chmService.ts`:
-  - Export `extractChmContent(arrayBuffer: ArrayBuffer): Promise<{ html: string; toc: ChapterInfo[] }>` — decompress CHM archive → extract HTML files → concatenate in TOC order → resolve internal links
-  - CHM files contain compiled HTML — extract and stitch together
-  - Singleton: `export const chmService = { extractChmContent }`
-- [ ] **Update** `Reader.tsx`: add `'chm'` case → `<HtmlReader>` with extracted content
-- [ ] **Note:** CHM library availability in npm is limited — may need to use a WASM-compiled `chmlib` or skip if no reliable package exists
+#### 3.4.2 CHM Support — DOCUMENTED LIMITATION
+- [x] Created `src/services/chmService.ts` with placeholder (no reliable JS library exists)
+- [x] Documented limitation - requires native C libraries (CHMLib)
+- [x] Added helpful error messages directing users to conversion tools
 
 #### 3.4.3 DJVU Support
 - [ ] **Install:** `npm install djvu.js` (~2MB — use dynamic import)
@@ -643,26 +646,22 @@ After installing, import and use. Vite handles bundling automatically. For heavy
 
 ### Current Status Summary
 - **Phase 1 (MVP):** 26/26 tasks complete (100%)
-- **Phase 2 (Feature Rich):** 21/37 tasks complete (57%)
-- **Phase 3 (Polish):** 0/17 tasks (0%)
+- **Phase 2 (Feature Rich):** 28/37 tasks complete (76%)
+- **Phase 3 (Polish):** 3/17 tasks (18%)
 
-**Overall Progress:** 47/80 tasks (59%)
+**Overall Progress:** 57/80 tasks (71%)
 
 ### Phase 1 — COMPLETE
 All MVP features are implemented: EPUB + PDF + TXT/HTML/MD reading, library with grid/list views and filters, bookmarks/highlights, tap zones, swipe gestures, page animations, search, theming, and progress tracking.
 
 ### Remaining Phase 2 items (next sprint):
-1. Dictionary lookup (API + offline cache)
-2. Translation integration (LibreTranslate)
-3. Reading ruler / focus tools + bionic reading
-4. Brightness gesture (left-edge vertical swipe)
-5. Cloud sync (Dropbox + WebDAV)
-6. Backup/restore (JSZip export)
-7. Custom font loading (@font-face injection)
-8. Custom background colors/images
-9. Biometric + PIN lock
-10. Calibre-Web: sync progress back, "Get Books" browse page
-11. MOBI/AZW3, CBZ/CBR, DOCX, ODT format support
+1. Backup/restore (JSZip export)
+2. Custom font loading (@font-face injection)
+3. Custom background colors/images
+4. Biometric + PIN lock
+5. Calibre-Web: sync progress back, "Get Books" browse page
+6. Brightness gesture (left-edge vertical swipe)
+7. MOBI/AZW3, CBZ/CBR, DOCX, ODT format support
 
 ---
 

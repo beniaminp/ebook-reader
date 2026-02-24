@@ -117,54 +117,7 @@
   max-width: 700px;
 }
 
-/* Reading ruler */
-.reading-ruler-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.reading-ruler-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: var(--reader-accent);
-  box-shadow: 0 0 8px var(--reader-accent), 0 0 16px var(--reader-accent);
-  transition: top 0.05s ease-out;
-}
-
-.reading-ruler-line::before,
-.reading-ruler-line::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(0, 0, 0, 0.05)
-  );
-  pointer-events: none;
-}
-
-.reading-ruler-line::before {
-  bottom: 100%;
-}
-
-.reading-ruler-line::after {
-  top: 100%;
-  background: linear-gradient(
-    to top,
-    transparent,
-    rgba(0, 0, 0, 0.05)
-  );
-}
+/* Reading ruler styles moved to ReadingRuler.css */
 
 /* Blue light filter */
 .blue-light-filter-overlay {
@@ -181,6 +134,7 @@
 /* Bionic reading */
 .bionic-reading .word {
   display: inline-block;
+  white-space: nowrap;
 }
 
 .bionic-reading .word-bold {
@@ -190,6 +144,14 @@
 .bionic-reading .word-regular {
   font-weight: 400;
   opacity: 0.7;
+}
+
+/* Improve bionic reading readability */
+.bionic-reading p,
+.bionic-reading li {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Content styling */
@@ -291,12 +253,20 @@
 /* Print styles */
 @media print {
   .reading-ruler-container,
-  .blue-light-filter-overlay {
+  .reading-ruler-line,
+  .blue-light-filter-overlay,
+  .focus-mode-overlay {
     display: none !important;
   }
 
   .reader-container {
     background: white !important;
     color: black !important;
+  }
+
+  .focus-dimmed,
+  .focus-active {
+    opacity: 1 !important;
+    filter: none !important;
   }
 }

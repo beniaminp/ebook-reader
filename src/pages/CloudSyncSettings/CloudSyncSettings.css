@@ -1,0 +1,233 @@
+/**
+ * Cloud Sync Settings Page Styles
+ */
+
+.cloud-sync-settings {
+  --padding-top: var(--ion-spacing-md);
+  --padding-bottom: var(--ion-spacing-xl);
+  --padding-start: var(--ion-spacing-md);
+  --padding-end: var(--ion-spacing-md);
+}
+
+/* Connection Card */
+.connect-card {
+  margin: var(--ion-spacing-md);
+}
+
+.connect-card ion-card-header {
+  text-align: center;
+}
+
+.provider-description {
+  margin: var(--ion-spacing-md) 0;
+  text-align: center;
+}
+
+.auth-help-text {
+  display: block;
+  margin-top: var(--ion-spacing-md);
+  font-size: 0.9em;
+  line-height: 1.4;
+  color: var(--ion-color-medium);
+}
+
+/* Status Card */
+.status-card {
+  margin: var(--ion-spacing-md);
+}
+
+.status-card.connected {
+  --background: var(--ion-color-success-tint);
+}
+
+.status-card ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ion-spacing-sm);
+}
+
+.sync-info {
+  margin: var(--ion-spacing-md) 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--ion-spacing-sm) 0;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: var(--ion-color-medium);
+}
+
+.info-row .value {
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ion-spacing-sm);
+  margin-top: var(--ion-spacing-md);
+}
+
+/* Progress Card */
+.progress-card {
+  margin: var(--ion-spacing-md);
+  --background: var(--ion-color-light-tint);
+}
+
+.progress-card ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ion-spacing-sm);
+}
+
+.progress-details {
+  margin-top: var(--ion-spacing-md);
+}
+
+.progress-details p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.progress-details .file-name {
+  display: block;
+  margin-top: var(--ion-spacing-xs);
+  font-size: 0.85em;
+  word-break: break-all;
+}
+
+/* Cloud Book Items */
+.cloud-book-item {
+  --padding-start: var(--ion-spacing-md);
+  --padding-end: var(--ion-spacing-md);
+}
+
+.cloud-book-item ion-label h3 {
+  font-weight: 600;
+  margin-bottom: var(--ion-spacing-xs);
+}
+
+/* Info Card */
+.info-card {
+  margin: var(--ion-spacing-md);
+}
+
+.info-card ul {
+  margin: var(--ion-spacing-md) 0;
+  padding-left: var(--ion-spacing-lg);
+}
+
+.info-card li {
+  margin-bottom: var(--ion-spacing-xs);
+}
+
+/* Modal Actions */
+.modal-actions {
+  padding: var(--ion-spacing-md);
+}
+
+.modal-actions ion-button {
+  margin-bottom: var(--ion-spacing-sm);
+}
+
+/* Segmented Control Styling */
+ion-segment {
+  --background: var(--ion-color-light);
+  margin-bottom: var(--ion-spacing-md);
+  border-radius: var(--ion-border-radius);
+}
+
+ion-segment-button {
+  --background: transparent;
+  --background-checked: var(--ion-color-primary);
+  --color-checked: var(--ion-color-primary-contrast);
+  --border-radius: var(--ion-border-radius);
+  min-height: 48px;
+}
+
+ion-segment-button ion-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+/* Chip Styling */
+ion-chip {
+  margin: 2px;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+  .action-buttons {
+    flex-direction: row;
+  }
+
+  .action-buttons ion-button {
+    flex: 1;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .progress-card {
+    --background: var(--ion-color-dark-shade);
+  }
+
+  .status-card.connected {
+    --background: rgba(16, 185, 129, 0.15);
+  }
+}
+
+/* Loading state */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ion-spacing-xl);
+  gap: var(--ion-spacing-md);
+}
+
+.loading-container ion-spinner {
+  width: 48px;
+  height: 48px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--ion-spacing-xl);
+  color: var(--ion-color-medium);
+}
+
+.empty-state ion-icon {
+  font-size: 64px;
+  margin-bottom: var(--ion-spacing-md);
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  margin-bottom: var(--ion-spacing-sm);
+}
+
+.empty-state p {
+  font-size: 0.9em;
+}
+
+/* Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.syncing .progress-bar {
+  animation: pulse 1.5s ease-in-out infinite;
+}

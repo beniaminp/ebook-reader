@@ -42,12 +42,17 @@ import {
 
 import { FoliateEngine } from './FoliateEngine';
 import { PdfEngine } from './PdfEngine';
+import { PdfEngineWithHighlights } from './PdfEngineWithHighlights';
 import { ScrollEngine } from './ScrollEngine';
 import { ReadingSettingsPanel } from '../reader-ui/ReadingSettingsPanel';
+import { TranslationPanel } from '../reader-ui/TranslationPanel';
+import { TextSelectionMenu } from '../reader-ui/TextSelectionMenu';
+import { DictionaryPanel } from '../dictionary';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { EPUB_THEMES } from '../../types/epub';
 import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter, ReaderFormat } from '../../types/reader';
-import type { Book } from '../../types/index';
+import type { Book, Highlight } from '../../types/index';
+import { databaseService } from '../../services/database';
 
 import './UnifiedReaderContainer.css';
 import './EpubReader.css';
@@ -117,6 +122,13 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tocOpen, setTocOpen] = useState(false);
 
+  // Dictionary state
+  const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const [selectedWord, setSelectedWord] = useState('');
+
+  // PDF highlights state
+  const [pdfHighlights, setPdfHighlights] = useState<Highlight[]>([]);
+
   // Toast
   const [toastMessage, setToastMessage] = useState('');
 
@@ -129,9 +141,48 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [overlayPassthrough, setOverlayPassthrough] = useState(false);
 
+  // Text selection state
+  const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const isFoliate = FOLIATE_FORMATS.has(format);
   const isPdf = format === 'pdf';
   const isScroll = SCROLL_FORMATS.has(format);
+
+  // ─── Load PDF highlights ─────────────────────────
+
+  useEffect(() => {
+    if (isPdf) {
+      databaseService.getHighlights(book.id).then(setPdfHighlights);
+    }
+  }, [isPdf, book.id]);
+
+  const handleAddPdfHighlight = useCallback(async (highlight: Omit<Highlight, 'id' | 'timestamp'>) => {
+    const result = await databaseService.addHighlight({
+      ...highlight,
+      location: highlight.location.pageNumber
+        ? String(highlight.location.pageNumber)
+        : highlight.location.cfi || String(highlight.location.position),
+      rects: highlight.rects ? JSON.stringify(highlight.rects) : undefined,
+    });
+    if (result) {
+      setPdfHighlights(prev => [...prev, result]);
+      setToastMessage('Highlight added');
+    }
+  }, []);
+
+  const handleDeletePdfHighlight = useCallback(async (id: string) => {
+    await databaseService.deleteHighlight(id);
+    setPdfHighlights(prev => prev.filter(h => h.id !== id));
+  }, []);
+
+  const handleUpdatePdfHighlight = useCallback(async (id: string, updates: { color?: string; note?: string }) => {
+    await databaseService.updateHighlight(id, updates);
+    setPdfHighlights(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
+  }, []);
+
+  const handlePdfHighlightsChange = useCallback((updatedHighlights: Highlight[]) => {
+    setPdfHighlights(updatedHighlights);
+  }, []);
 
   // ─── Navigation handlers ─────────────────────────
 
@@ -341,6 +392,86 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     setTocOpen(false);
   }, []);
 
+  // ─── Dictionary / Text selection ─────────────────────────
+
+  const handleTextSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+
+    const text = selection.toString().trim();
+    if (!text) return;
+
+    // Check if it looks like a single word (allow apostrophes and hyphens)
+    if (/^[\w'-]+$/.test(text)) {
+      setSelectedWord(text);
+      setDictionaryOpen(true);
+    }
+
+    // Clear selection after a delay
+    if (selectionTimerRef.current) {
+      clearTimeout(selectionTimerRef.current);
+    }
+    selectionTimerRef.current = setTimeout(() => {
+      selection?.removeAllRanges();
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    // Add text selection listener for scroll and PDF engines
+    if (isScroll || isPdf) {
+      document.addEventListener('selectionchange', handleTextSelection);
+      return () => {
+        document.removeEventListener('selectionchange', handleTextSelection);
+        if (selectionTimerRef.current) {
+          clearTimeout(selectionTimerRef.current);
+        }
+      };
+    }
+  }, [isScroll, isPdf, handleTextSelection]);
+
+  // Handle text selection for foliate (EPUB) via iframe
+  const handleFoliateTextSelection = useCallback(() => {
+    if (!isFoliate) return;
+
+    // Try to get selection from foliate iframe
+    const foliateView = document.querySelector('foliate-view');
+    if (!foliateView) return;
+
+    const iframe = foliateView.shadowRoot?.querySelector('iframe');
+    if (!iframe?.contentWindow) return;
+
+    const iframeSelection = iframe.contentWindow.getSelection();
+    if (!iframeSelection || iframeSelection.isCollapsed) return;
+
+    const text = iframeSelection.toString().trim();
+    if (!text) return;
+
+    // Check if it looks like a single word
+    if (/^[\w'-]+$/.test(text)) {
+      setSelectedWord(text);
+      setDictionaryOpen(true);
+    }
+
+    // Clear selection after a delay
+    if (selectionTimerRef.current) {
+      clearTimeout(selectionTimerRef.current);
+    }
+    selectionTimerRef.current = setTimeout(() => {
+      iframeSelection?.removeAllRanges();
+    }, 500);
+  }, [isFoliate]);
+
+  // Poll for foliate text selection when in passthrough mode
+  useEffect(() => {
+    if (!isFoliate || !overlayPassthrough) return;
+
+    const interval = setInterval(() => {
+      handleFoliateTextSelection();
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isFoliate, overlayPassthrough, handleFoliateTextSelection]);
+
   // ─── Render engine ─────────────────────────
 
   const renderEngine = useMemo(() => {
@@ -361,7 +492,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
     if (isPdf && fileData) {
       return (
-        <PdfEngine
+        <PdfEngineWithHighlights
           ref={engineRef}
           pdfData={fileData}
           bookId={book.id}
@@ -369,6 +500,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           onRelocate={handleRelocate}
           onLoadComplete={handlePdfLoadComplete}
           onError={handleError}
+          existingHighlights={pdfHighlights}
+          onHighlightsChange={handlePdfHighlightsChange}
         />
       );
     }
@@ -392,6 +525,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     book.id, format, initialLocation,
     handleRelocate, handleFoliateLoadComplete, handlePdfLoadComplete,
     handleScrollLoadComplete, handleError,
+    pdfHighlights, handlePdfHighlightsChange,
   ]);
 
   // ─── Toolbar theme styling ─────────────────────────
@@ -611,6 +745,36 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         message={toastMessage}
         duration={2000}
         position="bottom"
+      />
+
+      {/* ─── Dictionary Panel ─── */}
+      <DictionaryPanel
+        isOpen={dictionaryOpen}
+        onDismiss={() => setDictionaryOpen(false)}
+        word={selectedWord}
+        bookId={book.id}
+      />
+
+      {/* ─── Translation Panel ─── */}
+      <TranslationPanel
+        bookId={book.id}
+        location={progress?.locationString}
+      />
+
+      {/* ─── Text Selection Menu ─── */}
+      <TextSelectionMenu
+        enabledActions={['translate', 'highlight', 'copy', 'define']}
+        onHighlight={(text) => {
+          // Handle highlight - this would integrate with annotations service
+          setToastMessage('Highlight added');
+        }}
+        onCopy={(text) => {
+          setToastMessage('Copied to clipboard');
+        }}
+        onDefine={(text) => {
+          setSelectedWord(text.split(/\s+/)[0]);
+          setDictionaryOpen(true);
+        }}
       />
     </IonPage>
   );

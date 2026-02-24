@@ -25,13 +25,13 @@ import {
   IonRow,
   IonCol,
 } from '@ionic/react';
-import { close, contrast, text, eye } from 'ionicons/icons';
+import { close, contrast, text, eye, ribbon } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
-import type { ThemeType, FontFamily, TextAlignment, MarginSize } from '../../services/themeService';
+import type { ThemeType, FontFamily, TextAlignment, MarginSize, RulerColor } from '../../services/themeService';
 import { PREDEFINED_THEMES, FONT_FAMILIES } from '../../services/themeService';
 import './ReadingSettingsPanel.css';
 
-type SettingsTab = 'appearance' | 'typography' | 'reading-tools';
+type SettingsTab = 'appearance' | 'typography' | 'reading-tools' | 'focus-ruler';
 
 export interface ReadingSettingsPanelProps {
   onDismiss: () => void;
@@ -48,7 +48,10 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     blueLightFilter,
     blueLightIntensity,
     readingRuler,
+    readingRulerSettings,
     bionicReading,
+    focusMode,
+    focusModeSettings,
     autoScroll,
     autoScrollSpeed,
     setTheme,
@@ -60,11 +63,15 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setBlueLightFilter,
     setBlueLightIntensity,
     setReadingRuler,
+    setReadingRulerHeight,
+    setReadingRulerOpacity,
+    setReadingRulerColor,
     setBionicReading,
+    setFocusMode,
+    setFocusModeOpacity,
     setAutoScroll,
     setAutoScrollSpeed,
     resetSettings,
-    applyPreset,
   } = useThemeStore();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
@@ -83,6 +90,30 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
 
   const handleAutoScrollSpeedChange = (e: any) => {
     setAutoScrollSpeed(e.detail.value as number);
+  };
+
+  const handleReadingRulerHeightChange = (e: any) => {
+    setReadingRulerHeight(e.detail.value as number);
+  };
+
+  const handleReadingRulerOpacityChange = (e: any) => {
+    setReadingRulerOpacity(e.detail.value as number);
+  };
+
+  const handleReadingRulerColorChange = (e: any) => {
+    setReadingRulerColor(e.detail.value as RulerColor);
+  };
+
+  const handleFocusModeOpacityChange = (e: any) => {
+    setFocusModeOpacity(e.detail.value as number);
+  };
+
+  const toggleReadingRuler = () => {
+    setReadingRuler(!readingRuler);
+  };
+
+  const toggleFocusMode = () => {
+    setFocusMode(!focusMode);
   };
 
   return (
@@ -112,6 +143,10 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
             <IonSegmentButton value="reading-tools">
               <IonIcon icon={eye} />
               <IonLabel>Tools</IonLabel>
+            </IonSegmentButton>
+            <IonSegmentButton value="focus-ruler">
+              <IonIcon icon={ribbon} />
+              <IonLabel>Focus</IonLabel>
             </IonSegmentButton>
           </IonSegment>
         </IonToolbar>
@@ -293,6 +328,101 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                 />
               </IonItem>
             )}
+
+            <IonItem button onClick={resetSettings}>
+              <IonLabel color="danger">Reset to Defaults</IonLabel>
+            </IonItem>
+          </IonList>
+        )}
+
+        {activeTab === 'focus-ruler' && (
+          <IonList>
+            <IonItem>
+              <IonLabel>Reading Ruler</IonLabel>
+              <IonToggle
+                checked={readingRuler || readingRulerSettings.enabled}
+                onIonChange={toggleReadingRuler}
+              />
+            </IonItem>
+
+            {(readingRuler || readingRulerSettings.enabled) && (
+              <>
+                <IonItem>
+                  <IonLabel position="stacked">
+                    Height: {readingRulerSettings.height} lines
+                  </IonLabel>
+                  <IonRange
+                    min={1}
+                    max={4}
+                    step={1}
+                    value={readingRulerSettings.height}
+                    onIonChange={handleReadingRulerHeightChange}
+                    snaps
+                  />
+                </IonItem>
+
+                <IonItem>
+                  <IonLabel position="stacked">
+                    Opacity: {readingRulerSettings.opacity}%
+                  </IonLabel>
+                  <IonRange
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={readingRulerSettings.opacity}
+                    onIonChange={handleReadingRulerOpacityChange}
+                    snaps
+                  />
+                </IonItem>
+
+                <IonItem>
+                  <IonLabel position="stacked">Color</IonLabel>
+                  <IonSelect
+                    value={readingRulerSettings.color}
+                    onIonChange={handleReadingRulerColorChange}
+                  >
+                    <IonSelectOption value="accent">Accent</IonSelectOption>
+                    <IonSelectOption value="yellow">Yellow</IonSelectOption>
+                    <IonSelectOption value="green">Green</IonSelectOption>
+                    <IonSelectOption value="blue">Blue</IonSelectOption>
+                    <IonSelectOption value="pink">Pink</IonSelectOption>
+                    <IonSelectOption value="red">Red</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+              </>
+            )}
+
+            <IonItem>
+              <IonLabel>Focus Mode</IonLabel>
+              <IonToggle
+                checked={focusMode || focusModeSettings.enabled}
+                onIonChange={toggleFocusMode}
+              />
+            </IonItem>
+
+            {(focusMode || focusModeSettings.enabled) && (
+              <IonItem>
+                <IonLabel position="stacked">
+                  Dim Opacity: {focusModeSettings.opacity}%
+                </IonLabel>
+                <IonRange
+                  min={10}
+                  max={80}
+                  step={5}
+                  value={focusModeSettings.opacity}
+                  onIonChange={handleFocusModeOpacityChange}
+                  snaps
+                />
+              </IonItem>
+            )}
+
+            <IonItem>
+              <IonLabel>Bionic Reading</IonLabel>
+              <IonToggle
+                checked={bionicReading}
+                onIonChange={(e) => setBionicReading(e.detail.checked)}
+              />
+            </IonItem>
 
             <IonItem button onClick={resetSettings}>
               <IonLabel color="danger">Reset to Defaults</IonLabel>

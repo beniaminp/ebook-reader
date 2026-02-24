@@ -1,0 +1,163 @@
+/**
+ * TranslationPanel Styles
+ */
+
+.translation-panel-content {
+  padding: 16px;
+}
+
+/* Language Selector Card */
+.language-selector-card {
+  margin: 0 0 16px 0;
+}
+
+.language-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.language-select {
+  flex: 1;
+}
+
+.language-label {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  margin-bottom: 4px;
+}
+
+.swap-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  margin-top: 20px;
+  flex-shrink: 0;
+}
+
+.detected-lang-chip {
+  margin-top: 8px;
+  height: 24px;
+  font-size: 12px;
+}
+
+/* Text Cards */
+.text-card,
+.translation-result-card {
+  margin: 0 0 16px 0;
+}
+
+.text-card-subtitle {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.original-text,
+.translated-text {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.original-text p,
+.translated-text p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.translated-text {
+  color: var(--ion-color-primary);
+}
+
+/* Loading State */
+.translation-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: var(--ion-color-medium);
+}
+
+.translation-loading p {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+/* Error Card */
+.error-card {
+  --background: var(--ion-color-danger-tint);
+  margin: 0 0 16px 0;
+}
+
+.error-card ion-text p {
+  margin: 0 0 16px 0;
+}
+
+.retry-button {
+  margin: 0;
+}
+
+/* Translation Actions */
+.translation-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.translation-actions ion-button {
+  --padding-start: 12px;
+  --padding-end: 12px;
+}
+
+/* Settings List */
+.translation-settings-list {
+  margin-top: 16px;
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  .text-card,
+  .translation-result-card {
+    --background: var(--ion-color-step-50);
+  }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .language-row {
+    flex-wrap: wrap;
+  }
+
+  .swap-button {
+    order: -1;
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  .translation-actions {
+    flex-direction: column;
+  }
+
+  .translation-actions ion-button {
+    width: 100%;
+  }
+}
+
+/* Animation for result card */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.translation-result-card {
+  animation: fadeIn 0.3s ease-out;
+}

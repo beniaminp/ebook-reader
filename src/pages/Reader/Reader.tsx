@@ -17,6 +17,7 @@ import { databaseService } from '../../services/database';
 import { calibreWebService } from '../../services/calibreWebService';
 import { useCalibreWebStore } from '../../stores/calibreWebStore';
 import { webFileStorage } from '../../services/webFileStorage';
+import { chmService } from '../../services/chmService';
 import { UnifiedReaderContainer } from '../../components/readers/UnifiedReaderContainer';
 import type { Book } from '../../types/index';
 import type { ReadingProgress } from '../../types/database';
@@ -37,11 +38,13 @@ function detectFormat(filePath: string, bookFormat?: string): string {
   if (ext === 'mobi') return 'mobi';
   if (ext === 'fb2') return 'fb2';
   if (ext === 'cbz') return 'cbz';
+  if (ext === 'chm') return 'chm';
   // Fallback to bookFormat, with a final fallback to 'txt'
   return bookFormat || 'txt';
 }
 
 const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown', 'mobi', 'fb2', 'cbz'];
+const UNSUPPORTED_FORMATS = ['chm'];
 
 /** Formats that should be loaded as text rather than ArrayBuffer. */
 const TEXT_FORMATS = new Set(['txt', 'html', 'htm', 'md', 'markdown']);
@@ -177,6 +180,17 @@ const Reader: React.FC = () => {
 
       const fmt = detectFormat(resolvedFilePath, foundBook.format);
       setEffectiveFormat(fmt);
+
+      // Check for unsupported formats (CHM)
+      if (UNSUPPORTED_FORMATS.includes(fmt)) {
+        if (fmt === 'chm') {
+          setErrorMessage(chmService.getUnsupportedReason());
+        } else {
+          setErrorMessage(`Format "${fmt}" is not currently supported.`);
+        }
+        setLoadState('format-unsupported');
+        return;
+      }
 
       if (!SUPPORTED_FORMATS.includes(fmt)) {
         setErrorMessage(`Format "${fmt}" is not currently supported.`);

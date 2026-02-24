@@ -1,0 +1,126 @@
+/**
+ * FB2 Reader Styles
+ *
+ * Styles for rendering converted FB2 (FictionBook) content
+ */
+
+.fb2-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.fb2-section {
+  margin-bottom: 2em;
+  page-break-after: always;
+}
+
+.fb2-title {
+  margin: 2em 0 1em;
+  text-align: center;
+}
+
+.fb2-title p {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  line-height: 1.3;
+}
+
+.fb2-epigraph {
+  margin: 2em 0;
+  padding: 1em 2em;
+  font-style: italic;
+  text-align: left;
+  border-left: 3px solid var(--ion-color-medium);
+}
+
+.fb2-text-author {
+  text-align: right;
+  margin-top: 0.5em;
+  font-size: 0.9em;
+}
+
+.fb2-poem {
+  margin: 2em 0;
+  padding: 1.5em;
+  background-color: var(--ion-color-light-tint);
+  border-radius: 4px;
+}
+
+.fb2-stanza {
+  margin-bottom: 1.5em;
+}
+
+.fb2-verse {
+  margin: 0.5em 0;
+  text-align: left;
+  white-space: pre-wrap;
+  font-family: 'Georgia', serif;
+}
+
+.fb2-cite {
+  margin: 2em 0;
+  padding: 1em 1.5em;
+  border-left: 4px solid var(--ion-color-primary);
+  background-color: var(--ion-color-light-tint);
+}
+
+.fb2-cite p {
+  margin: 0.5em 0;
+}
+
+.fb2-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .fb2-content {
+    padding: 15px;
+  }
+
+  .fb2-title p {
+    font-size: 1.2em;
+  }
+
+  .fb2-epigraph,
+  .fb2-cite {
+    padding: 0.75em 1em;
+  }
+
+  .fb2-poem {
+    padding: 1em;
+  }
+}
+
+/* Dark theme support via CSS custom properties */
+@media (prefers-color-scheme: dark) {
+  .fb2-poem {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .fb2-cite {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Print styles for FB2 content */
+@media print {
+  .fb2-section {
+    page-break-after: always;
+  }
+
+  .fb2-title {
+    page-break-after: avoid;
+  }
+
+  .fb2-poem,
+  .fb2-cite {
+    page-break-inside: avoid;
+  }
+}

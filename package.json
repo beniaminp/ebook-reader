@@ -32,12 +32,14 @@
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.13.5",
     "dompurify": "^3.3.1",
+    "dropbox": "^10.34.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "fast-xml-parser": "^5.3.7",
     "foliate-js": "^1.0.1",
     "ionicons": "^7.4.0",
     "marked": "^17.0.3",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.624",
     "prettier": "^3.8.1",
     "r2d3": "^1.0.0",
@@ -47,6 +49,7 @@
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
     "recharts": "^3.7.0",
+    "webdav": "^5.9.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

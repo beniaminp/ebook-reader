@@ -13,7 +13,7 @@ export interface Book {
   author: string;
   filePath: string;
   coverPath?: string;
-  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'cbz' | 'txt';
+  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'cbz' | 'txt' | 'html' | 'htm' | 'md' | 'markdown' | 'chm';
   totalPages: number;
   currentPage: number;
   progress: number;
@@ -57,6 +57,13 @@ export interface Bookmark {
   timestamp: Date;
 }
 
+export interface HighlightRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface Highlight {
   id: string;
   bookId: string;
@@ -65,6 +72,10 @@ export interface Highlight {
   color: string;
   note?: string;
   timestamp: Date;
+  /** PDF-specific: page number for the highlight */
+  pageNumber?: number;
+  /** PDF-specific: bounding rectangles for text selection */
+  rects?: HighlightRect[];
 }
 
 export interface Annotation {
@@ -142,3 +153,85 @@ export interface DatabaseSchema {
   annotations: Annotation;
   settings: ReadingSettings & ReaderSettings;
 }
+
+// Translation types
+export type TranslationLanguageCode =
+  | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ru' | 'zh' | 'ja' | 'ko'
+  | 'ar' | 'nl' | 'pl' | 'tr' | 'sv' | 'da' | 'fi' | 'no' | 'cs' | 'el'
+  | 'he' | 'hi' | 'th' | 'vi' | 'id' | 'uk' | 'auto';
+
+export interface TranslationSettings {
+  targetLanguage: TranslationLanguageCode;
+  autoDetectSource: boolean;
+  apiKey?: string;
+  apiEndpoint?: string;
+  saveHistory: boolean;
+}
+
+export interface TranslationHistoryEntry {
+  id: string;
+  bookId: string;
+  sourceText: string;
+  translatedText: string;
+  sourceLang: string;
+  targetLang: string;
+  timestamp: number;
+  location?: string; // CFI or page number
+}
+
+export interface TranslationSelection {
+  text: string;
+  rect?: DOMRect;
+  range?: Range;
+}
+
+export interface TranslationResult {
+  translatedText: string;
+  sourceLang: string;
+  sourceLangName: string;
+  targetLang: string;
+  targetLangName: string;
+  originalText: string;
+}
+
+// Dictionary types
+export interface Phonetic {
+  text?: string;
+  audio?: string;
+}
+
+export interface Definition {
+  definition: string;
+  synonyms?: string[];
+  antonyms?: string[];
+  example?: string;
+}
+
+export interface Meaning {
+  partOfSpeech: string;
+  definitions: Definition[];
+  synonyms?: string[];
+  antonyms?: string[];
+}
+
+export interface DefinitionResult {
+  word: string;
+  phonetic?: string;
+  phonetics: Phonetic[];
+  meanings: Meaning[];
+  origin?: string;
+  found: boolean;
+  cachedAt?: number;
+}
+
+export interface VocabularyWord {
+  word: string;
+  definition: string;
+  partOfSpeech: string;
+  example?: string;
+  addedAt: number;
+  context?: string;
+}
+
+// Cloud sync types
+export * from './cloudSync';

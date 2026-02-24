@@ -5,7 +5,16 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ReadingSettings, ThemeType, FontFamily, TextAlignment, MarginSize } from '../services/themeService';
+import type {
+  ReadingSettings,
+  ThemeType,
+  FontFamily,
+  TextAlignment,
+  MarginSize,
+  ReadingRulerSettings,
+  FocusModeSettings,
+  RulerColor
+} from '../services/themeService';
 import { DEFAULT_SETTINGS } from '../services/themeService';
 
 export interface ReaderTheme {
@@ -145,7 +154,12 @@ interface ThemeState extends ReadingSettings {
   setBlueLightFilter: (enabled: boolean) => void;
   setBlueLightIntensity: (intensity: number) => void;
   setReadingRuler: (enabled: boolean) => void;
+  setReadingRulerHeight: (height: number) => void;
+  setReadingRulerOpacity: (opacity: number) => void;
+  setReadingRulerColor: (color: RulerColor) => void;
   setBionicReading: (enabled: boolean) => void;
+  setFocusMode: (enabled: boolean) => void;
+  setFocusModeOpacity: (opacity: number) => void;
   setAutoScroll: (enabled: boolean) => void;
   setAutoScrollSpeed: (speed: number) => void;
   setPageTransitionType: (type: PageTransitionType) => void;
@@ -196,7 +210,10 @@ export const useThemeStore = create<ThemeState>()(
       blueLightFilter: DEFAULT_SETTINGS.blueLightFilter,
       blueLightIntensity: DEFAULT_SETTINGS.blueLightIntensity,
       readingRuler: DEFAULT_SETTINGS.readingRuler,
+      readingRulerSettings: DEFAULT_SETTINGS.readingRulerSettings,
       bionicReading: DEFAULT_SETTINGS.bionicReading,
+      focusMode: DEFAULT_SETTINGS.focusMode,
+      focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
       autoScroll: DEFAULT_SETTINGS.autoScroll,
       autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
       customThemes: [],
@@ -230,7 +247,25 @@ export const useThemeStore = create<ThemeState>()(
 
       setReadingRuler: (readingRuler) => set({ readingRuler }),
 
+      setReadingRulerHeight: (height) => set((state) => ({
+        readingRulerSettings: { ...state.readingRulerSettings, height }
+      })),
+
+      setReadingRulerOpacity: (opacity) => set((state) => ({
+        readingRulerSettings: { ...state.readingRulerSettings, opacity }
+      })),
+
+      setReadingRulerColor: (color) => set((state) => ({
+        readingRulerSettings: { ...state.readingRulerSettings, color }
+      })),
+
       setBionicReading: (bionicReading) => set({ bionicReading }),
+
+      setFocusMode: (focusMode) => set({ focusMode }),
+
+      setFocusModeOpacity: (opacity) => set((state) => ({
+        focusModeSettings: { ...state.focusModeSettings, opacity }
+      })),
 
       setAutoScroll: (autoScroll) => set({ autoScroll }),
 
@@ -251,7 +286,10 @@ export const useThemeStore = create<ThemeState>()(
         blueLightFilter: DEFAULT_SETTINGS.blueLightFilter,
         blueLightIntensity: DEFAULT_SETTINGS.blueLightIntensity,
         readingRuler: DEFAULT_SETTINGS.readingRuler,
+        readingRulerSettings: DEFAULT_SETTINGS.readingRulerSettings,
         bionicReading: DEFAULT_SETTINGS.bionicReading,
+        focusMode: DEFAULT_SETTINGS.focusMode,
+        focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
         autoScroll: DEFAULT_SETTINGS.autoScroll,
         autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
       }),
@@ -292,7 +330,10 @@ export const useThemeStore = create<ThemeState>()(
         blueLightFilter: state.blueLightFilter,
         blueLightIntensity: state.blueLightIntensity,
         readingRuler: state.readingRuler,
+        readingRulerSettings: state.readingRulerSettings,
         bionicReading: state.bionicReading,
+        focusMode: state.focusMode,
+        focusModeSettings: state.focusModeSettings,
         autoScroll: state.autoScroll,
         autoScrollSpeed: state.autoScrollSpeed,
         customThemes: state.customThemes,
@@ -303,5 +344,14 @@ export const useThemeStore = create<ThemeState>()(
 );
 
 // Re-export types
-export type { ReadingSettings, ThemeType, FontFamily, TextAlignment, MarginSize } from '../services/themeService';
+export type {
+  ReadingSettings,
+  ThemeType,
+  FontFamily,
+  TextAlignment,
+  MarginSize,
+  ReadingRulerSettings,
+  FocusModeSettings,
+  RulerColor
+} from '../services/themeService';
 export { PREDEFINED_THEMES, DEFAULT_SETTINGS };

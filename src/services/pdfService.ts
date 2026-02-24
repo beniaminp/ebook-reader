@@ -1,4 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import { PDFDocument, rgb } from 'pdf-lib';
 
 // Set worker from CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -23,6 +24,24 @@ export interface PdfOutlineItem {
   pageNumber: number;
   level: number;
   children: PdfOutlineItem[];
+}
+
+export interface PdfHighlightRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface PdfHighlight {
+  id: string;
+  bookId: string;
+  pageNumber: number;
+  text: string;
+  rects: PdfHighlightRect[];
+  color: string;
+  note?: string;
+  createdAt: Date;
 }
 
 /**
@@ -369,6 +388,120 @@ export class PdfService {
         isValid: false,
         error: err?.message || 'Invalid PDF file',
       };
+    }
+  }
+
+  /**
+   * Parse hex color to RGB values (0-255)
+   */
+  private static parseColorToRgb(hexColor: string): { r: number; g: number; b: number } {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return { r, g, b };
+  }
+
+  /**
+   * Save highlights to PDF as annotations using pdf-lib
+   */
+  static async saveAnnotationsToPdf(
+    pdfArrayBuffer: ArrayBuffer,
+    highlights: PdfHighlight[]
+  ): Promise<ArrayBuffer> {
+    try {
+      // Load the PDF document
+      const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
+      const pages = pdfDoc.getPages();
+
+      // Group highlights by page
+      const highlightsByPage = new Map<number, PdfHighlight[]>();
+      for (const highlight of highlights) {
+        const pageHighlights = highlightsByPage.get(highlight.pageNumber) || [];
+        pageHighlights.push(highlight);
+        highlightsByPage.set(highlight.pageNumber, pageHighlights);
+      }
+
+      // Add highlights to each page
+      for (const [pageNumber, pageHighlights] of highlightsByPage.entries()) {
+        const pageIndex = pageNumber - 1;
+        if (pageIndex < 0 || pageIndex >= pages.length) continue;
+
+        const page = pages[pageIndex];
+        const { height } = page.getSize();
+
+        for (const highlight of pageHighlights) {
+          const { r, g, b } = this.parseColorToRgb(highlight.color);
+
+          // For each rect, add a highlight annotation
+          for (const rect of highlight.rects) {
+            // PDF coordinates: (0,0) is bottom-left, y increases upward
+            // Our rect coordinates are from top-left, y increases downward
+            const pdfX = rect.x;
+            const pdfY = height - rect.y - rect.height;
+
+            // Create a highlight annotation
+            page.drawRectangle({
+              x: pdfX,
+              y: pdfY,
+              width: rect.width,
+              height: rect.height,
+              color: rgb(r / 255, g / 255, b / 255),
+              opacity: 0.3,
+            });
+          }
+
+          // If there's a note, add a text annotation
+          if (highlight.note && highlight.rects.length > 0) {
+            const firstRect = highlight.rects[0];
+            const pdfX = firstRect.x;
+            const pdfY = height - firstRect.y;
+
+            // Add a text box with the note
+            page.drawText(`Note: ${highlight.note}`, {
+              x: pdfX,
+              y: pdfY + 10,
+              size: 10,
+              color: rgb(0, 0, 0),
+            });
+          }
+        }
+      }
+
+      // Save the modified PDF
+      const modifiedPdfBytes = await pdfDoc.save();
+      return modifiedPdfBytes.buffer as ArrayBuffer;
+    } catch (error) {
+      console.error('Failed to save annotations to PDF:', error);
+      throw new Error('Failed to save annotations to PDF');
+    }
+  }
+
+  /**
+   * Export an annotated PDF for a book
+   * This loads the original PDF, applies highlights, and triggers download
+   */
+  static async exportAnnotatedPdf(
+    pdfArrayBuffer: ArrayBuffer,
+    highlights: PdfHighlight[],
+    filename: string = 'annotated.pdf'
+  ): Promise<void> {
+    try {
+      const annotatedPdf = await this.saveAnnotationsToPdf(pdfArrayBuffer, highlights);
+
+      // Create a blob and trigger download
+      const blob = new Blob([annotatedPdf], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export annotated PDF:', error);
+      throw new Error('Failed to export annotated PDF');
     }
   }
 

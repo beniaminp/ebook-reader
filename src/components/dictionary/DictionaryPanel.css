@@ -1,0 +1,250 @@
+/**
+ * DictionaryPanel Styles
+ */
+
+.dict-content {
+  padding: 16px;
+}
+
+/* Header section */
+.dict-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ion-color-light);
+}
+
+.dict-word-section {
+  flex: 1;
+}
+
+.dict-word {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--ion-text-color);
+  text-transform: capitalize;
+}
+
+.dict-phonetic {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.phonetic-text {
+  font-size: 16px;
+  color: var(--ion-color-medium);
+  font-family: 'Courier New', monospace;
+}
+
+.audio-playing {
+  animation: pulse 1s infinite;
+  color: var(--ion-color-primary);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Loading state */
+.dict-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+
+/* Error state */
+.dict-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+  text-align: center;
+}
+
+.dict-error .error-icon {
+  font-size: 48px;
+  color: var(--ion-color-medium);
+  margin-bottom: 8px;
+}
+
+/* Results section */
+.dict-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dict-origin {
+  padding: 12px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  font-style: italic;
+}
+
+.dict-origin p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Meanings accordion */
+.meaning-header {
+  --padding-start: 0;
+  --background: transparent;
+}
+
+.meaning-header h2.part-of-speech {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ion-color-primary);
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.meaning-content {
+  padding: 0 16px 16px;
+}
+
+.meaning-synonyms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--ion-color-light-tint);
+  border-radius: 8px;
+}
+
+.synonyms-label {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.meaning-synonyms ion-chip {
+  --background: var(--ion-color-light);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.meaning-synonyms ion-chip:hover {
+  --background: var(--ion-color-light-shade);
+}
+
+/* Definitions list */
+.definitions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dict-definition {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: var(--ion-color-light-tint);
+  border-radius: 8px;
+}
+
+.def-number {
+  font-weight: 600;
+  color: var(--ion-color-primary);
+  min-width: 24px;
+}
+
+.def-content {
+  flex: 1;
+}
+
+.def-text {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ion-text-color);
+}
+
+.def-example {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ion-color-medium);
+  padding-left: 12px;
+  border-left: 2px solid var(--ion-color-medium);
+}
+
+.def-synonyms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.def-synonyms ion-chip {
+  --background: var(--ion-color-light);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.def-synonyms ion-chip:hover {
+  --background: var(--ion-color-light-shade);
+}
+
+/* Cache info */
+.dict-cache-info {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ion-color-light);
+}
+
+.cache-hint {
+  font-size: 12px;
+  text-align: center;
+  margin: 0;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .dict-word {
+    color: var(--ion-text-color);
+  }
+
+  .meaning-content {
+    --background: rgba(255, 255, 255, 0.05);
+  }
+
+  .dict-definition {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .meaning-synonyms {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .dict-word {
+    font-size: 24px;
+  }
+
+  .dict-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dict-header ion-button {
+    align-self: flex-start;
+  }
+}

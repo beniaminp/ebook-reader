@@ -15,7 +15,9 @@ import {
   IonSelectOption,
   IonButton,
   IonNote,
+  IonIcon,
 } from '@ionic/react';
+import { cloudOutline } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
 
@@ -223,6 +225,20 @@ const Settings: React.FC = () => {
             <IonLabel>
               <h3>Reading Statistics</h3>
               <IonNote>View your reading history and progress</IonNote>
+            </IonLabel>
+          </IonItem>
+        </IonList>
+
+        <IonList>
+          <IonListHeader>
+            <IonLabel>Cloud Sync</IonLabel>
+          </IonListHeader>
+
+          <IonItem button routerLink="/cloud-sync-settings" detail>
+            <IonIcon icon={cloudOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Cloud Sync</h3>
+              <IonNote>Sync your reading progress, bookmarks, and highlights</IonNote>
             </IonLabel>
           </IonItem>
         </IonList>

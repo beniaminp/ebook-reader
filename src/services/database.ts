@@ -34,12 +34,14 @@ interface DbBookmark {
 }
 
 interface DbHighlight {
-  id: string;
+  id?: string;
   bookId: string;
   location: string; // CFI or page number as string
   text: string;
   color: string;
   note?: string;
+  pageNumber?: number;
+  rects?: string; // JSON stringified array of {x, y, width, height}
 }
 
 // ============================================================================
@@ -760,9 +762,11 @@ export async function deleteBookmark(id: string): Promise<boolean> {
 // ============================================================================
 
 export async function addHighlight(highlight: DbHighlight): Promise<Highlight | null> {
+  const id = highlight.id || `${highlight.bookId}-${Date.now()}`;
+
   if (!Capacitor.isNativePlatform()) {
     const newHighlight: Highlight = {
-      id: highlight.id,
+      id,
       bookId: highlight.bookId,
       location: {
         bookId: highlight.bookId,
@@ -772,6 +776,8 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
       text: highlight.text,
       color: highlight.color,
       note: highlight.note,
+      pageNumber: highlight.pageNumber,
+      rects: highlight.rects ? JSON.parse(highlight.rects) : undefined,
       timestamp: new Date(),
     };
     localStorage.setItem(`highlight_${newHighlight.id}`, JSON.stringify(newHighlight));
@@ -783,14 +789,13 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
   }
 
   try {
-    const id = highlight.id || `${highlight.bookId}-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
     await db!.query(
       `INSERT INTO ${TABLES.HIGHLIGHTS} (
-        id, book_id, location, text, color, note, page_number,
+        id, book_id, location, text, color, note, page_number, rects,
         chapter_id, chapter_title, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         id,
         highlight.bookId,
@@ -798,7 +803,8 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
         highlight.text,
         highlight.color || '#ffff00',
         highlight.note || null,
-        null,
+        highlight.pageNumber || null,
+        highlight.rects || null,
         null,
         null,
         now,
@@ -817,6 +823,8 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
       text: highlight.text,
       color: highlight.color,
       note: highlight.note,
+      pageNumber: highlight.pageNumber,
+      rects: highlight.rects ? JSON.parse(highlight.rects) : undefined,
       timestamp: new Date(now * 1000),
     };
   } catch (error) {
@@ -860,6 +868,8 @@ export async function getHighlights(bookId: string): Promise<Highlight[]> {
       text: row.text,
       color: row.color,
       note: row.note || undefined,
+      pageNumber: row.page_number || undefined,
+      rects: row.rects ? JSON.parse(row.rects) : undefined,
       timestamp: new Date(row.created_at * 1000),
     }));
   } catch (error) {

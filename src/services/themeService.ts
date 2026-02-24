@@ -8,6 +8,19 @@ export type FontFamily = 'serif' | 'sans-serif' | 'mono' | 'bookerly' | 'literat
 export type TextAlignment = 'left' | 'center' | 'justify' | 'right';
 export type MarginSize = 'small' | 'medium' | 'large';
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
+export type RulerColor = 'accent' | 'yellow' | 'green' | 'blue' | 'pink' | 'red';
+
+export interface ReadingRulerSettings {
+  enabled: boolean;
+  height: number; // 1-4 lines
+  opacity: number; // 0-100
+  color: RulerColor;
+}
+
+export interface FocusModeSettings {
+  enabled: boolean;
+  opacity: number; // 0-100 for dimmed content
+}
 
 export interface ReadingSettings {
   theme: ThemeType;
@@ -19,7 +32,10 @@ export interface ReadingSettings {
   blueLightFilter: boolean;
   blueLightIntensity: number;
   readingRuler: boolean;
+  readingRulerSettings: ReadingRulerSettings;
   bionicReading: boolean;
+  focusMode: boolean;
+  focusModeSettings: FocusModeSettings;
   autoScroll: boolean;
   autoScrollSpeed: number;
 }
@@ -149,7 +165,18 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   blueLightFilter: false,
   blueLightIntensity: 15,
   readingRuler: false,
+  readingRulerSettings: {
+    enabled: false,
+    height: 2,
+    opacity: 30,
+    color: 'accent',
+  },
   bionicReading: false,
+  focusMode: false,
+  focusModeSettings: {
+    enabled: false,
+    opacity: 30,
+  },
   autoScroll: false,
   autoScrollSpeed: 1,
 };
