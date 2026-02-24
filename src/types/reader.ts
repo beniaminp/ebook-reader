@@ -35,7 +35,9 @@ export type ReaderFormat =
   | 'html'
   | 'htm'
   | 'md'
-  | 'markdown';
+  | 'markdown'
+  | 'docx'
+  | 'odt';
 
 /** Progress info returned by engines. */
 export interface ReaderProgress {

@@ -470,6 +470,10 @@ const Library: React.FC = () => {
       format = 'html';
     } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown')) {
       format = 'md';
+    } else if (fileName.endsWith('.docx')) {
+      format = 'docx';
+    } else if (fileName.endsWith('.odt')) {
+      format = 'odt';
     }
 
     const bookId = crypto.randomUUID();
@@ -817,6 +821,8 @@ const Library: React.FC = () => {
               <IonSelectOption value="mobi">MOBI</IonSelectOption>
               <IonSelectOption value="txt">TXT</IonSelectOption>
               <IonSelectOption value="fb2">FB2</IonSelectOption>
+              <IonSelectOption value="docx">DOCX</IonSelectOption>
+              <IonSelectOption value="odt">ODT</IonSelectOption>
             </IonSelect>
           </IonItem>
 
@@ -1029,7 +1035,7 @@ const Library: React.FC = () => {
         id="file-input"
         type="file"
         key={fileInputKey}
-        accept=".epub,.pdf,.mobi,.fb2,.cbz,.txt,.html,.htm,.md"
+        accept=".epub,.pdf,.mobi,.fb2,.cbz,.txt,.html,.htm,.md,.docx,.odt"
         style={{ display: 'none' }}
         onChange={handleFileImport}
         multiple

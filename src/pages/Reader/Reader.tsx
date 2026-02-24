@@ -39,15 +39,61 @@ function detectFormat(filePath: string, bookFormat?: string): string {
   if (ext === 'fb2') return 'fb2';
   if (ext === 'cbz') return 'cbz';
   if (ext === 'chm') return 'chm';
+  if (ext === 'docx') return 'docx';
+  if (ext === 'odt') return 'odt';
   // Fallback to bookFormat, with a final fallback to 'txt'
   return bookFormat || 'txt';
 }
 
-const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown', 'mobi', 'fb2', 'cbz'];
+const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown', 'mobi', 'fb2', 'cbz', 'docx', 'odt'];
 const UNSUPPORTED_FORMATS = ['chm'];
 
 /** Formats that should be loaded as text rather than ArrayBuffer. */
 const TEXT_FORMATS = new Set(['txt', 'html', 'htm', 'md', 'markdown']);
+
+/** Convert DOCX or ODT binary data to HTML string. */
+async function convertDocumentToHtml(buffer: ArrayBuffer, format: string): Promise<string> {
+  if (format === 'docx') {
+    const mammoth = await import('mammoth');
+    const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+    return result.value;
+  }
+  if (format === 'odt') {
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(buffer);
+    const contentXml = await zip.file('content.xml')?.async('string');
+    if (!contentXml) throw new Error('Invalid ODT file: missing content.xml');
+    // Parse ODT XML and convert to basic HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(contentXml, 'application/xml');
+    const body = doc.getElementsByTagNameNS('urn:oasis:names:tc:opendocument:xmlns:office:1.0', 'body')[0];
+    if (!body) throw new Error('Invalid ODT file: missing body element');
+    const textNode = doc.getElementsByTagNameNS('urn:oasis:names:tc:opendocument:xmlns:office:1.0', 'text')[0];
+    const root = textNode || body;
+    const html: string[] = [];
+    for (let i = 0; i < root.childNodes.length; i++) {
+      const node = root.childNodes[i] as Element;
+      const tag = node.localName;
+      const text = node.textContent || '';
+      if (tag === 'p') html.push(`<p>${text}</p>`);
+      else if (tag === 'h') html.push(`<h2>${text}</h2>`);
+      else if (tag === 'list') {
+        const items: string[] = [];
+        for (let j = 0; j < node.childNodes.length; j++) {
+          const li = node.childNodes[j] as Element;
+          if (li.localName === 'list-item') items.push(`<li>${li.textContent || ''}</li>`);
+        }
+        html.push(`<ul>${items.join('')}</ul>`);
+      } else if (tag === 'table') {
+        html.push(`<table border="1">${text}</table>`);
+      } else if (text.trim()) {
+        html.push(`<p>${text}</p>`);
+      }
+    }
+    return html.join('\n');
+  }
+  throw new Error(`Unsupported conversion format: ${format}`);
+}
 
 const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
@@ -204,6 +250,7 @@ const Reader: React.FC = () => {
       }
 
       const isText = TEXT_FORMATS.has(fmt);
+      const needsConversion = fmt === 'docx' || fmt === 'odt';
 
       try {
         let buffer: ArrayBuffer | null = null;
@@ -217,7 +264,11 @@ const Reader: React.FC = () => {
         }
 
         if (buffer) {
-          if (isText) {
+          if (needsConversion) {
+            const html = await convertDocumentToHtml(buffer, fmt);
+            setTextContent(html);
+            setEffectiveFormat('html');
+          } else if (isText) {
             const decoder = new TextDecoder();
             setTextContent(decoder.decode(buffer));
           } else {
@@ -230,7 +281,12 @@ const Reader: React.FC = () => {
             throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
           }
 
-          if (isText) {
+          if (needsConversion) {
+            const buf = await response.arrayBuffer();
+            const html = await convertDocumentToHtml(buf, fmt);
+            setTextContent(html);
+            setEffectiveFormat('html');
+          } else if (isText) {
             setTextContent(await response.text());
           } else {
             setFileData(await response.arrayBuffer());

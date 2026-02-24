@@ -81,7 +81,7 @@ export interface UnifiedReaderContainerProps {
 const FOLIATE_FORMATS = new Set<string>(['epub', 'mobi', 'fb2', 'cbz']);
 
 /** Formats that use the scroll engine. */
-const SCROLL_FORMATS = new Set<string>(['txt', 'html', 'htm', 'md', 'markdown']);
+const SCROLL_FORMATS = new Set<string>(['txt', 'html', 'htm', 'md', 'markdown', 'docx', 'odt']);
 
 function scrollContentType(format: string): 'text' | 'html' | 'markdown' {
   if (format === 'html' || format === 'htm') return 'html';

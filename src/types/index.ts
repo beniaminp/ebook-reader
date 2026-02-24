@@ -13,7 +13,7 @@ export interface Book {
   author: string;
   filePath: string;
   coverPath?: string;
-  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'cbz' | 'txt' | 'html' | 'htm' | 'md' | 'markdown' | 'chm';
+  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'cbz' | 'txt' | 'html' | 'htm' | 'md' | 'markdown' | 'chm' | 'docx' | 'odt';
   totalPages: number;
   currentPage: number;
   progress: number;
