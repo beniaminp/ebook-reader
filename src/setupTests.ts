@@ -12,3 +12,14 @@ window.matchMedia = window.matchMedia || function() {
       removeListener: function() {}
   };
 };
+
+// Mock DOMMatrix for pdfjs-dist (required for tests)
+global.DOMMatrix = class DOMMatrix {
+  constructor() {}
+  multiply() { return this; }
+  translate() { return this; }
+  scale() { return this; }
+  inverse() { return this; }
+  transformPoint() { return this; }
+  toJSON() { return {}; }
+} as any;

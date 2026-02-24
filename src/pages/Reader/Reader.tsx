@@ -25,9 +25,9 @@ import type { ReaderFormat } from '../../types/reader';
 type LoadState = 'loading' | 'downloading' | 'loaded' | 'error' | 'format-unsupported';
 
 /** Detect the effective format from the file extension or book.format field */
-function detectFormat(filePath: string, bookFormat: string): string {
+function detectFormat(filePath: string, bookFormat?: string): string {
   if (!filePath) {
-    console.warn('detectFormat called with undefined filePath');
+    console.warn('detectFormat called with undefined filePath, falling back to bookFormat');
     return bookFormat || 'txt';
   }
   const ext = filePath.split('.').pop()?.toLowerCase() || '';
@@ -37,7 +37,8 @@ function detectFormat(filePath: string, bookFormat: string): string {
   if (ext === 'mobi') return 'mobi';
   if (ext === 'fb2') return 'fb2';
   if (ext === 'cbz') return 'cbz';
-  return bookFormat;
+  // Fallback to bookFormat, with a final fallback to 'txt'
+  return bookFormat || 'txt';
 }
 
 const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown', 'mobi', 'fb2', 'cbz'];
@@ -97,6 +98,14 @@ const Reader: React.FC = () => {
         setErrorMessage(`Book has missing file path. The book data may be corrupted. Please re-import the book.`);
         setLoadState('error');
         return;
+      }
+
+      // Validate format field - try to detect from filePath if missing
+      if (!foundBook.format) {
+        const detectedFormat = detectFormat(foundBook.filePath, undefined);
+        console.warn(`Book ${foundBook.id} has missing format, detected: ${detectedFormat} from filePath`);
+        // Update the book with the detected format
+        foundBook = { ...foundBook, format: detectedFormat as Book['format'] };
       }
 
       setBook(foundBook);

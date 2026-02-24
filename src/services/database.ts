@@ -212,6 +212,16 @@ export async function getBookById(id: string): Promise<Book | null> {
 export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
   const now = Date.now();
 
+  // Validate required fields before adding to database
+  if (!book.filePath) {
+    console.error('Cannot add book: filePath is required', book);
+    throw new Error('Cannot add book: filePath is required');
+  }
+  if (!book.format) {
+    console.error('Cannot add book: format is required', book);
+    throw new Error('Cannot add book: format is required');
+  }
+
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     const webBook: WebBook = {
