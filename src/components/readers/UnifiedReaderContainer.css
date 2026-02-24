@@ -1,0 +1,53 @@
+/* UnifiedReaderContainer styles */
+
+.unified-reader-page {
+  background: var(--reader-bg, #ffffff);
+}
+
+.unified-reader-page.fullscreen ion-content {
+  --padding-top: 0;
+  --padding-bottom: 0;
+}
+
+.unified-reader-page.fullscreen ion-content::part(scroll) {
+  padding: 0;
+}
+
+/* Wrapper for foliate engine — needs relative positioning for tap overlay */
+.unified-reader-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Transparent tap overlay — captures taps above the foliate-view iframe */
+.unified-tap-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: transparent;
+}
+
+.unified-tap-overlay.passthrough {
+  pointer-events: none;
+}
+
+/* Bottom controls bar */
+.unified-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  min-height: 44px;
+}
+
+.unified-bottom-bar .page-info {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  text-align: center;
+  flex: 1;
+}

@@ -1,10 +1,10 @@
 /**
- * EPUB Reader Components Index
+ * Reader Components Index
  *
- * Exports all EPUB reader-related components and utilities
+ * Exports the unified reader architecture components.
  */
 
-export { EpubReader } from './EpubReader';
-
-export { EpubControls } from './EpubControls';
-export { EpubReaderContainer } from './EpubReaderContainer';
+export { UnifiedReaderContainer } from './UnifiedReaderContainer';
+export { FoliateEngine } from './FoliateEngine';
+export { PdfEngine } from './PdfEngine';
+export { ScrollEngine } from './ScrollEngine';

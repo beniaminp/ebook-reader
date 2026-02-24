@@ -1,6 +1,9 @@
 // EPUB-specific types
 export * from './epub';
 
+// Unified reader types
+export * from './reader';
+
 // Book types
 export type BookSource = 'local' | 'calibre-web' | 'opds' | 'dropbox' | 'webdav' | 'gdrive';
 
@@ -10,7 +13,7 @@ export interface Book {
   author: string;
   filePath: string;
   coverPath?: string;
-  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'txt';
+  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'cbz' | 'txt';
   totalPages: number;
   currentPage: number;
   progress: number;

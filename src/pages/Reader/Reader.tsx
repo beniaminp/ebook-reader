@@ -5,7 +5,6 @@ import {
   IonPage,
   IonSpinner,
   IonButton,
-  IonModal,
   IonIcon,
   IonToast,
   IonProgressBar,
@@ -18,14 +17,10 @@ import { databaseService } from '../../services/database';
 import { calibreWebService } from '../../services/calibreWebService';
 import { useCalibreWebStore } from '../../stores/calibreWebStore';
 import { webFileStorage } from '../../services/webFileStorage';
-import { EpubReaderContainer } from '../../components/readers/EpubReaderContainer';
-import { PdfReader } from '../../components/readers/PdfReader';
-import { TextReader } from '../../components/readers/TextReader';
-import { HtmlReader } from '../../components/readers/HtmlReader';
-import { MarkdownReader } from '../../components/readers/MarkdownReader';
-import { ReadingSettingsPanel } from '../../components/reader-ui/ReadingSettingsPanel';
+import { UnifiedReaderContainer } from '../../components/readers/UnifiedReaderContainer';
 import type { Book } from '../../types/index';
 import type { ReadingProgress } from '../../types/database';
+import type { ReaderFormat } from '../../types/reader';
 
 type LoadState = 'loading' | 'downloading' | 'loaded' | 'error' | 'format-unsupported';
 
@@ -35,10 +30,16 @@ function detectFormat(filePath: string, bookFormat: string): string {
   if (ext === 'txt') return 'txt';
   if (ext === 'html' || ext === 'htm') return 'html';
   if (ext === 'md' || ext === 'markdown') return 'md';
+  if (ext === 'mobi') return 'mobi';
+  if (ext === 'fb2') return 'fb2';
+  if (ext === 'cbz') return 'cbz';
   return bookFormat;
 }
 
-const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown'];
+const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown', 'mobi', 'fb2', 'cbz'];
+
+/** Formats that should be loaded as text rather than ArrayBuffer. */
+const TEXT_FORMATS = new Set(['txt', 'html', 'htm', 'md', 'markdown']);
 
 const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
@@ -59,7 +60,6 @@ const Reader: React.FC = () => {
   const [effectiveFormat, setEffectiveFormat] = useState<string>('');
   const [initialLocation, setInitialLocation] = useState<string | undefined>(undefined);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState('');
@@ -111,7 +111,6 @@ const Reader: React.FC = () => {
           setDownloadProgress(0);
           try {
             await calibreWebService.initialize();
-            // Fetch the CalibreWeb book to get format info
             const cwBook = await calibreWebService.fetchBook(calibreBookId);
             if (!cwBook) {
               throw new Error('Could not fetch book metadata from server');
@@ -136,7 +135,6 @@ const Reader: React.FC = () => {
             if (!localPath) {
               throw new Error('Download failed — no file path returned');
             }
-            // Update the book record to mark as downloaded
             await databaseService.updateBook(foundBook.id, { downloaded: true, filePath: localPath });
             resolvedFilePath = localPath;
             foundBook = { ...foundBook, downloaded: true, filePath: localPath };
@@ -166,6 +164,8 @@ const Reader: React.FC = () => {
         return;
       }
 
+      const isText = TEXT_FORMATS.has(fmt);
+
       try {
         let buffer: ArrayBuffer | null = null;
 
@@ -178,8 +178,7 @@ const Reader: React.FC = () => {
         }
 
         if (buffer) {
-          // We already have the ArrayBuffer from IndexedDB
-          if (fmt === 'txt' || fmt === 'html' || fmt === 'htm' || fmt === 'md' || fmt === 'markdown') {
+          if (isText) {
             const decoder = new TextDecoder();
             setTextContent(decoder.decode(buffer));
           } else {
@@ -192,9 +191,8 @@ const Reader: React.FC = () => {
             throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
           }
 
-          if (fmt === 'txt' || fmt === 'html' || fmt === 'htm' || fmt === 'md' || fmt === 'markdown') {
-            const text = await response.text();
-            setTextContent(text);
+          if (isText) {
+            setTextContent(await response.text());
           } else {
             setFileData(await response.arrayBuffer());
           }
@@ -229,52 +227,16 @@ const Reader: React.FC = () => {
     history.push('/library');
   }, [book, history, setCurrentBook, recordSession]);
 
-  const handleEpubProgress = useCallback(
-    (cfi: string, percentage: number) => {
+  const handleProgressChange = useCallback(
+    (locationString: string, percentage: number) => {
       if (!book) return;
-      updateProgress(book.id, Math.round(percentage), 100, cfi);
+      updateProgress(book.id, Math.round(percentage), 100, locationString);
       sessionPagesRef.current += 1;
     },
     [book, updateProgress]
   );
 
-  const handlePdfPageChange = useCallback(
-    (pageNumber: number, totalPages: number) => {
-      if (!book) return;
-      updateProgress(book.id, pageNumber, totalPages, String(pageNumber));
-      sessionPagesRef.current += 1;
-    },
-    [book, updateProgress]
-  );
-
-  const handleTextProgress = useCallback(
-    (progress: number) => {
-      if (!book) return;
-      updateProgress(book.id, progress, 100, String(progress));
-    },
-    [book, updateProgress]
-  );
-
-  const handlePdfBookmarkToggle = useCallback(
-    async (pageNumber: number) => {
-      if (!book) return;
-      try {
-        await useAppStore.getState().addBookmark(
-          book.id,
-          String(pageNumber),
-          pageNumber,
-          undefined,
-          `Page ${pageNumber}`
-        );
-        setToastMessage(`Bookmark ${useAppStore.getState().hasBookmark(book.id, pageNumber) ? 'added' : 'removed'}`);
-      } catch {
-        setToastMessage('Failed to toggle bookmark');
-      }
-    },
-    [book]
-  );
-
-  const handleEpubBookmark = useCallback(
+  const handleBookmark = useCallback(
     async (bookIdParam: string, location: string, textPreview?: string) => {
       try {
         await useAppStore.getState().addBookmark(bookIdParam, location, undefined, undefined, textPreview);
@@ -291,16 +253,7 @@ const Reader: React.FC = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              gap: '16px',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
             <IonSpinner name="crescent" />
             <p>Loading book...</p>
           </div>
@@ -314,17 +267,7 @@ const Reader: React.FC = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              gap: '16px',
-              padding: '0 32px',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', padding: '0 32px' }}>
             <IonSpinner name="crescent" />
             <IonText>
               <p style={{ textAlign: 'center' }}>{downloadStatus || 'Downloading book...'}</p>
@@ -347,17 +290,7 @@ const Reader: React.FC = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              gap: '16px',
-              textAlign: 'center',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', textAlign: 'center' }}>
             <IonIcon icon={arrowBack} style={{ fontSize: '48px', color: 'var(--ion-color-danger)' }} />
             <p style={{ color: 'var(--ion-color-danger)', maxWidth: '300px' }}>{errorMessage}</p>
             <IonButton onClick={handleBack} fill="outline">
@@ -369,75 +302,21 @@ const Reader: React.FC = () => {
     );
   }
 
-  // Loaded - render appropriate reader
+  // Loaded — render unified reader
   if (!book) return null;
-
-  const bookInfo = { id: book.id, title: book.title, author: book.author };
 
   return (
     <>
-      {effectiveFormat === 'epub' && fileData && (
-        <EpubReaderContainer
-          book={book}
-          arrayBuffer={fileData}
-          initialLocation={initialLocation}
-          onBack={handleBack}
-          onBookmark={handleEpubBookmark}
-          onProgressChange={handleEpubProgress}
-        />
-      )}
-
-      {effectiveFormat === 'pdf' && fileData && (
-        <PdfReader
-          book={{
-            id: book.id,
-            title: book.title,
-            author: book.author,
-            currentPage: initialLocation ? parseInt(initialLocation, 10) || 1 : 1,
-          }}
-          pdfData={fileData}
-          onPageChange={handlePdfPageChange}
-          onBookmarkToggle={handlePdfBookmarkToggle}
-          onClose={handleBack}
-        />
-      )}
-
-      {effectiveFormat === 'txt' && (
-        <TextReader
-          book={bookInfo}
-          textContent={textContent}
-          onClose={handleBack}
-          onProgressChange={handleTextProgress}
-        />
-      )}
-
-      {(effectiveFormat === 'html' || effectiveFormat === 'htm') && (
-        <HtmlReader
-          book={bookInfo}
-          htmlContent={textContent}
-          onClose={handleBack}
-          onProgressChange={handleTextProgress}
-        />
-      )}
-
-      {(effectiveFormat === 'md' || effectiveFormat === 'markdown') && (
-        <MarkdownReader
-          book={bookInfo}
-          markdownContent={textContent}
-          onClose={handleBack}
-          onProgressChange={handleTextProgress}
-        />
-      )}
-
-      {/* Reading settings modal (triggered from toolbar in sub-components) */}
-      <IonModal
-        isOpen={settingsOpen}
-        onDidDismiss={() => setSettingsOpen(false)}
-        breakpoints={[0, 0.5, 0.85]}
-        initialBreakpoint={0.5}
-      >
-        <ReadingSettingsPanel onDismiss={() => setSettingsOpen(false)} />
-      </IonModal>
+      <UnifiedReaderContainer
+        book={book}
+        format={effectiveFormat as ReaderFormat}
+        fileData={fileData || undefined}
+        textContent={textContent || undefined}
+        initialLocation={initialLocation}
+        onBack={handleBack}
+        onBookmark={handleBookmark}
+        onProgressChange={handleProgressChange}
+      />
 
       <IonToast
         isOpen={!!toastMessage}
