@@ -9,7 +9,10 @@ export default defineConfig({
   base: process.env.GITHUB_ACTIONS ? '/ebook-reader/' : '/',
   plugins: [
     react(),
-    legacy()
+    legacy({
+      targets: ['defaults', 'not IE 11'],
+      modernTargets: ['chrome>=87', 'firefox>=78', 'safari>=14', 'edge>=88'],
+    })
   ],
   test: {
     globals: true,

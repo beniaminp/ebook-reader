@@ -321,35 +321,48 @@ const Library: React.FC = () => {
     arrayBuffer: ArrayBuffer
   ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
     try {
-      const ePub = (await import('epubjs')).default;
+      const { makeBook } = await import('foliate-js/view.js');
       const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' });
-      const fileUrl = URL.createObjectURL(blob);
-      const book = ePub(fileUrl);
 
-      // Timeout after 8s — epub.js can hang on some files or mobile browsers
-      const ready = await withTimeout(book.ready, 8000);
-      if (!ready) {
-        try { book.destroy(); } catch { /* ignore */ }
-        URL.revokeObjectURL(fileUrl);
-        return null;
+      const book = await withTimeout(makeBook(blob), 8000);
+      if (!book) return null;
+
+      // Extract title — may be a string or a language map
+      const rawTitle = book.metadata?.title;
+      const title = typeof rawTitle === 'string'
+        ? rawTitle
+        : rawTitle && typeof rawTitle === 'object'
+          ? Object.values(rawTitle)[0] ?? ''
+          : '';
+
+      // Extract author — may be a string, object, or array
+      const rawAuthor = book.metadata?.author;
+      let author = '';
+      if (typeof rawAuthor === 'string') {
+        author = rawAuthor;
+      } else if (Array.isArray(rawAuthor)) {
+        author = rawAuthor
+          .map((a: any) => typeof a === 'string' ? a : typeof a?.name === 'string' ? a.name : Object.values(a?.name ?? {})[0] ?? '')
+          .filter(Boolean)
+          .join(', ');
+      } else if (rawAuthor && typeof rawAuthor === 'object' && 'name' in rawAuthor) {
+        const name = (rawAuthor as any).name;
+        author = typeof name === 'string' ? name : Object.values(name ?? {})[0] as string ?? '';
       }
-
-      const metadata = await withTimeout(book.loaded.metadata, 5000);
-      const title = (metadata as any)?.title || '';
-      const author = (metadata as any)?.creator || '';
 
       let coverDataUrl: string | undefined;
       try {
-        const coverUrl = await withTimeout(book.coverUrl(), 5000);
-        if (coverUrl) {
-          coverDataUrl = coverUrl as string;
+        if (book.getCover) {
+          const coverBlob = await withTimeout(book.getCover(), 5000);
+          if (coverBlob) {
+            coverDataUrl = URL.createObjectURL(coverBlob as Blob);
+          }
         }
       } catch {
         // Cover extraction is optional
       }
 
-      book.destroy();
-      URL.revokeObjectURL(fileUrl);
+      if (book.destroy) book.destroy();
 
       return {
         title: title || '',

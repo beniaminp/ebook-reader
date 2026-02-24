@@ -1,11 +1,11 @@
 /**
  * EPUB Reader Component
  *
- * A wrapper around epub.js for rendering EPUB files in the app
+ * A wrapper around foliate-js for rendering EPUB files in the app
  */
 
 import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
-import ePub, { Book, Rendition } from 'epubjs';
+import type { View as FoliateView, FoliateLocation, FoliateTocItem } from 'foliate-js/view.js';
 import type { EpubCfi, EpubChapter, EpubMetadata, BookDataForReader, EpubReaderRef, EpubSearchResult } from '../../types/epub';
 import type { EpubTheme } from '../../types/epub';
 
@@ -20,16 +20,62 @@ export interface EpubReaderProps {
   onError?: (error: string) => void;
 }
 
+/** Extract a plain string from foliate-js metadata fields that may be a string or a language map. */
+function metaString(val: unknown): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && val !== null) {
+    // Language map — return first available value
+    const values = Object.values(val as Record<string, string>);
+    return values[0] ?? '';
+  }
+  return String(val);
+}
+
+/** Extract author name from foliate-js metadata.author which may be a string, object, or array. */
+function metaAuthor(val: unknown): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (Array.isArray(val)) {
+    return val.map(item => metaString(item?.name ?? item)).filter(Boolean).join(', ');
+  }
+  if (typeof val === 'object' && val !== null && 'name' in val) {
+    return metaString((val as { name: unknown }).name);
+  }
+  return metaString(val);
+}
+
+/** Convert a foliate-js TOC item tree to our EpubChapter type. */
+function tocToChapters(toc: FoliateTocItem[] | undefined | null): EpubChapter[] {
+  if (!toc) return [];
+  return toc.map((item, idx) => ({
+    id: String(item.id ?? idx),
+    label: item.label?.trim() || `Chapter ${idx + 1}`,
+    href: item.href || '',
+    subitems: item.subitems ? tocToChapters(item.subitems) : undefined,
+  }));
+}
+
 export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref) => {
   const { bookData, initialLocation, onProgressChange, onChapterChange, onLoadComplete, onError } = props;
 
-  const viewerRef = useRef<HTMLDivElement>(null);
-  const bookRef = useRef<Book | null>(null);
-  const renditionRef = useRef<Rendition | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<FoliateView | null>(null);
   const loadedBookIdRef = useRef<string | null>(null);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [chapters, setChapters] = useState<EpubChapter[]>([]);
+
+  // Track current position for getCurrentLocation/getPercentage
+  const currentCfiRef = useRef<string>('');
+  const currentFractionRef = useRef<number>(0);
+
+  // Track current theme/font settings for injection into section docs
+  const themeRef = useRef<EpubTheme | null>(null);
+  const fontSizeRef = useRef<number>(16);
+  const fontFamilyRef = useRef<string>('serif');
+  const lineHeightRef = useRef<number>(1.6);
+  const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Store callbacks in refs so the effect doesn't re-run when they change
   const onProgressChangeRef = useRef(onProgressChange);
@@ -41,125 +87,153 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
   onLoadCompleteRef.current = onLoadComplete;
   onErrorRef.current = onError;
 
-  // Initialize EPUB book — only runs when the actual book identity changes
+  /** Build and inject a <style> element into a section document. */
+  const injectStyles = useCallback((doc: Document) => {
+    const existingStyle = doc.getElementById('foliate-reader-style');
+    if (existingStyle) existingStyle.remove();
+
+    const style = doc.createElement('style');
+    style.id = 'foliate-reader-style';
+
+    const theme = themeRef.current;
+    const rules: string[] = [];
+
+    if (theme) {
+      rules.push(`body { background: ${theme.backgroundColor} !important; color: ${theme.textColor} !important; }`);
+    }
+    rules.push(`body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`);
+    rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
+
+    style.textContent = rules.join('\n');
+    doc.head.appendChild(style);
+  }, []);
+
+  /** Re-inject styles into all currently loaded section documents. */
+  const reapplyStyles = useCallback(() => {
+    for (const doc of loadedDocsRef.current) {
+      try {
+        injectStyles(doc);
+      } catch {
+        // Doc may have been detached
+      }
+    }
+  }, [injectStyles]);
+
+  // Initialize the foliate-view — only runs when the actual book identity changes
   useEffect(() => {
     if (!bookData) return;
 
     const bookId = bookData.book?.id || '';
 
     // Skip if this book is already loaded
-    if (loadedBookIdRef.current === bookId && bookRef.current) {
+    if (loadedBookIdRef.current === bookId && viewRef.current) {
       return;
     }
 
-    // Cleanup previous book if any
-    if (bookRef.current) {
-      bookRef.current.destroy();
-      bookRef.current = null;
-      renditionRef.current = null;
+    // Cleanup previous view if any
+    if (viewRef.current) {
+      try { viewRef.current.close(); } catch { /* ignore */ }
+      viewRef.current.remove();
+      viewRef.current = null;
     }
+    loadedDocsRef.current.clear();
 
     let destroyed = false;
 
     const loadBook = async () => {
       try {
-        let book: Book;
+        // Dynamically import foliate-js to register the custom element
+        const { View } = await import('foliate-js/view.js');
 
+        if (destroyed) return;
+
+        // Ensure custom element is registered (import side-effects handle this)
+        // Create the <foliate-view> element
+        const view = new View() as FoliateView;
+        viewRef.current = view;
+        loadedBookIdRef.current = bookId;
+
+        if (!containerRef.current) return;
+        containerRef.current.appendChild(view);
+
+        // Track chapters ref for chapter change callback
+        let chaptersLocal: EpubChapter[] = [];
+
+        // Listen for section loads to inject styles
+        view.addEventListener('load', ((e: CustomEvent<{ doc: Document; index: number }>) => {
+          if (destroyed) return;
+          const { doc } = e.detail;
+          loadedDocsRef.current.add(doc);
+          injectStyles(doc);
+        }) as EventListener);
+
+        // Listen for relocations to track progress
+        view.addEventListener('relocate', ((e: CustomEvent<FoliateLocation>) => {
+          if (destroyed) return;
+          const loc = e.detail;
+          const cfi = loc.cfi || '';
+          const fraction = loc.fraction ?? 0;
+          const currentPage = loc.location?.current ?? 0;
+          const totalPages = loc.location?.total ?? 0;
+
+          currentCfiRef.current = cfi;
+          currentFractionRef.current = fraction;
+
+          onProgressChangeRef.current?.(cfi, fraction * 100, Math.max(1, currentPage), totalPages);
+
+          // Chapter change
+          if (loc.tocItem) {
+            const tocLabel = loc.tocItem.label?.trim() || '';
+            const idx = chaptersLocal.findIndex(ch => ch.label === tocLabel || ch.href === loc.tocItem?.href);
+            if (idx >= 0) {
+              onChapterChangeRef.current?.(chaptersLocal[idx], idx);
+            }
+          }
+        }) as EventListener);
+
+        // Open the book — pass a Blob to foliate-js
+        let blob: Blob;
         if (bookData.arrayBuffer) {
-          book = ePub(bookData.arrayBuffer);
+          blob = new Blob([bookData.arrayBuffer], { type: 'application/epub+zip' });
         } else if (bookData.fileUri) {
-          book = ePub(bookData.fileUri);
+          // Fetch the file URI to get a blob
+          const res = await fetch(bookData.fileUri);
+          blob = await res.blob();
         } else {
           throw new Error('No valid book data provided');
         }
 
-        if (destroyed) { book.destroy(); return; }
+        if (destroyed) return;
 
-        bookRef.current = book;
-        loadedBookIdRef.current = bookId;
+        await view.open(blob);
 
-        if (viewerRef.current) {
-          const rendition = book.renderTo(viewerRef.current, {
-            width: '100%',
-            height: '100%',
-            spread: 'auto',
-            allowScriptedContent: false,
-          });
+        if (destroyed) return;
 
-          if (destroyed) { book.destroy(); return; }
-
-          renditionRef.current = rendition;
-
-          await rendition.display(initialLocation || undefined);
-
-          if (destroyed) return;
-
-          // Get metadata
-          const metadata = await book.loaded.metadata;
-          onLoadCompleteRef.current?.({
-            title: metadata.title || 'Unknown Title',
-            author: metadata.creator,
-            description: metadata.description,
-            publisher: metadata.publisher,
-            language: metadata.language,
-          });
-
-          // Get table of contents
-          const navigation = await book.loaded.navigation;
-          const tocChapters = navigation.toc.map((chapter: any) => ({
-            id: chapter.id,
-            label: chapter.label,
-            href: chapter.href,
-            subitems: chapter.subitems?.map((sub: any) => ({
-              id: sub.id,
-              label: sub.label,
-              href: sub.href,
-            })),
-          }));
-          setChapters(tocChapters);
-
-          // Track whether locations have been generated
-          let locationsReady = false;
-          let locationsTotal = 0;
-          let lastRelocateCfi: string | null = null;
-
-          // Set up progress tracking immediately so it works before locations load
-          rendition.on('relocated', (location: any) => {
-            const cfi = location.start.cfi;
-            lastRelocateCfi = cfi;
-
-            if (locationsReady) {
-              const pct = book.locations.percentageFromCfi(cfi);
-              const currentPage = Math.round(pct * locationsTotal);
-              onProgressChangeRef.current?.(cfi, pct * 100, Math.max(1, currentPage), locationsTotal);
-            } else {
-              // Before locations are ready, report percentage from epub.js directly
-              const pct = location.start.percentage ?? 0;
-              onProgressChangeRef.current?.(cfi, pct * 100, 0, 0);
-            }
-
-            const currentChapter = findChapterByCfi(tocChapters, cfi);
-            if (currentChapter) {
-              onChapterChangeRef.current?.(currentChapter.chapter, currentChapter.index);
-            }
-          });
-
-          // Generate locations in the background for page counting
-          book.locations.generate(1024).then(() => {
-            if (destroyed) return;
-            locationsReady = true;
-            locationsTotal = book.locations.length();
-
-            // Re-emit progress with page numbers now that locations are ready
-            if (lastRelocateCfi) {
-              const pct = book.locations.percentageFromCfi(lastRelocateCfi);
-              const currentPage = Math.round(pct * locationsTotal);
-              onProgressChangeRef.current?.(lastRelocateCfi, pct * 100, Math.max(1, currentPage), locationsTotal);
-            }
-          });
-
-          setIsLoaded(true);
+        // Navigate to initial location
+        if (initialLocation) {
+          await view.goTo(initialLocation);
+        } else {
+          await view.next();
         }
+
+        if (destroyed) return;
+
+        // Extract metadata
+        const meta = view.book?.metadata;
+        onLoadCompleteRef.current?.({
+          title: metaString(meta?.title) || 'Unknown Title',
+          author: metaAuthor(meta?.author),
+          description: meta?.description ? String(meta.description) : undefined,
+          publisher: meta?.publisher ? metaString(typeof meta.publisher === 'object' && 'name' in meta.publisher ? meta.publisher.name : meta.publisher) : undefined,
+          language: Array.isArray(meta?.language) ? meta.language[0] : meta?.language ? String(meta.language) : undefined,
+        });
+
+        // Extract TOC
+        const tocChapters = tocToChapters(view.book?.toc);
+        chaptersLocal = tocChapters;
+        setChapters(tocChapters);
+
+        setIsLoaded(true);
       } catch (error) {
         if (destroyed) return;
         console.error('Failed to load EPUB:', error);
@@ -171,12 +245,13 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
 
     return () => {
       destroyed = true;
-      if (bookRef.current) {
-        bookRef.current.destroy();
-        bookRef.current = null;
-        renditionRef.current = null;
+      if (viewRef.current) {
+        try { viewRef.current.close(); } catch { /* ignore */ }
+        viewRef.current.remove();
+        viewRef.current = null;
         loadedBookIdRef.current = null;
       }
+      loadedDocsRef.current.clear();
     };
     // Only re-run when the actual book identity changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,83 +261,64 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
   useImperativeHandle(
     ref,
     () => ({
-      next: () => renditionRef.current?.next(),
-      prev: () => renditionRef.current?.prev(),
+      next: () => { viewRef.current?.next(); },
+      prev: () => { viewRef.current?.prev(); },
       goToChapter: (index: number) => {
         if (chapters[index]) {
-          renditionRef.current?.display(chapters[index].href);
+          viewRef.current?.goTo(chapters[index].href);
         }
       },
       goToCfi: (cfi: string) => {
-        renditionRef.current?.display(cfi);
+        viewRef.current?.goTo(cfi);
       },
       setFontSize: (size: number) => {
-        if (renditionRef.current) {
-          renditionRef.current.themes.fontSize(`${size}px`);
-        }
+        fontSizeRef.current = size;
+        reapplyStyles();
       },
       setFontFamily: (family: string) => {
-        if (renditionRef.current) {
-          renditionRef.current.themes.font(family);
-        }
+        fontFamilyRef.current = family;
+        reapplyStyles();
       },
       setLineHeight: (height: number) => {
-        if (renditionRef.current) {
-          // Use register to apply custom CSS rules for line-height
-          renditionRef.current.themes.register('line-height', {
-            'body, p': { 'line-height': `${height}` },
-          });
-          renditionRef.current.themes.select('line-height');
-        }
+        lineHeightRef.current = height;
+        reapplyStyles();
       },
       setTheme: (theme: EpubTheme) => {
-        if (renditionRef.current) {
-          renditionRef.current.themes.register(theme.id, {
-            body: {
-              background: theme.backgroundColor,
-              color: theme.textColor,
-            },
-          });
-          renditionRef.current.themes.select(theme.id);
-        }
+        themeRef.current = theme;
+        reapplyStyles();
       },
       getChapters: () => chapters,
-      getCurrentLocation: () => {
-        // This would need to be tracked in state
-        return '';
-      },
-      getPercentage: () => {
-        // This would need to be tracked in state
-        return 0;
-      },
+      getCurrentLocation: () => currentCfiRef.current,
+      getPercentage: () => currentFractionRef.current * 100,
       search: async (query: string): Promise<EpubSearchResult[]> => {
-        if (!bookRef.current || !query.trim()) return [];
+        if (!viewRef.current || !query.trim()) return [];
 
         const results: EpubSearchResult[] = [];
 
         try {
-          await bookRef.current.spine.each(async (section: any) => {
-            try {
-              const sectionResults = await section.search(query);
-              if (sectionResults && sectionResults.length > 0) {
-                // Find the chapter label for this section
-                const chapterLabel =
-                  chapters.find(
-                    (ch) => section.href && section.href.includes(ch.href)
-                  )?.label || section.href || 'Unknown chapter';
-
-                sectionResults.forEach((r: any) => {
-                  results.push({
-                    cfi: r.cfi,
-                    excerpt: r.excerpt || '',
-                    chapterLabel,
-                  });
+          const iter = viewRef.current.search({ query });
+          for await (const result of iter) {
+            if (result === 'done') break;
+            if (typeof result === 'string') continue;
+            if (result.subitems) {
+              // Section-level result with subitems
+              const chapterLabel = result.label || 'Unknown chapter';
+              for (const sub of result.subitems) {
+                results.push({
+                  cfi: sub.cfi,
+                  excerpt: sub.excerpt || '',
+                  chapterLabel,
                 });
               }
-            } catch {
-              // Some sections may not support search — skip them
+            } else if (result.cfi) {
+              // Individual result
+              results.push({
+                cfi: result.cfi,
+                excerpt: result.excerpt || '',
+                chapterLabel: '',
+              });
             }
-          });
+          }
         } catch (err) {
           console.error('EPUB search failed:', err);
         }
@@ -270,31 +326,12 @@ export const EpubReader = forwardRef<EpubReaderRef, EpubReaderProps>((props, ref
         return results;
       },
     }),
-    [chapters]
+    [chapters, reapplyStyles]
   );
 
-  return <div ref={viewerRef} className="epub-viewer" />;
+  return <div ref={containerRef} className="epub-viewer" />;
 });
 
 EpubReader.displayName = 'EpubReader';
-
-// Helper to find chapter by CFI
-function findChapterByCfi(
-  chapters: EpubChapter[],
-  cfi: string
-): { chapter: EpubChapter; index: number } | null {
-  for (let i = 0; i < chapters.length; i++) {
-    const chapter = chapters[i];
-    if (chapter.subitems && chapter.subitems.length > 0) {
-      const subResult = findChapterByCfi(chapter.subitems, cfi);
-      if (subResult) return subResult;
-    }
-    // Simple comparison - in real implementation would need proper CFI parsing
-    if (cfi.startsWith(chapter.href)) {
-      return { chapter, index: i };
-    }
-  }
-  return null;
-}
 
 export default EpubReader;
