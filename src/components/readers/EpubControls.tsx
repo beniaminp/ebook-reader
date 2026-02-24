@@ -29,8 +29,10 @@ import {
   colorPalette,
   text,
   arrowBack,
+  checkmark,
 } from 'ionicons/icons';
 import type { EpubTheme, EpubChapter } from '../../types/epub';
+import { EPUB_THEMES } from '../../types/epub';
 
 export interface EpubControlsProps {
   currentPage: number;
@@ -83,11 +85,7 @@ export const EpubControls: React.FC<EpubControlsProps> = ({
     { value: 'monospace', label: 'Monospace' },
   ];
 
-  const themes = [
-    { id: 'light', name: 'Light', icon: 'sunny' },
-    { id: 'sepia', name: 'Sepia', icon: 'eye' },
-    { id: 'dark', name: 'Dark', icon: 'moon' },
-  ];
+  const themeList = Object.values(EPUB_THEMES);
 
   return (
     <>
@@ -176,23 +174,61 @@ export const EpubControls: React.FC<EpubControlsProps> = ({
           )}
 
           {settingsTab === 'theme' && (
-            <IonList>
-              {themes.map((theme) => (
-                <IonItem
-                  key={theme.id}
-                  button
-                  onClick={() => onSetTheme(currentTheme)}
-                  disabled={currentTheme.id === theme.id}
-                >
-                  <IonIcon
-                    icon={theme.icon === 'sunny' ? 'sunny' : theme.icon === 'moon' ? 'moon' : 'eye'}
-                    slot="start"
-                  />
-                  <IonLabel>{theme.name}</IonLabel>
-                  {currentTheme.id === theme.id && <IonIcon icon="checkmark" slot="end" />}
-                </IonItem>
-              ))}
-            </IonList>
+            <div style={{ padding: '12px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+              {themeList.map((theme) => {
+                const isActive = currentTheme.id === theme.id;
+                return (
+                  <div
+                    key={theme.id}
+                    onClick={() => onSetTheme(theme)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      border: isActive ? '2px solid var(--ion-color-primary)' : '2px solid transparent',
+                      background: 'var(--ion-color-light)',
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.backgroundColor,
+                        border: '2px solid var(--ion-color-medium-shade)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        position: 'relative',
+                      }}
+                    >
+                      <span style={{ color: theme.textColor, fontSize: '14px', fontWeight: 700 }}>A</span>
+                      {isActive && (
+                        <IonIcon
+                          icon={checkmark}
+                          style={{
+                            position: 'absolute',
+                            bottom: '-4px',
+                            right: '-4px',
+                            fontSize: '14px',
+                            color: 'white',
+                            background: 'var(--ion-color-primary)',
+                            borderRadius: '50%',
+                            padding: '1px',
+                          }}
+                        />
+                      )}
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400 }}>{theme.name}</span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </IonPopover>

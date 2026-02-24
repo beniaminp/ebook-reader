@@ -37,6 +37,7 @@ import type {
   EpubSearchResult,
 } from '../../types';
 import { EPUB_THEMES } from '../../types';
+import { useThemeStore } from '../../stores/useThemeStore';
 
 interface EpubReaderContainerProps {
   book: Book;
@@ -70,10 +71,13 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
 
   const [toolbarVisible, setToolbarVisible] = useState<boolean>(true);
 
-  const [fontSize, setFontSize] = useState<number>(16);
-  const [fontFamily, setFontFamily] = useState<string>('serif');
-  const [lineHeight, setLineHeight] = useState<number>(1.6);
-  const [currentTheme, setCurrentTheme] = useState<EpubTheme>(EPUB_THEMES.light);
+  const themeStore = useThemeStore();
+  const storedTheme = EPUB_THEMES[themeStore.theme] || EPUB_THEMES.light;
+
+  const [fontSize, setFontSize] = useState<number>(themeStore.fontSize);
+  const [fontFamily, setFontFamily] = useState<string>(themeStore.fontFamily);
+  const [lineHeight, setLineHeight] = useState<number>(themeStore.lineHeight);
+  const [currentTheme, setCurrentTheme] = useState<EpubTheme>(storedTheme);
 
   const [showToast, setShowToast] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
@@ -217,23 +221,27 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   const handleSetFontSize = useCallback((size: number) => {
     setFontSize(size);
     readerRef.current?.setFontSize(size);
-  }, []);
+    themeStore.setFontSize(size);
+  }, [themeStore]);
 
   const handleSetFontFamily = useCallback((family: string) => {
     setFontFamily(family);
     readerRef.current?.setFontFamily(family);
-  }, []);
+    themeStore.setFontFamily(family as any);
+  }, [themeStore]);
 
   const handleSetLineHeight = useCallback((height: number) => {
     setLineHeight(height);
     readerRef.current?.setLineHeight(height);
-  }, []);
+    themeStore.setLineHeight(height);
+  }, [themeStore]);
 
   const handleSetTheme = useCallback((theme: EpubTheme) => {
     setCurrentTheme(theme);
     readerRef.current?.setTheme(theme);
+    themeStore.setTheme(theme.id as any);
     showToastMessage(`Theme: ${theme.name}`);
-  }, [showToastMessage]);
+  }, [showToastMessage, themeStore]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -291,18 +299,30 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
   }, [searchResults, currentSearchIndex]);
 
   return (
-    <IonPage className={`epub-reader-page${toolbarVisible ? '' : ' epub-reader-fullscreen'}`}>
+    <IonPage
+      className={`epub-reader-page${toolbarVisible ? '' : ' epub-reader-fullscreen'}`}
+      style={{
+        '--epub-bg': currentTheme.backgroundColor,
+        '--epub-fg': currentTheme.textColor,
+      } as React.CSSProperties}
+    >
       {toolbarVisible && (
         <IonHeader>
-          <IonToolbar color="light">
+          <IonToolbar
+            style={{
+              '--background': currentTheme.backgroundColor,
+              '--color': currentTheme.textColor,
+              '--border-color': currentTheme.id === 'light' ? '#e0e0e0' : 'rgba(255,255,255,0.12)',
+            } as React.CSSProperties}
+          >
             <IonButtons slot="start">
-              <IonButton onClick={onBack}>
+              <IonButton onClick={onBack} style={{ color: currentTheme.textColor }}>
                 <IonIcon icon={arrowBack} />
               </IonButton>
             </IonButtons>
-            <IonTitle>{metadata?.title || book.title}</IonTitle>
+            <IonTitle style={{ color: currentTheme.textColor }}>{metadata?.title || book.title}</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setSearchOpen(true)}>
+              <IonButton onClick={() => setSearchOpen(true)} style={{ color: currentTheme.textColor }}>
                 <IonIcon icon={searchOutline} />
               </IonButton>
             </IonButtons>
@@ -310,7 +330,11 @@ export const EpubReaderContainer: React.FC<EpubReaderContainerProps> = ({
         </IonHeader>
       )}
 
-      <IonContent className="epub-reader-content" scrollY={false}>
+      <IonContent
+        className="epub-reader-content"
+        scrollY={false}
+        style={{ '--background': currentTheme.backgroundColor } as React.CSSProperties}
+      >
         <div className="epub-reader-wrapper">
           <EpubReader
             ref={readerRef}

@@ -580,18 +580,18 @@ const Library: React.FC = () => {
                   </div>
                 )}
                 {renderDownloadBadge(book)}
+                <IonChip
+                  outline={true}
+                  color={getFormatColor(book.format)}
+                  className="book-format-chip"
+                >
+                  {book.format.toUpperCase()}
+                </IonChip>
               </div>
               <IonCardHeader className="ion-no-padding">
                 <IonCardTitle className="book-title">{book.title}</IonCardTitle>
                 <IonCardSubtitle className="book-author">{book.author}</IonCardSubtitle>
               </IonCardHeader>
-              <IonChip
-                outline={true}
-                color={getFormatColor(book.format)}
-                className="book-format-chip"
-              >
-                {book.format.toUpperCase()}
-              </IonChip>
             </IonCard>
           </IonCol>
         ))}
@@ -635,10 +635,12 @@ const Library: React.FC = () => {
             <p>{book.author}</p>
             {book.progress > 0 && (
               <div className="book-progress-container">
-                <div
-                  className="book-progress-bar-small"
-                  style={{ width: `${getProgressWidth(book)}%` }}
-                />
+                <div className="book-progress-bar-small">
+                  <div
+                    className="book-progress-fill"
+                    style={{ width: `${getProgressWidth(book)}%` }}
+                  />
+                </div>
                 <IonText color="medium" className="book-progress-text">
                   {Math.round(book.progress * 100)}%
                 </IonText>

@@ -11,7 +11,11 @@
 }
 
 .epub-viewer:empty {
-  background: #f5f5f5;
+  background: var(--epub-bg, #f5f5f5);
+}
+
+.epub-reader-page {
+  background: var(--epub-bg, #ffffff);
 }
 
 .epub-viewer foliate-view {
