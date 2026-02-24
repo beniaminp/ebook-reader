@@ -355,7 +355,14 @@ const Library: React.FC = () => {
         if (book.getCover) {
           const coverBlob = await withTimeout(book.getCover(), 5000);
           if (coverBlob) {
-            coverDataUrl = URL.createObjectURL(coverBlob as Blob);
+            // Convert to data: URI so it persists across page reloads
+            // (blob: URLs are ephemeral and die on reload)
+            coverDataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(coverBlob as Blob);
+            });
           }
         }
       } catch {
@@ -377,7 +384,7 @@ const Library: React.FC = () => {
 
   const extractPdfMetadata = async (
     arrayBuffer: ArrayBuffer
-  ): Promise<{ title: string; author: string } | null> => {
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
     try {
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -386,9 +393,27 @@ const Library: React.FC = () => {
       const metadata = await pdf.getMetadata();
       const info = metadata.info as any;
 
+      // Render first page as cover thumbnail
+      let coverDataUrl: string | undefined;
+      try {
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 0.5 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+          coverDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        }
+      } catch {
+        // Cover extraction is optional
+      }
+
       return {
         title: info?.Title || '',
         author: info?.Author || 'Unknown',
+        coverDataUrl,
       };
     } catch (err) {
       console.error('PDF metadata extraction failed:', err);
@@ -474,6 +499,7 @@ const Library: React.FC = () => {
         if (meta) {
           title = meta.title || title;
           author = meta.author || author;
+          coverPath = meta.coverDataUrl;
         }
       } else if (format === 'fb2') {
         const meta = await extractFb2Metadata(arrayBuffer);
