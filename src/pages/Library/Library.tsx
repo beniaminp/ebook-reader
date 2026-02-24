@@ -397,6 +397,11 @@ const Library: React.FC = () => {
   };
 
   const importBook = async (file: File): Promise<void> => {
+    // Validate File object to prevent crashes
+    if (!file || !file.name) {
+      throw new Error('Invalid file: file name is required');
+    }
+
     const fileName = file.name.toLowerCase();
     let format: Book['format'] = 'txt';
 

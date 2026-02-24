@@ -440,6 +440,11 @@ export async function getAllCollections(): Promise<Collection[]> {
 // ============================================================================
 
 function mapRowToBook(row: any): Book {
+  // Validate required fields to prevent crashes
+  if (!row.file_path) {
+    console.error(`Book ${row.id} has missing file_path`, row);
+    throw new Error(`Book ${row.id} has invalid data: file_path is required`);
+  }
   return {
     id: row.id,
     title: row.title,
@@ -460,6 +465,11 @@ function mapRowToBook(row: any): Book {
 }
 
 function webBookToBook(webBook: WebBook): Book {
+  // Validate required fields to prevent crashes
+  if (!webBook.filePath) {
+    console.error(`WebBook ${webBook.id} has missing filePath`, webBook);
+    throw new Error(`Book ${webBook.id} has invalid data: filePath is required`);
+  }
   return {
     id: webBook.id,
     title: webBook.title,

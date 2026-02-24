@@ -26,6 +26,10 @@ type LoadState = 'loading' | 'downloading' | 'loaded' | 'error' | 'format-unsupp
 
 /** Detect the effective format from the file extension or book.format field */
 function detectFormat(filePath: string, bookFormat: string): string {
+  if (!filePath) {
+    console.warn('detectFormat called with undefined filePath');
+    return bookFormat || 'txt';
+  }
   const ext = filePath.split('.').pop()?.toLowerCase() || '';
   if (ext === 'txt') return 'txt';
   if (ext === 'html' || ext === 'htm') return 'html';
@@ -84,6 +88,13 @@ const Reader: React.FC = () => {
 
       if (!foundBook) {
         setErrorMessage(`Book not found (id: ${bookId})`);
+        setLoadState('error');
+        return;
+      }
+
+      // Validate filePath early to prevent crashes
+      if (!foundBook.filePath) {
+        setErrorMessage(`Book has missing file path. The book data may be corrupted. Please re-import the book.`);
         setLoadState('error');
         return;
       }
