@@ -2,17 +2,6 @@ import { create } from 'zustand';
 import { databaseService } from '../services/database';
 import type { Book, Bookmark, Highlight } from '../types/index';
 
-export interface ReadingSettings {
-  fontSize: number;
-  fontFamily: string;
-  lineHeight: number;
-  theme: 'light' | 'dark' | 'sepia';
-  margin: number;
-  textAlign: 'left' | 'justify';
-  autoScroll: boolean;
-  autoScrollSpeed: number;
-}
-
 interface AppState {
   // Library state
   books: Book[];
@@ -24,9 +13,6 @@ interface AppState {
   currentLocation: number;
   bookmarks: Map<string, number[]>;
   highlights: Map<string, Array<{ location: number; text: string; color: string; note?: string }>>;
-
-  // Settings
-  settings: ReadingSettings;
 
   // Actions - Library
   loadBooks: () => Promise<void>;
@@ -51,23 +37,9 @@ interface AppState {
   removeHighlight: (highlightId: string) => Promise<void>;
   getHighlights: (bookId: string) => Array<{ location: number; text: string; color: string; note?: string }>;
 
-  // Settings actions
-  updateSettings: (settings: Partial<ReadingSettings>) => void;
-
   // Search
   searchBooks: (query: string) => Promise<Book[]>;
 }
-
-const defaultSettings: ReadingSettings = {
-  fontSize: 16,
-  fontFamily: 'Georgia',
-  lineHeight: 1.6,
-  theme: 'light',
-  margin: 20,
-  textAlign: 'justify',
-  autoScroll: false,
-  autoScrollSpeed: 1,
-};
 
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
@@ -78,7 +50,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentLocation: 0,
   bookmarks: new Map(),
   highlights: new Map(),
-  settings: defaultSettings,
 
   // Library actions
   loadBooks: async () => {
@@ -100,7 +71,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (success) {
         // Reload books to get the newly added book from the database
         const books = await databaseService.getAllBooks();
-        const newBook = books.find((b) => b.id === (bookData as any).id) || books[0] || null;
+        const newBook = books.find((b) => b.id === bookData.id) || books[0] || null;
         set({ books, isLoading: false });
         return newBook;
       }
@@ -203,7 +174,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addBookmark: async (bookId, location, pageNumber, chapterTitle, textPreview) => {
     try {
       await databaseService.addBookmark({
-        id: `bookmark-${Date.now()}`,
+        id: crypto.randomUUID(),
         bookId,
         location,
         pageNumber,
@@ -260,7 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addHighlight: async (bookId, location, text, color, note) => {
     try {
       await databaseService.addHighlight({
-        id: `highlight-${Date.now()}`,
+        id: crypto.randomUUID(),
         bookId,
         location,
         text,
@@ -288,11 +259,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   getHighlights: (bookId) => {
     return get().highlights.get(bookId) || [];
   },
-
-  // Settings actions
-  updateSettings: (newSettings) => set((state) => ({
-    settings: { ...state.settings, ...newSettings },
-  })),
 
   // Search
   searchBooks: async (query) => {

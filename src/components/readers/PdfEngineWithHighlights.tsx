@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import '../../utils/pdfWorkerSetup';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { PageTransition } from '../reader-ui/PageTransition';
 import type { PageDirection } from '../reader-ui/PageTransition';
@@ -18,8 +19,8 @@ import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter } from '../
 import type { HighlightRect, Highlight } from '../../types/index';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { PdfService } from '../../services/pdfService';
+import { PdfHighlightPanel } from '../common/PdfHighlightPanel';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 export interface PdfEngineWithHighlightsProps {
   pdfData: ArrayBuffer;
@@ -56,7 +57,6 @@ export const PdfEngineWithHighlights = forwardRef<ReaderEngineRef, PdfEngineWith
   const [loaded, setLoaded] = useState(false);
   const [pageDirection, setPageDirection] = useState<PageDirection>('forward');
   const [viewport, setViewport] = useState<pdfjsLib.PageViewport | null>(null);
-  const [scale, setScale] = useState(1);
 
   // Highlight state
   const [highlights, setHighlights] = useState<Highlight[]>([...existingHighlights]);
@@ -303,7 +303,6 @@ export const PdfEngineWithHighlights = forwardRef<ReaderEngineRef, PdfEngineWith
       const scaledViewport = page.getViewport({ scale: containerScale });
 
       setViewport(scaledViewport);
-      setScale(containerScale);
 
       const context = canvasRef.current.getContext('2d', { alpha: false });
       if (!context) return;
@@ -604,26 +603,23 @@ export const PdfEngineWithHighlights = forwardRef<ReaderEngineRef, PdfEngineWith
       </div>
 
       {/* Highlights Panel */}
-      {React.createElement(
-        require('../common/PdfHighlightPanel').default || require('../common/PdfHighlightPanel').PdfHighlightPanel,
-        {
-          isOpen: showHighlightsPanel,
-          onClose: () => setShowHighlightsPanel(false),
-          highlights: highlights.filter(h => h.pageNumber && h.rects).map(h => ({
-            id: h.id,
-            bookId: h.bookId,
-            pageNumber: h.pageNumber!,
-            text: h.text,
-            rects: h.rects!,
-            color: h.color,
-            note: h.note,
-            createdAt: h.timestamp as any,
-          })),
-          onGoToHighlight: (pageNumber: number) => goToPage(pageNumber),
-          onDeleteHighlight: handleDeleteHighlight,
-          onUpdateHighlight: handleUpdateHighlight,
-        }
-      )}
+      <PdfHighlightPanel
+        isOpen={showHighlightsPanel}
+        onClose={() => setShowHighlightsPanel(false)}
+        highlights={highlights.filter(h => h.pageNumber && h.rects).map(h => ({
+          id: h.id,
+          bookId: h.bookId,
+          pageNumber: h.pageNumber!,
+          text: h.text,
+          rects: h.rects!,
+          color: h.color,
+          note: h.note,
+          createdAt: h.timestamp as any,
+        }))}
+        onGoToHighlight={(pageNumber: number) => goToPage(pageNumber)}
+        onDeleteHighlight={handleDeleteHighlight}
+        onUpdateHighlight={handleUpdateHighlight}
+      />
     </div>
   );
 });

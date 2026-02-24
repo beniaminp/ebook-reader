@@ -144,11 +144,25 @@ export async function initDatabase(): Promise<boolean> {
       return true;
     }
 
+    // DB opened but isOpen.result is false — clear the connection so callers get a clear error
+    db = null;
     return false;
   } catch (error) {
+    db = null;
     console.error('Error initializing database:', error);
     return false;
   }
+}
+
+/**
+ * Returns a guaranteed-open database connection.
+ * Calls initDatabase() if the connection has not been established yet.
+ * Throws if initialization fails so callers never silently operate on a null db.
+ */
+async function getDb(): Promise<SQLiteDBConnection> {
+  if (!db) await initDatabase();
+  if (!db) throw new Error('Database initialization failed');
+  return db;
 }
 
 async function initWebDatabase(): Promise<boolean> {
@@ -172,12 +186,9 @@ export async function getAllBooks(): Promise<Book[]> {
     return webBooks.map(webBookToBook);
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(`SELECT * FROM ${TABLES.BOOKS} ORDER BY added_at DESC;`);
+    const database = await getDb();
+    const result = await database.query(`SELECT * FROM ${TABLES.BOOKS} ORDER BY added_at DESC;`);
     return result.values?.map(mapRowToBook) || [];
   } catch (error) {
     console.error('Error getting books:', error);
@@ -192,12 +203,9 @@ export async function getBookById(id: string): Promise<Book | null> {
     return found ? webBookToBook(found) : null;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.BOOKS} WHERE id = ? LIMIT 1;`,
       [id]
     );
@@ -237,12 +245,9 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(
+    const database = await getDb();
+    await database.query(
       `INSERT INTO ${TABLES.BOOKS} (
         id, title, author, file_path, file_name, file_size, format,
         cover_path, total_pages, language, publisher, publish_date, isbn,
@@ -297,11 +302,8 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
     return false;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const fields: string[] = [];
     const values: any[] = [];
 
@@ -329,13 +331,37 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
       fields.push('last_read = ?');
       values.push(updates.lastRead.getTime());
     }
+    if (updates.filePath !== undefined) {
+      fields.push('file_path = ?');
+      values.push(updates.filePath);
+    }
+    if (updates.downloaded !== undefined) {
+      fields.push('downloaded = ?');
+      values.push(updates.downloaded ? 1 : 0);
+    }
+    if (updates.format !== undefined) {
+      fields.push('format = ?');
+      values.push(updates.format.toUpperCase());
+    }
+    if (updates.source !== undefined) {
+      fields.push('source = ?');
+      values.push(updates.source);
+    }
+    if (updates.sourceId !== undefined) {
+      fields.push('source_id = ?');
+      values.push(updates.sourceId);
+    }
+    if (updates.sourceUrl !== undefined) {
+      fields.push('source_url = ?');
+      values.push(updates.sourceUrl);
+    }
 
     if (fields.length > 0) {
       fields.push('updated_at = ?');
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await db!.query(
+      await database.query(
         `UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`,
         values
       );
@@ -357,12 +383,9 @@ export async function deleteBook(id: string): Promise<boolean> {
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(`DELETE FROM ${TABLES.BOOKS} WHERE id = ?;`, [id]);
+    const database = await getDb();
+    await database.query(`DELETE FROM ${TABLES.BOOKS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting book:', error);
@@ -379,12 +402,9 @@ export async function searchBooks(query: string): Promise<Book[]> {
       .map(webBookToBook);
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.BOOKS}
        WHERE title LIKE ? OR author LIKE ?
        ORDER BY added_at DESC;`,
@@ -405,13 +425,10 @@ export async function getBooksByFormat(formats: string[]): Promise<Book[]> {
       .map(webBookToBook);
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const placeholders = formats.map(() => '?').join(',');
-    const result = await db!.query(
+    const result = await database.query(
       `SELECT * FROM ${TABLES.BOOKS} WHERE format IN (${placeholders}) ORDER BY added_at DESC;`,
       formats
     );
@@ -432,12 +449,9 @@ export async function getAllCollections(): Promise<Collection[]> {
     return webCollections.map(webCollectionToCollection);
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.COLLECTIONS} ORDER BY sort_order;`
     );
     return result.values?.map(mapRowToCollection) || [];
@@ -538,12 +552,9 @@ export async function upsertReadingProgress(
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(
+    const database = await getDb();
+    await database.query(
       `INSERT INTO ${TABLES.READING_PROGRESS} (
         id, book_id, current_page, total_pages, percentage, location,
         chapter_id, chapter_title, last_read_at, created_at, updated_at
@@ -597,12 +608,9 @@ export async function getReadingProgress(bookId: string): Promise<ReadingProgres
     return null;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.READING_PROGRESS} WHERE book_id = ?;`,
       [bookId]
     );
@@ -651,15 +659,12 @@ export async function addBookmark(bookmark: DbBookmark): Promise<Bookmark | null
     return newBookmark;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const id = bookmark.id || `${bookmark.bookId}-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await db!.query(
+    await database.query(
       `INSERT INTO ${TABLES.BOOKMARKS} (
         id, book_id, location, page_number, chapter_id, chapter_title,
         text_preview, note, created_at, updated_at
@@ -711,12 +716,9 @@ export async function getBookmarks(bookId: string): Promise<Bookmark[]> {
     return bookmarks;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.BOOKMARKS} WHERE book_id = ? ORDER BY created_at DESC;`,
       [bookId]
     );
@@ -744,12 +746,9 @@ export async function deleteBookmark(id: string): Promise<boolean> {
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(`DELETE FROM ${TABLES.BOOKMARKS} WHERE id = ?;`, [id]);
+    const database = await getDb();
+    await database.query(`DELETE FROM ${TABLES.BOOKMARKS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting bookmark:', error);
@@ -784,14 +783,11 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
     return newHighlight;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const now = Math.floor(Date.now() / 1000);
 
-    await db!.query(
+    await database.query(
       `INSERT INTO ${TABLES.HIGHLIGHTS} (
         id, book_id, location, text, color, note, page_number, rects,
         chapter_id, chapter_title, created_at, updated_at
@@ -848,12 +844,9 @@ export async function getHighlights(bookId: string): Promise<Highlight[]> {
     return highlights;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.HIGHLIGHTS} WHERE book_id = ? ORDER BY created_at DESC;`,
       [bookId]
     );
@@ -884,12 +877,9 @@ export async function deleteHighlight(id: string): Promise<boolean> {
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(`DELETE FROM ${TABLES.HIGHLIGHTS} WHERE id = ?;`, [id]);
+    const database = await getDb();
+    await database.query(`DELETE FROM ${TABLES.HIGHLIGHTS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting highlight:', error);
@@ -910,11 +900,8 @@ export async function updateHighlight(id: string, updates: Partial<Pick<Highligh
     return false;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const fields: string[] = [];
     const values: any[] = [];
 
@@ -932,7 +919,7 @@ export async function updateHighlight(id: string, updates: Partial<Pick<Highligh
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await db!.query(
+      await database.query(
         `UPDATE ${TABLES.HIGHLIGHTS} SET ${fields.join(', ')} WHERE id = ?;`,
         values
       );
@@ -958,24 +945,21 @@ export async function recordReadingSession(
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const todayStart = Math.floor(Date.now() / 1000);
     const today = todayStart - (todayStart % 86400);
     const now = Math.floor(Date.now() / 1000);
 
     // Check if exists
-    const existingResult = await db!.query(
+    const existingResult = await database.query(
       `SELECT * FROM ${TABLES.READING_STATS} WHERE book_id = ? AND date = ?;`,
       [bookId, today]
     );
 
     if (existingResult.values && existingResult.values.length > 0) {
       const row = existingResult.values[0];
-      await db!.query(
+      await database.query(
         `UPDATE ${TABLES.READING_STATS}
          SET pages_read = ?, time_spent = ?, session_count = ?, updated_at = ?
          WHERE id = ?;`,
@@ -988,7 +972,7 @@ export async function recordReadingSession(
         ]
       );
     } else {
-      await db!.query(
+      await database.query(
         `INSERT INTO ${TABLES.READING_STATS} (
           id, book_id, date, pages_read, time_spent, session_count, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
@@ -1017,14 +1001,11 @@ export async function getReadingStats(bookId: string, days = 30): Promise<any[]>
     return [];
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const startDate = Math.floor(Date.now() / 1000) - days * 86400;
 
-    const result = await db!.query(
+    const result = await database.query(
       `SELECT * FROM ${TABLES.READING_STATS}
        WHERE book_id = ? AND date >= ?
        ORDER BY date DESC;`,
@@ -1044,14 +1025,11 @@ export async function getGlobalReadingStats(days = 30): Promise<any[]> {
     return [];
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const startDate = Math.floor(Date.now() / 1000) - days * 86400;
 
-    const result = await db!.query(
+    const result = await database.query(
       `SELECT rs.date, SUM(rs.pages_read) as pages_read, SUM(rs.time_spent) as time_spent,
               SUM(rs.session_count) as session_count, COUNT(DISTINCT rs.book_id) as books_active
        FROM ${TABLES.READING_STATS} rs
@@ -1088,12 +1066,9 @@ export async function getTotalReadingSummary(): Promise<{
     };
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const summaryResult = await db!.query(
+    const database = await getDb();
+    const summaryResult = await database.query(
       `SELECT
          COUNT(DISTINCT book_id) as total_books,
          SUM(pages_read) as total_pages,
@@ -1135,12 +1110,9 @@ export async function getSetting<T = any>(key: string): Promise<T | null> {
     return null;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT value FROM ${TABLES.APP_SETTINGS} WHERE key = ?;`,
       [key]
     );
@@ -1160,12 +1132,9 @@ export async function setSetting(key: string, value: any, category?: string): Pr
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(
+    const database = await getDb();
+    await database.query(
       `INSERT INTO ${TABLES.APP_SETTINGS} (id, key, value, category, updated_at)
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, category = excluded.category, updated_at = excluded.updated_at;`,
@@ -1204,12 +1173,9 @@ export async function getAllSettings(): Promise<Record<string, any>> {
     return settings;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(`SELECT key, value FROM ${TABLES.APP_SETTINGS};`);
+    const database = await getDb();
+    const result = await database.query(`SELECT key, value FROM ${TABLES.APP_SETTINGS};`);
 
     const settings: Record<string, any> = {};
     for (const row of result.values || []) {
@@ -1231,12 +1197,9 @@ export async function getAllSettings(): Promise<Record<string, any>> {
 // ============================================================================
 
 export async function getThemes(): Promise<any[]> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(`SELECT * FROM ${TABLES.THEMES} ORDER BY name;`);
+    const database = await getDb();
+    const result = await database.query(`SELECT * FROM ${TABLES.THEMES} ORDER BY name;`);
     return (result.values || []).map(row => ({
       id: row.id,
       name: row.name,
@@ -1258,12 +1221,9 @@ export async function getThemes(): Promise<any[]> {
 }
 
 export async function getTheme(id: string): Promise<any | null> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT * FROM ${TABLES.THEMES} WHERE id = ?;`,
       [id]
     );
@@ -1300,15 +1260,12 @@ export async function addBookToCollection(
   collectionId: string,
   sortOrder = 0
 ): Promise<boolean> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const id = `${collectionId}-${bookId}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await db!.query(
+    await database.query(
       `INSERT OR IGNORE INTO ${TABLES.BOOK_COLLECTIONS} (id, book_id, collection_id, sort_order, added_at)
        VALUES (?, ?, ?, ?, ?);`,
       [id, bookId, collectionId, sortOrder, now]
@@ -1321,12 +1278,9 @@ export async function addBookToCollection(
 }
 
 export async function removeBookFromCollection(bookId: string, collectionId: string): Promise<boolean> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(
+    const database = await getDb();
+    await database.query(
       `DELETE FROM ${TABLES.BOOK_COLLECTIONS} WHERE book_id = ? AND collection_id = ?;`,
       [bookId, collectionId]
     );
@@ -1338,12 +1292,9 @@ export async function removeBookFromCollection(bookId: string, collectionId: str
 }
 
 export async function getBooksInCollection(collectionId: string): Promise<Book[]> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT b.* FROM ${TABLES.BOOKS} b
        INNER JOIN ${TABLES.BOOK_COLLECTIONS} bc ON b.id = bc.book_id
        WHERE bc.collection_id = ?
@@ -1375,15 +1326,12 @@ export async function createCollection(
     return newCollection;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const id = `collection-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await db!.query(
+    await database.query(
       `INSERT INTO ${TABLES.COLLECTIONS} (id, name, description, cover_path, sort_order, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?);`,
       [id, collection.name, collection.description || null, null, collection.sortOrder, now, now]
@@ -1411,11 +1359,8 @@ export async function updateCollection(
     return false;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const fields: string[] = [];
     const values: any[] = [];
 
@@ -1437,7 +1382,7 @@ export async function updateCollection(
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await db!.query(
+      await database.query(
         `UPDATE ${TABLES.COLLECTIONS} SET ${fields.join(', ')} WHERE id = ?;`,
         values
       );
@@ -1457,12 +1402,9 @@ export async function deleteCollection(id: string): Promise<boolean> {
     return true;
   }
 
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(`DELETE FROM ${TABLES.COLLECTIONS} WHERE id = ?;`, [id]);
+    const database = await getDb();
+    await database.query(`DELETE FROM ${TABLES.COLLECTIONS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting collection:', error);
@@ -1475,12 +1417,9 @@ export async function deleteCollection(id: string): Promise<boolean> {
 // ============================================================================
 
 export async function getTags(): Promise<any[]> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(`SELECT * FROM ${TABLES.TAGS} ORDER BY name;`);
+    const database = await getDb();
+    const result = await database.query(`SELECT * FROM ${TABLES.TAGS} ORDER BY name;`);
     return (result.values || []).map(row => ({
       id: row.id,
       name: row.name,
@@ -1493,15 +1432,12 @@ export async function getTags(): Promise<any[]> {
 }
 
 export async function createTag(name: string, color?: string): Promise<any | null> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const id = `tag-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await db!.query(
+    await database.query(
       `INSERT INTO ${TABLES.TAGS} (id, name, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?);`,
       [id, name, color || null, now, now]
     );
@@ -1514,15 +1450,12 @@ export async function createTag(name: string, color?: string): Promise<any | nul
 }
 
 export async function addTagToBook(bookId: string, tagId: string): Promise<boolean> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
+    const database = await getDb();
     const id = `${tagId}-${bookId}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await db!.query(
+    await database.query(
       `INSERT OR IGNORE INTO ${TABLES.BOOK_TAGS} (id, book_id, tag_id, added_at) VALUES (?, ?, ?, ?);`,
       [id, bookId, tagId, now]
     );
@@ -1534,12 +1467,9 @@ export async function addTagToBook(bookId: string, tagId: string): Promise<boole
 }
 
 export async function removeTagFromBook(bookId: string, tagId: string): Promise<boolean> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    await db!.query(
+    const database = await getDb();
+    await database.query(
       `DELETE FROM ${TABLES.BOOK_TAGS} WHERE book_id = ? AND tag_id = ?;`,
       [bookId, tagId]
     );
@@ -1551,12 +1481,9 @@ export async function removeTagFromBook(bookId: string, tagId: string): Promise<
 }
 
 export async function getBookTags(bookId: string): Promise<any[]> {
-  if (!db) {
-    await initDatabase();
-  }
-
   try {
-    const result = await db!.query(
+    const database = await getDb();
+    const result = await database.query(
       `SELECT t.* FROM ${TABLES.TAGS} t
        INNER JOIN ${TABLES.BOOK_TAGS} bt ON t.id = bt.tag_id
        WHERE bt.book_id = ?

@@ -7,12 +7,11 @@
 
 import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import '../../utils/pdfWorkerSetup';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { PageTransition } from '../reader-ui/PageTransition';
 import type { PageDirection } from '../reader-ui/PageTransition';
 import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter } from '../../types/reader';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 export interface PdfEngineProps {
   pdfData: ArrayBuffer;

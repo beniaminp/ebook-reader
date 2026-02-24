@@ -53,6 +53,7 @@ import { EPUB_THEMES } from '../../types/epub';
 import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter, ReaderFormat } from '../../types/reader';
 import type { Book, Highlight } from '../../types/index';
 import { databaseService } from '../../services/database';
+import { useAppStore } from '../../stores/useAppStore';
 
 import './UnifiedReaderContainer.css';
 import './EpubReader.css';
@@ -136,6 +137,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const themeStore = useThemeStore();
   const currentTheme = EPUB_THEMES[themeStore.theme] || EPUB_THEMES.light;
 
+  // Track the active bookmark ID so we can remove it
+  const currentBookmarkIdRef = useRef<string | null>(null);
+
   // Overlay tap zone state (for foliate engine with iframe)
   const overlayTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -184,6 +188,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     setPdfHighlights(updatedHighlights);
   }, []);
 
+  // ─── Stable callback refs for renderEngine (prevent remounting on handler change) ─────────────────────────
+
+  const handleRelocateRef = useRef<(p: ReaderProgress) => void>(() => {});
+  const handleFoliateLoadCompleteRef = useRef<(meta: { title: string; author: string }) => void>(() => {});
+  const handlePdfLoadCompleteRef = useRef<(meta: { title: string; author: string; totalPages: number }) => void>(() => {});
+  const handleScrollLoadCompleteRef = useRef<() => void>(() => {});
+  const handleErrorRef = useRef<(error: string) => void>(() => {});
+  const handlePdfHighlightsChangeRef = useRef<(highlights: Highlight[]) => void>(() => {});
+  const pdfHighlightsRef = useRef<Highlight[]>([]);
+
   // ─── Navigation handlers ─────────────────────────
 
   const handleNext = useCallback(() => engineRef.current?.next(), []);
@@ -224,6 +238,15 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     setToastMessage(`Error: ${error}`);
     setLoading(false);
   }, []);
+
+  // Keep stable callback refs in sync so renderEngine never remounts due to handler identity changes
+  handleRelocateRef.current = handleRelocate;
+  handleFoliateLoadCompleteRef.current = handleFoliateLoadComplete;
+  handlePdfLoadCompleteRef.current = handlePdfLoadComplete;
+  handleScrollLoadCompleteRef.current = handleScrollLoadComplete;
+  handleErrorRef.current = handleError;
+  handlePdfHighlightsChangeRef.current = handlePdfHighlightsChange;
+  pdfHighlightsRef.current = pdfHighlights;
 
   // ─── Apply theme/font changes to foliate engine ─────────────────────────
 
@@ -341,15 +364,36 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // ─── Bookmark ─────────────────────────
 
-  const handleToggleBookmark = useCallback(() => {
+  const handleToggleBookmark = useCallback(async () => {
     const loc = progress?.locationString || '';
     if (isBookmarked) {
+      // Remove the bookmark from the database
+      if (currentBookmarkIdRef.current) {
+        await useAppStore.getState().removeBookmark(currentBookmarkIdRef.current);
+        currentBookmarkIdRef.current = null;
+      } else {
+        // Fallback: fetch bookmarks and remove any that match the current location
+        const bookmarks = await databaseService.getBookmarks(book.id);
+        const match = bookmarks.find(b => b.location?.cfi === loc);
+        if (match) {
+          await databaseService.deleteBookmark(match.id);
+        }
+      }
+      setIsBookmarked(false);
       setToastMessage('Bookmark removed');
     } else {
+      const bookmarkId = `bookmark-${Date.now()}`;
+      currentBookmarkIdRef.current = bookmarkId;
+      // Add via the store so it persists to the database
+      await useAppStore.getState().addBookmark(book.id, loc, undefined, undefined, undefined);
+      // Fetch back the saved bookmark to capture its real ID
+      const saved = await databaseService.getBookmarks(book.id);
+      const match = saved.find(b => b.location?.cfi === loc);
+      if (match) currentBookmarkIdRef.current = match.id;
       onBookmark?.(book.id, loc);
+      setIsBookmarked(true);
       setToastMessage('Bookmark added');
     }
-    setIsBookmarked(prev => !prev);
   }, [book.id, progress, isBookmarked, onBookmark]);
 
   // ─── Search ─────────────────────────
@@ -461,18 +505,52 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     }, 500);
   }, [isFoliate]);
 
-  // Poll for foliate text selection when in passthrough mode
+  // Listen for foliate (EPUB iframe) text selection when in passthrough mode.
+  // Use mouseup + touchend events instead of polling so detection is immediate.
   useEffect(() => {
     if (!isFoliate || !overlayPassthrough) return;
 
-    const interval = setInterval(() => {
-      handleFoliateTextSelection();
-    }, 500);
+    // Attach to the document first; if the foliate iframe is available, also
+    // attach inside it so selection events bubble regardless of focus.
+    const attachIframeListeners = () => {
+      const foliateView = document.querySelector('foliate-view');
+      const iframe = foliateView?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
+      return iframe?.contentDocument ?? null;
+    };
 
-    return () => clearInterval(interval);
+    const onSelectionEnd = () => handleFoliateTextSelection();
+
+    document.addEventListener('mouseup', onSelectionEnd);
+    document.addEventListener('touchend', onSelectionEnd);
+
+    // Also attach inside the iframe document if accessible
+    const iframeDoc = attachIframeListeners();
+    if (iframeDoc) {
+      iframeDoc.addEventListener('mouseup', onSelectionEnd);
+      iframeDoc.addEventListener('touchend', onSelectionEnd);
+    }
+
+    return () => {
+      document.removeEventListener('mouseup', onSelectionEnd);
+      document.removeEventListener('touchend', onSelectionEnd);
+      if (iframeDoc) {
+        iframeDoc.removeEventListener('mouseup', onSelectionEnd);
+        iframeDoc.removeEventListener('touchend', onSelectionEnd);
+      }
+    };
   }, [isFoliate, overlayPassthrough, handleFoliateTextSelection]);
 
   // ─── Render engine ─────────────────────────
+  // Stable wrapper callbacks forward to refs so the useMemo only depends on
+  // structural values (book ID, format, file data), preventing unnecessary
+  // engine remounts when handler identity changes.
+
+  const stableOnRelocate = useCallback((p: ReaderProgress) => handleRelocateRef.current(p), []);
+  const stableOnFoliateLoadComplete = useCallback((meta: { title: string; author: string }) => handleFoliateLoadCompleteRef.current(meta), []);
+  const stableOnPdfLoadComplete = useCallback((meta: { title: string; author: string; totalPages: number }) => handlePdfLoadCompleteRef.current(meta), []);
+  const stableOnScrollLoadComplete = useCallback(() => handleScrollLoadCompleteRef.current(), []);
+  const stableOnError = useCallback((error: string) => handleErrorRef.current(error), []);
+  const stableOnPdfHighlightsChange = useCallback((highlights: Highlight[]) => handlePdfHighlightsChangeRef.current(highlights), []);
 
   const renderEngine = useMemo(() => {
     if (isFoliate && fileData) {
@@ -483,9 +561,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           bookId={book.id}
           format={format}
           initialLocation={initialLocation}
-          onRelocate={handleRelocate}
-          onLoadComplete={handleFoliateLoadComplete}
-          onError={handleError}
+          onRelocate={stableOnRelocate}
+          onLoadComplete={stableOnFoliateLoadComplete}
+          onError={stableOnError}
         />
       );
     }
@@ -497,11 +575,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           pdfData={fileData}
           bookId={book.id}
           initialPage={initialLocation ? parseInt(initialLocation, 10) || 1 : 1}
-          onRelocate={handleRelocate}
-          onLoadComplete={handlePdfLoadComplete}
-          onError={handleError}
-          existingHighlights={pdfHighlights}
-          onHighlightsChange={handlePdfHighlightsChange}
+          onRelocate={stableOnRelocate}
+          onLoadComplete={stableOnPdfLoadComplete}
+          onError={stableOnError}
+          existingHighlights={pdfHighlightsRef.current}
+          onHighlightsChange={stableOnPdfHighlightsChange}
         />
       );
     }
@@ -513,8 +591,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           content={textContent}
           contentType={scrollContentType(format)}
           ionContentRef={ionContentRef}
-          onRelocate={handleRelocate}
-          onLoadComplete={handleScrollLoadComplete}
+          onRelocate={stableOnRelocate}
+          onLoadComplete={stableOnScrollLoadComplete}
         />
       );
     }
@@ -523,9 +601,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   }, [
     isFoliate, isPdf, isScroll, fileData, textContent,
     book.id, format, initialLocation,
-    handleRelocate, handleFoliateLoadComplete, handlePdfLoadComplete,
-    handleScrollLoadComplete, handleError,
-    pdfHighlights, handlePdfHighlightsChange,
+    stableOnRelocate, stableOnFoliateLoadComplete, stableOnPdfLoadComplete,
+    stableOnScrollLoadComplete, stableOnError, stableOnPdfHighlightsChange,
   ]);
 
   // ─── Toolbar theme styling ─────────────────────────

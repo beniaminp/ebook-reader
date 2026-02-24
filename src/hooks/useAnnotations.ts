@@ -27,9 +27,8 @@ export interface UseBookmarksReturn {
   refreshBookmarks: () => Promise<void>;
 }
 
-export const useBookmarks = (bookId: string): UseBookmarksReturn => {
+export const useBookmarks = (bookId: string, currentCfi: EpubCfi = ''): UseBookmarksReturn => {
   const [bookmarks, setBookmarks] = useState<EpubBookmark[]>([]);
-  const [currentCfi, setCurrentCfi] = useState<EpubCfi>('');
 
   const refreshBookmarks = useCallback(async () => {
     const bookBookmarks = annotationsService.getBookmarks(bookId);

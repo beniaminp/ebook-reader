@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -84,7 +84,6 @@ const Library: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('dateAdded');
   const [isLoading, setIsLoading] = useState(true);
   const [showActionSheet, setShowActionSheet] = useState(false);
@@ -129,8 +128,9 @@ const Library: React.FC = () => {
     }
   };
 
-  // Filter and sort books when dependencies change
-  useEffect(() => {
+  // Compute filtered and sorted books directly — avoids the extra render cycle
+  // that useEffect + setState would cause.
+  const filteredBooks = useMemo(() => {
     let result = [...books];
 
     // Apply search filter
@@ -180,9 +180,7 @@ const Library: React.FC = () => {
     }
 
     // Apply sorting
-    result = sortBooks(result, sortBy);
-
-    setFilteredBooks(result);
+    return sortBooks(result, sortBy);
   }, [books, searchQuery, sortBy, filters, bookTagMap, bookCollectionMap]);
 
   const loadBooks = async () => {
@@ -449,7 +447,7 @@ const Library: React.FC = () => {
       format = 'md';
     }
 
-    const bookId = `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const bookId = crypto.randomUUID();
 
     // Read the file into an ArrayBuffer first — this is the critical step
     const arrayBuffer = await file.arrayBuffer();

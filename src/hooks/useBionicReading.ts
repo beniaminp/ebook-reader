@@ -6,7 +6,7 @@
  * the eye quickly scan through text while maintaining comprehension.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 
 export interface BionicReadingOptions {
   /** Whether bionic reading is enabled */
@@ -163,10 +163,21 @@ function processTextNode(
 export const useBionicReading = (
   options: BionicReadingOptions = {}
 ): UseBionicReadingReturn => {
-  const mergedOptions = {
-    ...DEFAULT_OPTIONS,
-    ...options,
-  };
+  const mergedOptions = useMemo(
+    () => ({
+      ...DEFAULT_OPTIONS,
+      ...options,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      options.enabled,
+      options.boldFraction,
+      options.boldClassName,
+      options.regularClassName,
+      options.wordClassName,
+      options.contentSelector,
+    ]
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const processedRef = useRef<Set<Document>>(new Set());
 

@@ -246,7 +246,7 @@ const OpdsCatalogPage: React.FC = () => {
       const format = formatToBookFormat(link.format);
 
       const newBook: Book = {
-        id: `opds-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: crypto.randomUUID(),
         title: entry.title,
         author: entry.author || 'Unknown',
         filePath: objectUrl,

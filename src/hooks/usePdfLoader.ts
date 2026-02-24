@@ -1,8 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-
-// Set worker from CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+import '../utils/pdfWorkerSetup';
 
 export interface PdfMetadata {
   title?: string;

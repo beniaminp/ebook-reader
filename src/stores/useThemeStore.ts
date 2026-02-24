@@ -274,7 +274,7 @@ export const useThemeStore = create<ThemeState>()(
       setPageTransitionType: (pageTransitionType) => set({ pageTransitionType }),
 
       // Bulk actions
-      updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
+      updateSettings: (settings) => set(settings),
 
       resetSettings: () => set({
         theme: DEFAULT_SETTINGS.theme,
@@ -294,10 +294,7 @@ export const useThemeStore = create<ThemeState>()(
         autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
       }),
 
-      applyPreset: (preset) => set((state) => ({
-        ...state,
-        ...presets[preset],
-      })),
+      applyPreset: (preset) => set(presets[preset]),
 
       // Custom theme management
       addCustomTheme: (theme) =>

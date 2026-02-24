@@ -68,6 +68,18 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isStoppingRef = useRef(false);
 
+  // Keep refs in sync with the latest state values so that speakSentence
+  // (which is captured as a closure in utterance.onend) always reads the
+  // most-recent settings without requiring a new callback reference.
+  const rateRef = useRef(rate);
+  const pitchRef = useRef(pitch);
+  const volumeRef = useRef(volume);
+  const selectedVoiceURIRef = useRef(selectedVoiceURI);
+  rateRef.current = rate;
+  pitchRef.current = pitch;
+  volumeRef.current = volume;
+  selectedVoiceURIRef.current = selectedVoiceURI;
+
   // Load available voices
   useEffect(() => {
     if (!isSupported) return;
@@ -128,14 +140,17 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
       }
 
       const utterance = new SpeechSynthesisUtterance(sentencesRef.current[index]);
-      utterance.rate = rate;
-      utterance.pitch = pitch;
-      utterance.volume = volume;
+      // Read from refs so that settings changed after speak() was called are
+      // picked up by subsequent sentences without re-creating this callback.
+      utterance.rate = rateRef.current;
+      utterance.pitch = pitchRef.current;
+      utterance.volume = volumeRef.current;
 
-      if (selectedVoiceURI) {
+      const voiceURI = selectedVoiceURIRef.current;
+      if (voiceURI) {
         const voice = window.speechSynthesis
           .getVoices()
-          .find(v => v.voiceURI === selectedVoiceURI);
+          .find(v => v.voiceURI === voiceURI);
         if (voice) utterance.voice = voice;
       }
 
@@ -167,7 +182,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     },
-    [isSupported, rate, pitch, volume, selectedVoiceURI]
+    [isSupported]
   );
 
   const speak = useCallback(

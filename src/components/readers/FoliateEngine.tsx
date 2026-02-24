@@ -84,6 +84,11 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
 
+  // Keep a ref to initialLocation so the load effect can read the latest value
+  // without re-running when it changes after the initial mount.
+  const initialLocationRef = useRef(initialLocation);
+  initialLocationRef.current = initialLocation;
+
   // Track current position
   const currentCfiRef = useRef<string>('');
   const currentFractionRef = useRef<number>(0);
@@ -192,8 +197,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         await view.open(file);
         if (destroyed) return;
 
-        if (initialLocation) {
-          await view.goTo(initialLocation);
+        if (initialLocationRef.current) {
+          await view.goTo(initialLocationRef.current);
         } else {
           await view.next();
         }
@@ -229,7 +234,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       }
       loadedDocsRef.current.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, arrayBuffer]);
 
   useImperativeHandle(ref, () => ({

@@ -5,14 +5,6 @@
 // EPUB CFI (Canonical Fragment Identifier) - location in EPUB
 export type EpubCfi = string;
 
-// EPUB Chapter information
-export interface EpubChapter {
-  id: string;
-  label: string;
-  href: string;
-  subitems?: EpubChapter[];
-}
-
 // EPUB Metadata
 export interface EpubMetadata {
   title: string;
@@ -149,18 +141,3 @@ export interface EpubSearchResult {
   chapterLabel: string;
 }
 
-// EPUB Reader ref methods
-export interface EpubReaderRef {
-  next: () => void;
-  prev: () => void;
-  goToChapter: (index: number) => void;
-  goToCfi: (cfi: string) => void;
-  setFontSize: (size: number) => void;
-  setFontFamily: (family: string) => void;
-  setLineHeight: (height: number) => void;
-  setTheme: (theme: EpubTheme) => void;
-  getChapters: () => EpubChapter[];
-  getCurrentLocation: () => EpubCfi;
-  getPercentage: () => number;
-  search: (query: string) => Promise<EpubSearchResult[]>;
-}

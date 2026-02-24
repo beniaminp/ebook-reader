@@ -53,7 +53,7 @@ const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
   const history = useHistory();
 
-  const { books, setCurrentBook, updateProgress } = useAppStore();
+  const { setCurrentBook, updateProgress } = useAppStore();
 
   const [book, setBook] = useState<Book | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -78,6 +78,11 @@ const Reader: React.FC = () => {
   useEffect(() => {
     const loadBook = async () => {
       setLoadState('loading');
+
+      // Read books directly from store state to avoid a stale closure.
+      // setCurrentBook and updateProgress are Zustand actions and are stable
+      // across renders, so they do not need to be in the dependency array.
+      const books = useAppStore.getState().books;
 
       // Try from store first
       let foundBook = books.find((b) => b.id === bookId) || null;

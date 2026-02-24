@@ -4,7 +4,8 @@
  * Utility functions for working with EPUB files, CFIs, and chapters
  */
 
-import type { EpubChapter, EpubCfi } from '../types/epub';
+import type { EpubCfi } from '../types/epub';
+import type { Chapter } from '../types/reader';
 
 /**
  * Parse a CFI (Canonical Fragment Identifier) to extract components
@@ -129,10 +130,10 @@ export const trimCfi = (cfi: string): string => {
  * Flatten chapter tree for list display
  */
 export const flattenChapters = (
-  chapters: EpubChapter[],
+  chapters: Chapter[],
   level = 0
-): Array<EpubChapter & { level: number }> => {
-  const result: Array<EpubChapter & { level: number }> = [];
+): Array<Chapter & { level: number }> => {
+  const result: Array<Chapter & { level: number }> = [];
 
   for (const chapter of chapters) {
     result.push({ ...chapter, level });
@@ -148,9 +149,9 @@ export const flattenChapters = (
  * Find chapter by href
  */
 export const findChapterByHref = (
-  chapters: EpubChapter[],
+  chapters: Chapter[],
   href: string
-): EpubChapter | null => {
+): Chapter | null => {
   for (const chapter of chapters) {
     if (chapter.href === href) {
       return chapter;
@@ -167,9 +168,9 @@ export const findChapterByHref = (
  * Find chapter by ID
  */
 export const findChapterById = (
-  chapters: EpubChapter[],
+  chapters: Chapter[],
   id: string
-): EpubChapter | null => {
+): Chapter | null => {
   for (const chapter of chapters) {
     if (chapter.id === id) {
       return chapter;
@@ -186,12 +187,12 @@ export const findChapterById = (
  * Get chapter path (array of parent chapters)
  */
 export const getChapterPath = (
-  chapters: EpubChapter[],
+  chapters: Chapter[],
   targetId: string
-): EpubChapter[] => {
-  const path: EpubChapter[] = [];
+): Chapter[] => {
+  const path: Chapter[] = [];
 
-  const search = (items: EpubChapter[], parentPath: EpubChapter[] = []): boolean => {
+  const search = (items: Chapter[], parentPath: Chapter[] = []): boolean => {
     for (const chapter of items) {
       const currentPath = [...parentPath, chapter];
 

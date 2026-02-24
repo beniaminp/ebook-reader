@@ -3,16 +3,12 @@
  * Provides quick actions like Translate, Define, Highlight
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   IonButton,
   IonButtons,
   IonIcon,
-  IonPopover,
-  IonList,
-  IonItem,
-  IonLabel,
 } from '@ionic/react';
 import { language, bookmark, glasses, copy, create } from 'ionicons/icons';
 import { useTranslationStore } from '../../stores/useTranslationStore';
@@ -37,8 +33,6 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 }) => {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedText, setSelectedText] = useState<string>('');
-  const [showPopover, setShowPopover] = useState(false);
-  const popoverRef = useRef<HTMLIonPopoverElement>(null);
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
@@ -60,11 +54,9 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
             y: rect.top + scrollY,
           });
           setSelectedText(text);
-          setShowPopover(true);
         }
       } else {
         setPosition(null);
-        setShowPopover(false);
         setSelectedText('');
       }
     };
@@ -92,32 +84,31 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   // Hide menu on scroll
   useEffect(() => {
     const handleScroll = () => {
-      if (showPopover) {
-        setShowPopover(false);
+      if (position !== null) {
         setPosition(null);
       }
     };
 
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
-  }, [showPopover]);
+  }, [position]);
 
   const handleTranslate = useCallback(() => {
     openTranslationPanel(selectedText);
     onTranslate?.(selectedText);
-    setShowPopover(false);
+    setPosition(null);
     window.getSelection()?.removeAllRanges();
   }, [selectedText, onTranslate, openTranslationPanel]);
 
   const handleDefine = useCallback(() => {
     onDefine?.(selectedText);
-    setShowPopover(false);
+    setPosition(null);
     window.getSelection()?.removeAllRanges();
   }, [selectedText, onDefine]);
 
   const handleHighlight = useCallback(() => {
     onHighlight?.(selectedText);
-    setShowPopover(false);
+    setPosition(null);
     window.getSelection()?.removeAllRanges();
   }, [selectedText, onHighlight]);
 
@@ -128,13 +119,13 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-    setShowPopover(false);
+    setPosition(null);
     window.getSelection()?.removeAllRanges();
   }, [selectedText, onCopy]);
 
   const handleAddNote = useCallback(() => {
     onAddNote?.(selectedText);
-    setShowPopover(false);
+    setPosition(null);
     window.getSelection()?.removeAllRanges();
   }, [selectedText, onAddNote]);
 
