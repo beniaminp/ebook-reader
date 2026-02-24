@@ -614,7 +614,7 @@ export class CalibreWebService {
   /**
    * Save servers to preferences
    */
-  private async saveServers(servers: CalibreWebServerConfig[]): Promise<void> {
+  async saveServers(servers: CalibreWebServerConfig[]): Promise<void> {
     await Preferences.set({
       key: PREF_KEY_SERVERS,
       value: JSON.stringify(servers),

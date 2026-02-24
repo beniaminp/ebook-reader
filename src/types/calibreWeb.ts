@@ -14,6 +14,10 @@ export interface CalibreWebServerConfig {
   isActive: boolean;
   createdAt: number;
   updatedAt: number;
+  // Sync preferences (persisted per-server)
+  syncMetadata?: boolean;
+  syncCovers?: boolean;
+  syncBooks?: boolean;
 }
 
 // Calibre-Web book metadata from API

@@ -93,6 +93,18 @@ const CalibreWebSettings: React.FC = () => {
     loadServers();
   }, []);
 
+  // Load sync preferences from the active server config
+  useEffect(() => {
+    if (activeServerId) {
+      const server = servers.find(s => s.id === activeServerId);
+      if (server) {
+        setSyncMetadata(server.syncMetadata ?? true);
+        setSyncCovers(server.syncCovers ?? true);
+        setSyncBooks(server.syncBooks ?? false);
+      }
+    }
+  }, [activeServerId, servers]);
+
   const loadServers = async () => {
     const loadedServers = await calibreWebService.loadServers();
     setServers(loadedServers);
@@ -167,6 +179,20 @@ const CalibreWebSettings: React.FC = () => {
     }
   };
 
+  const saveSyncPreferences = async (metadata: boolean, covers: boolean, books: boolean) => {
+    if (!activeServerId) return;
+    const loadedServers = await calibreWebService.loadServers();
+    const idx = loadedServers.findIndex(s => s.id === activeServerId);
+    if (idx !== -1) {
+      loadedServers[idx].syncMetadata = metadata;
+      loadedServers[idx].syncCovers = covers;
+      loadedServers[idx].syncBooks = books;
+      loadedServers[idx].updatedAt = Date.now();
+      await calibreWebService.saveServers(loadedServers);
+      setServers(loadedServers);
+    }
+  };
+
   const handleSync = async () => {
     const currentServer = calibreWebService.getCurrentServer();
     if (!currentServer) {
@@ -174,6 +200,9 @@ const CalibreWebSettings: React.FC = () => {
       setShowAlert(true);
       return;
     }
+
+    // Persist sync preferences before syncing
+    await saveSyncPreferences(syncMetadata, syncCovers, syncBooks);
 
     setIsSyncing(true);
     setShowSyncModal(false);
@@ -402,14 +431,22 @@ const CalibreWebSettings: React.FC = () => {
               <IonLabel>Sync Metadata</IonLabel>
               <IonToggle
                 checked={syncMetadata}
-                onIonChange={(e) => setSyncMetadata(e.detail.checked)}
+                onIonChange={(e) => {
+                  const val = e.detail.checked;
+                  setSyncMetadata(val);
+                  saveSyncPreferences(val, syncCovers, syncBooks);
+                }}
               />
             </IonItem>
             <IonItem>
               <IonLabel>Download Cover Images</IonLabel>
               <IonToggle
                 checked={syncCovers}
-                onIonChange={(e) => setSyncCovers(e.detail.checked)}
+                onIonChange={(e) => {
+                  const val = e.detail.checked;
+                  setSyncCovers(val);
+                  saveSyncPreferences(syncMetadata, val, syncBooks);
+                }}
               />
             </IonItem>
             <IonItem>
@@ -419,7 +456,11 @@ const CalibreWebSettings: React.FC = () => {
               </IonLabel>
               <IonToggle
                 checked={syncBooks}
-                onIonChange={(e) => setSyncBooks(e.detail.checked)}
+                onIonChange={(e) => {
+                  const val = e.detail.checked;
+                  setSyncBooks(val);
+                  saveSyncPreferences(syncMetadata, syncCovers, val);
+                }}
               />
             </IonItem>
           </IonList>
