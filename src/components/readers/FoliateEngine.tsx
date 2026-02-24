@@ -186,10 +186,10 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           });
         }) as EventListener);
 
-        const blob = new Blob([arrayBuffer], { type: formatToMime(format) });
+        const file = new File([arrayBuffer], `book.${format}`, { type: formatToMime(format) });
         if (destroyed) return;
 
-        await view.open(blob);
+        await view.open(file);
         if (destroyed) return;
 
         if (initialLocation) {
