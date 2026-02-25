@@ -37,6 +37,8 @@ import {
   IonModal,
   IonFooter,
   IonToast,
+  IonInput,
+  IonCheckbox,
 } from '@ionic/react';
 import {
   gridOutline,
@@ -50,6 +52,7 @@ import {
   filterOutline,
   cloudDownloadOutline,
   checkmarkCircleOutline,
+  libraryOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -82,6 +85,18 @@ const Library: React.FC = () => {
   const [allTags, setAllTags] = useState<Array<{ id: string; name: string; color?: string }>>([]);
   const [bookTagMap, setBookTagMap] = useState<Record<string, string[]>>({});
   const [bookCollectionMap, setBookCollectionMap] = useState<Record<string, string[]>>({});
+
+  // Shelf management state
+  const [showShelfModal, setShowShelfModal] = useState(false);
+  const [editingShelf, setEditingShelf] = useState<Collection | null>(null);
+  const [shelfName, setShelfName] = useState('');
+  const [shelfDescription, setShelfDescription] = useState('');
+  const [showDeleteShelfAlert, setShowDeleteShelfAlert] = useState(false);
+  const [shelfToDelete, setShelfToDelete] = useState<Collection | null>(null);
+
+  // "Add to Shelf" state
+  const [showShelfAssign, setShowShelfAssign] = useState(false);
+  const [bookShelfIds, setBookShelfIds] = useState<string[]>([]);
 
   const activeFilterCount = (
     (filters.format !== 'all' ? 1 : 0) +
@@ -252,6 +267,93 @@ const Library: React.FC = () => {
     setSelectedBook(book);
     setShowActionSheet(true);
   };
+
+  // ─── Shelf management handlers ─────────────────────────
+
+  const openShelfModal = useCallback((shelf?: Collection) => {
+    if (shelf) {
+      setEditingShelf(shelf);
+      setShelfName(shelf.name);
+      setShelfDescription(shelf.description || '');
+    } else {
+      setEditingShelf(null);
+      setShelfName('');
+      setShelfDescription('');
+    }
+    setShowShelfModal(true);
+  }, []);
+
+  const handleSaveShelf = useCallback(async () => {
+    if (!shelfName.trim()) return;
+    if (editingShelf) {
+      await databaseService.updateCollection(editingShelf.id, {
+        name: shelfName.trim(),
+        description: shelfDescription.trim() || undefined,
+      });
+    } else {
+      await databaseService.createCollection({
+        name: shelfName.trim(),
+        description: shelfDescription.trim() || undefined,
+        sortOrder: collections.length,
+      });
+    }
+    setShowShelfModal(false);
+    setEditingShelf(null);
+    setShelfName('');
+    setShelfDescription('');
+    await loadFilterData();
+  }, [shelfName, shelfDescription, editingShelf, collections.length]);
+
+  const handleDeleteShelf = useCallback(async () => {
+    if (!shelfToDelete) return;
+    await databaseService.deleteCollection(shelfToDelete.id);
+    if (filters.collectionId === shelfToDelete.id) {
+      setFilters(prev => ({ ...prev, collectionId: 'all' }));
+    }
+    setShelfToDelete(null);
+    await loadFilterData();
+    await loadBookMappings(books);
+  }, [shelfToDelete, filters.collectionId, setFilters, books]);
+
+  const handleShelfLongPress = useCallback((shelf: Collection, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openShelfModal(shelf);
+  }, [openShelfModal]);
+
+  // "Add to Shelf" handlers
+  const openShelfAssign = useCallback(async (book: Book) => {
+    // Find which shelves this book belongs to
+    const ids: string[] = [];
+    for (const [colId, bookIds] of Object.entries(bookCollectionMap)) {
+      if (bookIds.includes(book.id)) ids.push(colId);
+    }
+    setBookShelfIds(ids);
+    setShowShelfAssign(true);
+  }, [bookCollectionMap]);
+
+  const toggleBookShelf = useCallback(async (collectionId: string) => {
+    if (!selectedBook) return;
+    const isIn = bookShelfIds.includes(collectionId);
+    if (isIn) {
+      await databaseService.removeBookFromCollection(selectedBook.id, collectionId);
+      setBookShelfIds(prev => prev.filter(id => id !== collectionId));
+    } else {
+      await databaseService.addBookToCollection(selectedBook.id, collectionId);
+      setBookShelfIds(prev => [...prev, collectionId]);
+    }
+    // Update collection map
+    setBookCollectionMap(prev => {
+      const updated = { ...prev };
+      const list = updated[collectionId] ? [...updated[collectionId]] : [];
+      if (isIn) {
+        updated[collectionId] = list.filter(id => id !== selectedBook.id);
+      } else {
+        updated[collectionId] = [...list, selectedBook.id];
+      }
+      return updated;
+    });
+  }, [selectedBook, bookShelfIds]);
 
   const [importingCount, setImportingCount] = useState(0);
 
@@ -989,6 +1091,38 @@ const Library: React.FC = () => {
           )}
         </div>
 
+        {/* Shelf chips bar */}
+        {collections.length > 0 && (
+          <div className="shelf-chips-bar">
+            <IonChip
+              color={filters.collectionId === 'all' ? 'primary' : undefined}
+              outline={filters.collectionId !== 'all'}
+              onClick={() => setFilters(p => ({ ...p, collectionId: 'all' }))}
+            >
+              All
+            </IonChip>
+            {collections.map(shelf => (
+              <IonChip
+                key={shelf.id}
+                color={filters.collectionId === shelf.id ? 'primary' : undefined}
+                outline={filters.collectionId !== shelf.id}
+                onClick={() => setFilters(p => ({ ...p, collectionId: shelf.id }))}
+                onContextMenu={(e) => handleShelfLongPress(shelf, e)}
+              >
+                {shelf.name}
+                {filters.collectionId === shelf.id && bookCollectionMap[shelf.id] && (
+                  <IonBadge color="light" style={{ marginLeft: 6, fontSize: '10px' }}>
+                    {bookCollectionMap[shelf.id].length}
+                  </IonBadge>
+                )}
+              </IonChip>
+            ))}
+            <IonChip outline onClick={() => openShelfModal()}>
+              <IonIcon icon={addOutline} />
+            </IonChip>
+          </div>
+        )}
+
         {importingCount > 0 && (
           <div className="loading-state" style={{ paddingBottom: 0 }}>
             <IonSpinner name="crescent" />
@@ -1055,6 +1189,13 @@ const Library: React.FC = () => {
             icon: informationCircleOutline,
             handler: () => {
               setShowBookDetails(true);
+            },
+          },
+          {
+            text: 'Add to Shelf',
+            icon: libraryOutline,
+            handler: () => {
+              if (selectedBook) openShelfAssign(selectedBook);
             },
           },
           {
@@ -1202,6 +1343,124 @@ const Library: React.FC = () => {
         position="bottom"
         onDidDismiss={() => setToastMessage('')}
       />
+
+      {/* Create/Edit Shelf Modal */}
+      <IonModal isOpen={showShelfModal} onDidDismiss={() => setShowShelfModal(false)}>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>{editingShelf ? 'Edit Shelf' : 'New Shelf'}</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowShelfModal(false)}>Cancel</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <IonItem>
+            <IonLabel position="stacked">Shelf Name *</IonLabel>
+            <IonInput
+              value={shelfName}
+              onIonInput={e => setShelfName(e.detail.value || '')}
+              placeholder="e.g. Sci-Fi, Work, Summer Reading"
+              clearInput
+            />
+          </IonItem>
+          <IonItem>
+            <IonLabel position="stacked">Description</IonLabel>
+            <IonInput
+              value={shelfDescription}
+              onIonInput={e => setShelfDescription(e.detail.value || '')}
+              placeholder="Optional description"
+              clearInput
+            />
+          </IonItem>
+          <div className="ion-padding">
+            <IonButton
+              expand="block"
+              onClick={handleSaveShelf}
+              disabled={!shelfName.trim()}
+            >
+              {editingShelf ? 'Save Changes' : 'Create Shelf'}
+            </IonButton>
+            {editingShelf && (
+              <IonButton
+                expand="block"
+                fill="outline"
+                color="danger"
+                style={{ marginTop: 12 }}
+                onClick={() => {
+                  setShelfToDelete(editingShelf);
+                  setShowDeleteShelfAlert(true);
+                  setShowShelfModal(false);
+                }}
+              >
+                <IonIcon icon={trashOutline} slot="start" />
+                Delete Shelf
+              </IonButton>
+            )}
+          </div>
+        </IonContent>
+      </IonModal>
+
+      {/* Delete Shelf Alert */}
+      <IonAlert
+        isOpen={showDeleteShelfAlert}
+        onDidDismiss={() => {
+          setShowDeleteShelfAlert(false);
+          setShelfToDelete(null);
+        }}
+        header="Delete Shelf"
+        message={`Delete "${shelfToDelete?.name}"? Books in this shelf will not be deleted.`}
+        buttons={[
+          { text: 'Cancel', role: 'cancel' },
+          {
+            text: 'Delete',
+            role: 'destructive',
+            handler: handleDeleteShelf,
+          },
+        ]}
+      />
+
+      {/* Add to Shelf Modal */}
+      <IonModal
+        isOpen={showShelfAssign}
+        onDidDismiss={() => setShowShelfAssign(false)}
+        breakpoints={[0, 0.5, 0.85]}
+        initialBreakpoint={0.5}
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Add to Shelf</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowShelfAssign(false)}>Done</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent>
+          <IonList>
+            {collections.map(shelf => (
+              <IonItem key={shelf.id} button onClick={() => toggleBookShelf(shelf.id)}>
+                <IonCheckbox
+                  slot="start"
+                  checked={bookShelfIds.includes(shelf.id)}
+                  onIonChange={() => toggleBookShelf(shelf.id)}
+                />
+                <IonLabel>{shelf.name}</IonLabel>
+              </IonItem>
+            ))}
+          </IonList>
+          {collections.length === 0 && (
+            <div className="ion-padding ion-text-center">
+              <p>No shelves yet</p>
+              <IonButton fill="outline" onClick={() => {
+                setShowShelfAssign(false);
+                openShelfModal();
+              }}>
+                Create a Shelf
+              </IonButton>
+            </div>
+          )}
+        </IonContent>
+      </IonModal>
     </IonPage>
   );
 };
