@@ -276,7 +276,7 @@
 
 /* List View */
 .book-list {
-  padding: 0;
+  padding: 4px 12px;
 }
 
 .book-list-item {

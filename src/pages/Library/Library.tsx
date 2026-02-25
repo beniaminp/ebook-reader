@@ -58,33 +58,15 @@ import { webFileStorage } from '../../services/webFileStorage';
 import { fb2Service } from '../../services/fb2Service';
 import { chmService } from '../../services/chmService';
 import type { Book, Collection } from '../../types/index';
+import { useLibraryPrefsStore, DEFAULT_FILTERS, type SortOption, type ReadStatus } from '../../stores/useLibraryPrefsStore';
 import './Library.css';
-
-type ViewMode = 'grid' | 'list';
-type SortOption = 'title' | 'author' | 'dateAdded' | 'lastRead';
-type ReadStatus = 'all' | 'unread' | 'reading' | 'finished';
-
-interface ActiveFilters {
-  format: string;
-  collectionId: string;
-  readStatus: ReadStatus;
-  tagIds: string[];
-}
-
-const DEFAULT_FILTERS: ActiveFilters = {
-  format: 'all',
-  collectionId: 'all',
-  readStatus: 'all',
-  tagIds: [],
-};
 
 const Library: React.FC = () => {
   const history = useHistory();
   const { books, setBooks, setCurrentBook } = useAppStore();
+  const { viewMode, setViewMode, sortBy, setSortBy, filters, setFilters } = useLibraryPrefsStore();
 
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('dateAdded');
   const [isLoading, setIsLoading] = useState(true);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -95,7 +77,6 @@ const Library: React.FC = () => {
   const [toastColor, setToastColor] = useState<string>('danger');
 
   // Advanced filter state
-  const [filters, setFilters] = useState<ActiveFilters>(DEFAULT_FILTERS);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [allTags, setAllTags] = useState<Array<{ id: string; name: string; color?: string }>>([]);
