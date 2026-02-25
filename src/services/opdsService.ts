@@ -329,6 +329,29 @@ export interface FetchFeedOptions {
   password?: string;
 }
 
+/**
+ * Route a URL through the local CORS proxy when running in the browser dev
+ * server (or GitHub Pages build).  On native Capacitor there's no CORS issue.
+ */
+/**
+ * Route a URL through a CORS proxy when running in the browser.
+ * - Native Capacitor: no proxy needed (no CORS restrictions).
+ * - Vite dev server: uses the local /api/cors-proxy endpoint.
+ * - Production (GitHub Pages): uses a public CORS proxy as fallback.
+ */
+export function proxyUrl(url: string): string {
+  // Native Capacitor — no proxy needed
+  if (typeof (window as any)?.Capacitor !== 'undefined') return url;
+
+  // Dev server has a local proxy
+  if (import.meta.env.DEV) {
+    return `/api/cors-proxy?url=${encodeURIComponent(url)}`;
+  }
+
+  // Production (GitHub Pages) — use corsproxy.io
+  return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+}
+
 export async function fetchOpdsFeed(
   url: string,
   options: FetchFeedOptions = {}
@@ -344,7 +367,7 @@ export async function fetchOpdsFeed(
     headers['Authorization'] = `Basic ${credentials}`;
   }
 
-  const response = await fetch(url, { headers, signal });
+  const response = await fetch(proxyUrl(url), { headers, signal });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch OPDS feed: ${response.status} ${response.statusText}`);

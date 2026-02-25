@@ -50,6 +50,7 @@ import {
   opdsService,
   fetchOpdsFeed,
   searchOpdsCatalog,
+  proxyUrl,
   type OpdsCatalog,
   type OpdsFeed,
   type OpdsBook,
@@ -252,7 +253,7 @@ const OpdsCatalogPage: React.FC = () => {
         const credentials = btoa(`${activeCatalogRef.current.username}:${activeCatalogRef.current.password}`);
         downloadHeaders['Authorization'] = `Basic ${credentials}`;
       }
-      const response = await fetch(link.href, { headers: downloadHeaders });
+      const response = await fetch(proxyUrl(link.href), { headers: downloadHeaders });
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
       }
