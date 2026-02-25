@@ -356,14 +356,10 @@ export interface FetchFeedOptions {
 }
 
 /**
- * Route a URL through the local CORS proxy when running in the browser dev
- * server (or GitHub Pages build).  On native Capacitor there's no CORS issue.
- */
-/**
  * Route a URL through a CORS proxy when running in the browser.
  * - Native Capacitor: no proxy needed (no CORS restrictions).
  * - Vite dev server: uses the local /api/cors-proxy endpoint.
- * - Production (GitHub Pages): uses a public CORS proxy as fallback.
+ * - Production (GitHub Pages): uses allorigins.win as CORS proxy.
  */
 export function proxyUrl(url: string): string {
   // Native Capacitor — no proxy needed (no CORS restrictions)
@@ -374,8 +370,8 @@ export function proxyUrl(url: string): string {
     return `/api/cors-proxy?url=${encodeURIComponent(url)}`;
   }
 
-  // Production (GitHub Pages) — use corsproxy.io
-  return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  // Production (GitHub Pages) — use allorigins.win (returns raw content)
+  return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
 }
 
 export async function fetchOpdsFeed(
