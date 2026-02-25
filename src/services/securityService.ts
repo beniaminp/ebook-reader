@@ -59,6 +59,7 @@ async function getNativeBiometric(): Promise<NativeBiometricPlugin | null> {
 
   try {
     // Attempt dynamic import – only succeeds if the plugin is installed
+    // @ts-expect-error - Optional dependency, may not be installed
     const mod = await import('@capacitor-community/native-biometric');
     _nativeBiometric = (mod.NativeBiometric as unknown as NativeBiometricPlugin) ?? null;
   } catch {

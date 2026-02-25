@@ -201,7 +201,43 @@ export async function getAllBooks(): Promise<Book[]> {
   try {
     const database = await getDb();
     const result = await database.query(`SELECT * FROM ${TABLES.BOOKS} ORDER BY added_at DESC;`);
-    return result.values?.map(mapRowToBook) || [];
+    const books = result.values?.map(mapRowToBook) || [];
+
+    // Load reading progress for all books
+    const progressResult = await database.query(`SELECT * FROM ${TABLES.READING_PROGRESS};`);
+    const progressMap = new Map<string, ReadingProgress>();
+    if (progressResult.values) {
+      for (const row of progressResult.values) {
+        progressMap.set(row.book_id, {
+          id: row.id,
+          bookId: row.book_id,
+          currentPage: row.current_page,
+          totalPages: row.total_pages,
+          percentage: row.percentage,
+          location: row.location,
+          chapterId: row.chapter_id,
+          chapterTitle: row.chapter_title,
+          lastReadAt: row.last_read_at,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        });
+      }
+    }
+
+    // Merge progress into books
+    return books.map(book => {
+      const progress = progressMap.get(book.id);
+      if (progress) {
+        return {
+          ...book,
+          currentPage: progress.currentPage,
+          totalPages: progress.totalPages,
+          progress: progress.percentage / 100, // Convert from percentage to decimal
+          lastRead: new Date(progress.lastReadAt * 1000),
+        };
+      }
+      return book;
+    });
   } catch (error) {
     console.error('Error getting books:', error);
     return [];

@@ -131,10 +131,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Progress actions
   updateProgress: async (bookId, location, total, locationStr, chapterTitle) => {
     try {
+      const progressPercentage = total > 0 ? (location / total) : 0;
       await databaseService.upsertReadingProgress(bookId, {
         currentPage: location,
         totalPages: total,
-        percentage: total > 0 ? (location / total) * 100 : 0,
+        percentage: progressPercentage * 100,
         location: locationStr,
         chapterTitle: chapterTitle,
         lastReadAt: Math.floor(Date.now() / 1000),
@@ -143,10 +144,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       set((state) => ({
         books: state.books.map((b) =>
           b.id === bookId
-            ? { ...b, totalPages: total, currentPage: location }
+            ? {
+                ...b,
+                totalPages: total,
+                currentPage: location,
+                progress: progressPercentage,
+                lastRead: new Date(),
+              }
             : b
         ),
         currentLocation: location,
+        currentBook: state.currentBook?.id === bookId
+          ? { ...state.currentBook, totalPages: total, currentPage: location, progress: progressPercentage, lastRead: new Date() }
+          : state.currentBook,
       }));
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update progress' });

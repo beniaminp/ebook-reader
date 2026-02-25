@@ -1092,36 +1092,98 @@ const Library: React.FC = () => {
         ]}
       />
 
-      <IonAlert
+      <IonModal
         isOpen={showBookDetails}
         onDidDismiss={() => setShowBookDetails(false)}
-        header={selectedBook?.title}
-        subHeader={selectedBook?.author}
-        message={`
-          <div class="book-details">
-            <p><strong>Format:</strong> ${selectedBook?.format?.toUpperCase()}</p>
-            <p><strong>Pages:</strong> ${selectedBook?.totalPages || 'Unknown'}</p>
-            <p><strong>Progress:</strong> ${selectedBook ? Math.round(selectedBook.progress * 100) : 0}%</p>
-            <p><strong>Added:</strong> ${selectedBook?.dateAdded instanceof Date ? selectedBook.dateAdded.toLocaleDateString() : 'Unknown'}</p>
-            <p><strong>Last Read:</strong> ${selectedBook?.lastRead instanceof Date ? selectedBook.lastRead.toLocaleDateString() : 'Never'}</p>
-            <p><strong>Source:</strong> ${selectedBook?.source || 'local'}</p>
-          </div>
-        `}
-        buttons={[
-          {
-            text: 'Close',
-            role: 'cancel',
-          },
-          {
-            text: 'Open Book',
-            handler: () => {
-              if (selectedBook) {
-                handleBookClick(selectedBook);
-              }
-            },
-          },
-        ]}
-      />
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Book Details</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowBookDetails(false)}>
+                <IonIcon icon={closeOutline} />
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          {selectedBook && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Cover image */}
+              {selectedBook.coverPath && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                  <img
+                    src={selectedBook.coverPath}
+                    alt={selectedBook.title}
+                    style={{ maxWidth: '200px', maxHeight: '300px', objectFit: 'contain' }}
+                  />
+                </div>
+              )}
+
+              {/* Title and Author */}
+              <div>
+                <h2 style={{ margin: '0 0 8px 0' }}>{selectedBook.title}</h2>
+                <p style={{ margin: '0', color: 'var(--ion-color-medium)' }}>{selectedBook.author}</p>
+              </div>
+
+              {/* Details */}
+              <IonList>
+                <IonItem>
+                  <IonLabel>
+                    <h3>Format</h3>
+                    <p>{selectedBook.format?.toUpperCase()}</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem>
+                  <IonLabel>
+                    <h3>Pages</h3>
+                    <p>{selectedBook.totalPages || 'Unknown'}</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem>
+                  <IonLabel>
+                    <h3>Progress</h3>
+                    <p>{Math.round(selectedBook.progress * 100)}%</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem>
+                  <IonLabel>
+                    <h3>Date Added</h3>
+                    <p>{selectedBook.dateAdded instanceof Date ? selectedBook.dateAdded.toLocaleDateString() : 'Unknown'}</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem>
+                  <IonLabel>
+                    <h3>Last Read</h3>
+                    <p>{selectedBook.lastRead instanceof Date ? selectedBook.lastRead.toLocaleDateString() : 'Never'}</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem>
+                  <IonLabel>
+                    <h3>Source</h3>
+                    <p>{selectedBook.source || 'local'}</p>
+                  </IonLabel>
+                </IonItem>
+              </IonList>
+            </div>
+          )}
+        </IonContent>
+        <IonFooter>
+          <IonToolbar>
+            <IonButton
+              expand="block"
+              onClick={() => {
+                if (selectedBook) {
+                  setShowBookDetails(false);
+                  handleBookClick(selectedBook);
+                }
+              }}
+            >
+              Open Book
+            </IonButton>
+          </IonToolbar>
+        </IonFooter>
+      </IonModal>
 
       <IonAlert
         isOpen={showDeleteAlert}
