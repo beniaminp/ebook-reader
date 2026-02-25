@@ -105,7 +105,14 @@ const Library: React.FC = () => {
     filters.tagIds.length
   );
 
-  const sortBooks = (booksToSort: Book[], option: SortOption): Book[] => {
+  const toTime = (d: unknown): number => {
+    if (d instanceof Date) return d.getTime();
+    if (typeof d === 'number') return d;
+    if (typeof d === 'string') return new Date(d).getTime() || 0;
+    return 0;
+  };
+
+  const sortBooks = useCallback((booksToSort: Book[], option: SortOption): Book[] => {
     const sorted = [...booksToSort];
     switch (option) {
       case 'title':
@@ -113,21 +120,13 @@ const Library: React.FC = () => {
       case 'author':
         return sorted.sort((a, b) => a.author.localeCompare(b.author));
       case 'dateAdded':
-        return sorted.sort((a, b) => {
-          const aTime = a.dateAdded instanceof Date ? a.dateAdded.getTime() : 0;
-          const bTime = b.dateAdded instanceof Date ? b.dateAdded.getTime() : 0;
-          return bTime - aTime;
-        });
+        return sorted.sort((a, b) => toTime(b.dateAdded) - toTime(a.dateAdded));
       case 'lastRead':
-        return sorted.sort((a, b) => {
-          const aTime = a.lastRead instanceof Date ? a.lastRead.getTime() : 0;
-          const bTime = b.lastRead instanceof Date ? b.lastRead.getTime() : 0;
-          return bTime - aTime;
-        });
+        return sorted.sort((a, b) => toTime(b.lastRead) - toTime(a.lastRead));
       default:
         return sorted;
     }
-  };
+  }, []);
 
   // Load books on mount
   useEffect(() => {
@@ -201,7 +200,7 @@ const Library: React.FC = () => {
 
     // Apply sorting
     return sortBooks(result, sortBy);
-  }, [books, searchQuery, sortBy, filters, bookTagMap, bookCollectionMap]);
+  }, [books, searchQuery, sortBy, sortBooks, filters, bookTagMap, bookCollectionMap]);
 
   const loadBooks = async () => {
     setIsLoading(true);
