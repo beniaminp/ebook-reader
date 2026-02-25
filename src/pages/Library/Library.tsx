@@ -1126,6 +1126,16 @@ const Library: React.FC = () => {
                 <p style={{ margin: '0', color: 'var(--ion-color-medium)' }}>{selectedBook.author}</p>
               </div>
 
+              {/* Description */}
+              {selectedBook.metadata?.description && (
+                <div>
+                  <h3 style={{ margin: '0 0 4px 0' }}>Description</h3>
+                  <p style={{ margin: '0', color: 'var(--ion-color-medium)', fontSize: '14px', lineHeight: '1.5' }}>
+                    {selectedBook.metadata.description}
+                  </p>
+                </div>
+              )}
+
               {/* Details */}
               <IonList>
                 <IonItem>
