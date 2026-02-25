@@ -268,7 +268,7 @@ function parseFeedEntry(entry: Record<string, unknown>): OpdsBook | OpdsNavEntry
 // MAIN FEED PARSER
 // ============================================================================
 
-export function parseOpdsFeed(xmlString: string): OpdsFeed {
+export function parseOpdsFeed(xmlString: string, baseUrl?: string): OpdsFeed {
   const parsed = parser.parse(xmlString);
 
   const feed = parsed['feed'] || parsed;
@@ -305,15 +305,41 @@ export function parseOpdsFeed(xmlString: string): OpdsFeed {
   // Detect if this is an acquisition feed (has books with download links)
   const isAcquisitionFeed = parsedEntries.some(e => e.isAcquisition);
 
+  // Resolve relative URLs against the feed's base URL
+  const resolve = (href: string | undefined) => {
+    if (!href || !baseUrl) return href;
+    try {
+      return new URL(href, baseUrl).href;
+    } catch {
+      return href;
+    }
+  };
+
+  // Resolve URLs in all entries
+  if (baseUrl) {
+    for (const entry of parsedEntries) {
+      entry.coverUrl = resolve(entry.coverUrl);
+      entry.thumbnailUrl = resolve(entry.thumbnailUrl);
+      for (const link of entry.links) {
+        link.href = resolve(link.href)!;
+      }
+      if (entry.isAcquisition) {
+        for (const dl of (entry as OpdsBook).downloadLinks) {
+          dl.href = resolve(dl.href)!;
+        }
+      }
+    }
+  }
+
   return {
     id: feedId,
     title: feedTitle,
     updated: feedUpdated,
     entries: parsedEntries,
-    nextPageUrl,
-    prevPageUrl,
-    startUrl,
-    searchUrl,
+    nextPageUrl: resolve(nextPageUrl),
+    prevPageUrl: resolve(prevPageUrl),
+    startUrl: resolve(startUrl),
+    searchUrl: resolve(searchUrl),
     totalResults: total,
     isAcquisitionFeed,
   };
@@ -374,7 +400,7 @@ export async function fetchOpdsFeed(
   }
 
   const text = await response.text();
-  return parseOpdsFeed(text);
+  return parseOpdsFeed(text, url);
 }
 
 export async function searchOpdsCatalog(
