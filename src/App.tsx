@@ -85,6 +85,9 @@ const AppTabs: React.FC = () => {
         <Route exact path="/">
           <Redirect to="/library" />
         </Route>
+        <Route>
+          <Redirect to="/library" />
+        </Route>
       </IonRouterOutlet>
       <IonTabBar slot="bottom" style={isReaderRoute ? { display: 'none' } : undefined}>
         <IonTabButton tab="library" href="/library">
@@ -108,10 +111,12 @@ const AppTabs: React.FC = () => {
   );
 };
 
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
+
 const App: React.FC = () => {
   return (
     <IonApp>
-      <IonReactRouter>
+      <IonReactRouter basename={basename}>
         <AppTabs />
       </IonReactRouter>
     </IonApp>
