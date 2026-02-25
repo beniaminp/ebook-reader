@@ -10,7 +10,7 @@ import {
   setupIonicReact
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { book, library, settings, globeOutline } from 'ionicons/icons';
+import { library, settings, globeOutline } from 'ionicons/icons';
 import Library from './pages/Library/Library';
 import Reader from './pages/Reader/Reader';
 import Settings from './pages/Settings/Settings';
@@ -18,7 +18,7 @@ import CalibreWebSettings from './pages/CalibreWebSettings';
 import Statistics from './pages/Statistics/Statistics';
 import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
 import CloudSyncSettings from './pages/CloudSyncSettings/CloudSyncSettings';
-import { useAppStore } from './stores/useAppStore';
+
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -53,8 +53,6 @@ import './theme/variables.css';
 setupIonicReact();
 
 const AppTabs: React.FC = () => {
-  const currentBook = useAppStore((state) => state.currentBook);
-  const readerHref = currentBook ? `/reader/${currentBook.id}` : undefined;
   const location = useLocation();
   const isReaderRoute = location.pathname.startsWith('/reader/');
 
@@ -93,10 +91,6 @@ const AppTabs: React.FC = () => {
         <IonTabButton tab="library" href="/library">
           <IonIcon aria-hidden="true" icon={library} />
           <IonLabel>Library</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="reader" href={readerHref} disabled={!currentBook}>
-          <IonIcon aria-hidden="true" icon={book} />
-          <IonLabel>Reader</IonLabel>
         </IonTabButton>
         <IonTabButton tab="opds" href="/opds">
           <IonIcon aria-hidden="true" icon={globeOutline} />
