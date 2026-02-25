@@ -37,6 +37,7 @@ import {
   bookOutline,
   cloudDownloadOutline,
   globeOutline,
+  lockClosedOutline,
   searchOutline,
   trashOutline,
   chevronForwardOutline,
@@ -110,6 +111,8 @@ const OpdsCatalogPage: React.FC = () => {
   const [newCatalogName, setNewCatalogName] = useState('');
   const [newCatalogUrl, setNewCatalogUrl] = useState('');
   const [newCatalogDescription, setNewCatalogDescription] = useState('');
+  const [newCatalogUsername, setNewCatalogUsername] = useState('');
+  const [newCatalogPassword, setNewCatalogPassword] = useState('');
   const [catalogToDelete, setCatalogToDelete] = useState<OpdsCatalog | null>(null);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
@@ -133,6 +136,7 @@ const OpdsCatalogPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const activeCatalogRef = useRef<OpdsCatalog | null>(null);
 
   // Load catalogs on mount
   useEffect(() => {
@@ -166,7 +170,11 @@ const OpdsCatalogPage: React.FC = () => {
     }
 
     try {
-      const feed = await fetchOpdsFeed(url, { signal: abortRef.current.signal });
+      const feed = await fetchOpdsFeed(url, {
+        signal: abortRef.current.signal,
+        username: activeCatalogRef.current?.username,
+        password: activeCatalogRef.current?.password,
+      });
       setCurrentFeed(feed);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -178,6 +186,7 @@ const OpdsCatalogPage: React.FC = () => {
   }, []);
 
   const handleCatalogSelect = useCallback((catalog: OpdsCatalog) => {
+    activeCatalogRef.current = catalog;
     setBreadcrumbs([{ title: catalog.name, url: catalog.url }]);
     loadFeed(catalog.url, catalog.name, false);
   }, [loadFeed]);
@@ -217,7 +226,10 @@ const OpdsCatalogPage: React.FC = () => {
 
     setIsSearching(true);
     try {
-      const feed = await searchOpdsCatalog(currentFeed.searchUrl, searchQuery);
+      const feed = await searchOpdsCatalog(currentFeed.searchUrl, searchQuery, {
+        username: activeCatalogRef.current?.username,
+        password: activeCatalogRef.current?.password,
+      });
       setCurrentFeed(feed);
     } catch (err: any) {
       setFeedError(err.message || 'Search failed');
@@ -235,7 +247,12 @@ const OpdsCatalogPage: React.FC = () => {
 
     setDownloadingBookId(entry.id);
     try {
-      const response = await fetch(link.href);
+      const downloadHeaders: Record<string, string> = {};
+      if (activeCatalogRef.current?.username && activeCatalogRef.current?.password) {
+        const credentials = btoa(`${activeCatalogRef.current.username}:${activeCatalogRef.current.password}`);
+        downloadHeaders['Authorization'] = `Basic ${credentials}`;
+      }
+      const response = await fetch(link.href, { headers: downloadHeaders });
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
       }
@@ -299,14 +316,18 @@ const OpdsCatalogPage: React.FC = () => {
       name: newCatalogName.trim(),
       url: newCatalogUrl.trim(),
       description: newCatalogDescription.trim() || undefined,
+      username: newCatalogUsername.trim() || undefined,
+      password: newCatalogPassword.trim() || undefined,
     });
 
     setCatalogs(opdsService.loadSavedCatalogs());
     setNewCatalogName('');
     setNewCatalogUrl('');
     setNewCatalogDescription('');
+    setNewCatalogUsername('');
+    setNewCatalogPassword('');
     setShowAddCatalog(false);
-  }, [newCatalogName, newCatalogUrl, newCatalogDescription]);
+  }, [newCatalogName, newCatalogUrl, newCatalogDescription, newCatalogUsername, newCatalogPassword]);
 
   const handleDeleteCatalog = useCallback(() => {
     if (!catalogToDelete) return;
@@ -404,7 +425,12 @@ const OpdsCatalogPage: React.FC = () => {
           >
             <IonIcon icon={globeOutline} slot="start" color="primary" />
             <IonLabel>
-              <h2>{catalog.name}</h2>
+              <h2>
+                {catalog.name}
+                {catalog.username && (
+                  <IonIcon icon={lockClosedOutline} style={{ fontSize: '14px', marginLeft: '6px', verticalAlign: 'middle' }} />
+                )}
+              </h2>
               {catalog.description && <p>{catalog.description}</p>}
               <p className="opds-catalog-url">{catalog.url}</p>
             </IonLabel>
@@ -635,6 +661,25 @@ const OpdsCatalogPage: React.FC = () => {
               value={newCatalogDescription}
               onIonInput={e => setNewCatalogDescription(e.detail.value || '')}
               placeholder="Optional description"
+              clearInput
+            />
+          </IonItem>
+          <IonItem>
+            <IonLabel position="stacked">Username</IonLabel>
+            <IonInput
+              value={newCatalogUsername}
+              onIonInput={e => setNewCatalogUsername(e.detail.value || '')}
+              placeholder="Optional — for authenticated feeds"
+              clearInput
+            />
+          </IonItem>
+          <IonItem>
+            <IonLabel position="stacked">Password</IonLabel>
+            <IonInput
+              value={newCatalogPassword}
+              onIonInput={e => setNewCatalogPassword(e.detail.value || '')}
+              placeholder="Optional — for authenticated feeds"
+              type="password"
               clearInput
             />
           </IonItem>

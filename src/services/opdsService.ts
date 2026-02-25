@@ -16,6 +16,8 @@ export interface OpdsCatalog {
   url: string;
   description?: string;
   icon?: string;
+  username?: string;
+  password?: string;
 }
 
 export interface OpdsLink {

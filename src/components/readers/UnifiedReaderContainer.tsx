@@ -145,6 +145,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [overlayPassthrough, setOverlayPassthrough] = useState(false);
 
+  // Track whether a touch event already handled the tap (prevents double-toggle on mobile)
+  const touchHandledRef = useRef(false);
+
   // Text selection state
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -305,7 +308,10 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     const elapsed = Date.now() - overlayTouchRef.current.time;
     overlayTouchRef.current = null;
 
-    if (dx > 10 || dy > 10 || elapsed > 300) return;
+    if (dx > 10 || dy > 10 || elapsed > 500) return;
+
+    // Mark that touch handled this tap so onClick doesn't double-fire
+    touchHandledRef.current = true;
 
     const relX = touch.clientX / window.innerWidth;
     if (relX < 0.25) handlePrev();
@@ -314,11 +320,58 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   }, [overlayPassthrough, handlePrev, handleNext, handleToggleToolbar]);
 
   const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    // On mobile, touch events already handled the tap — skip the synthetic click
+    if (touchHandledRef.current) {
+      touchHandledRef.current = false;
+      return;
+    }
     const relX = e.clientX / window.innerWidth;
     if (relX < 0.25) handlePrev();
     else if (relX > 0.75) handleNext();
     else handleToggleToolbar();
   }, [handlePrev, handleNext, handleToggleToolbar]);
+
+  // ─── Content tap zones (for non-foliate formats: PDF, scroll) ─────────────────────────
+
+  const contentTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const contentTouchHandledRef = useRef(false);
+
+  const handleContentTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isFoliate) return;
+    const touch = e.touches[0];
+    contentTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  }, [isFoliate]);
+
+  const handleContentTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (isFoliate || !contentTouchRef.current) return;
+    const touch = e.changedTouches[0];
+    const dx = Math.abs(touch.clientX - contentTouchRef.current.x);
+    const dy = Math.abs(touch.clientY - contentTouchRef.current.y);
+    const elapsed = Date.now() - contentTouchRef.current.time;
+    contentTouchRef.current = null;
+
+    if (dx > 10 || dy > 10 || elapsed > 500) return;
+
+    const relX = touch.clientX / window.innerWidth;
+    // Only handle center tap to toggle toolbar for non-foliate formats
+    // (left/right navigation is handled by scrolling or PDF engine)
+    if (relX >= 0.25 && relX <= 0.75) {
+      contentTouchHandledRef.current = true;
+      handleToggleToolbar();
+    }
+  }, [isFoliate, handleToggleToolbar]);
+
+  const handleContentClick = useCallback((e: React.MouseEvent) => {
+    if (isFoliate) return;
+    if (contentTouchHandledRef.current) {
+      contentTouchHandledRef.current = false;
+      return;
+    }
+    const relX = e.clientX / window.innerWidth;
+    if (relX >= 0.25 && relX <= 0.75) {
+      handleToggleToolbar();
+    }
+  }, [isFoliate, handleToggleToolbar]);
 
   // ─── Keyboard navigation ─────────────────────────
 
@@ -659,6 +712,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         scrollY={isScroll}
         scrollEvents={isScroll}
         style={isFoliate ? { '--background': currentTheme.backgroundColor } as React.CSSProperties : undefined}
+        onTouchStart={handleContentTouchStart}
+        onTouchEnd={handleContentTouchEnd}
+        onClick={handleContentClick}
       >
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
