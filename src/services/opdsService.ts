@@ -340,8 +340,8 @@ export interface FetchFeedOptions {
  * - Production (GitHub Pages): uses a public CORS proxy as fallback.
  */
 export function proxyUrl(url: string): string {
-  // Native Capacitor — no proxy needed
-  if (typeof (window as any)?.Capacitor !== 'undefined') return url;
+  // Native Capacitor — no proxy needed (no CORS restrictions)
+  if ((window as any)?.Capacitor?.isNativePlatform?.()) return url;
 
   // Dev server has a local proxy
   if (import.meta.env.DEV) {
