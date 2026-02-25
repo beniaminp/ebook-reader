@@ -60,6 +60,9 @@ interface WebCollection extends Collection {
 
 let webBooks: WebBook[] = [];
 let webCollections: WebCollection[] = [];
+let webTags: Array<{ id: string; name: string; color?: string }> = [];
+let webBookTags: Record<string, string[]> = {}; // bookId -> tagIds
+let webBookCollections: Record<string, string[]> = {}; // collectionId -> bookIds
 
 const getDefaultCollections = (): WebCollection[] => [
   {
@@ -90,6 +93,9 @@ let webInitialized = false;
 function saveWebData() {
   localStorage.setItem('ebook_books', JSON.stringify(webBooks));
   localStorage.setItem('ebook_collections', JSON.stringify(webCollections));
+  localStorage.setItem('ebook_tags', JSON.stringify(webTags));
+  localStorage.setItem('ebook_book_tags', JSON.stringify(webBookTags));
+  localStorage.setItem('ebook_book_collections', JSON.stringify(webBookCollections));
 }
 
 /** Ensure the web database (localStorage) has been loaded into memory. */
@@ -97,8 +103,14 @@ function ensureWebInit() {
   if (webInitialized) return;
   const storedBooks = localStorage.getItem('ebook_books');
   const storedCollections = localStorage.getItem('ebook_collections');
+  const storedTags = localStorage.getItem('ebook_tags');
+  const storedBookTags = localStorage.getItem('ebook_book_tags');
+  const storedBookCollections = localStorage.getItem('ebook_book_collections');
   webBooks = storedBooks ? JSON.parse(storedBooks) : [];
   webCollections = storedCollections ? JSON.parse(storedCollections) : getDefaultCollections();
+  webTags = storedTags ? JSON.parse(storedTags) : [];
+  webBookTags = storedBookTags ? JSON.parse(storedBookTags) : {};
+  webBookCollections = storedBookCollections ? JSON.parse(storedBookCollections) : {};
   webInitialized = true;
 }
 
@@ -1260,6 +1272,18 @@ export async function addBookToCollection(
   collectionId: string,
   sortOrder = 0
 ): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    if (!webBookCollections[collectionId]) {
+      webBookCollections[collectionId] = [];
+    }
+    if (!webBookCollections[collectionId].includes(bookId)) {
+      webBookCollections[collectionId].push(bookId);
+      saveWebData();
+    }
+    return true;
+  }
+
   try {
     const database = await getDb();
     const id = `${collectionId}-${bookId}`;
@@ -1278,6 +1302,15 @@ export async function addBookToCollection(
 }
 
 export async function removeBookFromCollection(bookId: string, collectionId: string): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    if (webBookCollections[collectionId]) {
+      webBookCollections[collectionId] = webBookCollections[collectionId].filter(id => id !== bookId);
+      saveWebData();
+    }
+    return true;
+  }
+
   try {
     const database = await getDb();
     await database.query(
@@ -1292,6 +1325,12 @@ export async function removeBookFromCollection(bookId: string, collectionId: str
 }
 
 export async function getBooksInCollection(collectionId: string): Promise<Book[]> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    const bookIds = webBookCollections[collectionId] || [];
+    return webBooks.filter(b => bookIds.includes(b.id)).map(webBookToBook);
+  }
+
   try {
     const database = await getDb();
     const result = await database.query(
@@ -1417,6 +1456,11 @@ export async function deleteCollection(id: string): Promise<boolean> {
 // ============================================================================
 
 export async function getTags(): Promise<any[]> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    return webTags;
+  }
+
   try {
     const database = await getDb();
     const result = await database.query(`SELECT * FROM ${TABLES.TAGS} ORDER BY name;`);
@@ -1432,6 +1476,14 @@ export async function getTags(): Promise<any[]> {
 }
 
 export async function createTag(name: string, color?: string): Promise<any | null> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    const id = `tag-${Date.now()}`;
+    webTags.push({ id, name, color });
+    saveWebData();
+    return { id, name, color };
+  }
+
   try {
     const database = await getDb();
     const id = `tag-${Date.now()}`;
@@ -1450,6 +1502,18 @@ export async function createTag(name: string, color?: string): Promise<any | nul
 }
 
 export async function addTagToBook(bookId: string, tagId: string): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    if (!webBookTags[bookId]) {
+      webBookTags[bookId] = [];
+    }
+    if (!webBookTags[bookId].includes(tagId)) {
+      webBookTags[bookId].push(tagId);
+      saveWebData();
+    }
+    return true;
+  }
+
   try {
     const database = await getDb();
     const id = `${tagId}-${bookId}`;
@@ -1467,6 +1531,15 @@ export async function addTagToBook(bookId: string, tagId: string): Promise<boole
 }
 
 export async function removeTagFromBook(bookId: string, tagId: string): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    if (webBookTags[bookId]) {
+      webBookTags[bookId] = webBookTags[bookId].filter(id => id !== tagId);
+      saveWebData();
+    }
+    return true;
+  }
+
   try {
     const database = await getDb();
     await database.query(
@@ -1481,6 +1554,12 @@ export async function removeTagFromBook(bookId: string, tagId: string): Promise<
 }
 
 export async function getBookTags(bookId: string): Promise<any[]> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    const tagIds = webBookTags[bookId] || [];
+    return webTags.filter(t => tagIds.includes(t.id));
+  }
+
   try {
     const database = await getDb();
     const result = await database.query(

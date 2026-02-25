@@ -109,6 +109,30 @@ const Library: React.FC = () => {
     filters.tagIds.length
   );
 
+  const sortBooks = (booksToSort: Book[], option: SortOption): Book[] => {
+    const sorted = [...booksToSort];
+    switch (option) {
+      case 'title':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case 'author':
+        return sorted.sort((a, b) => a.author.localeCompare(b.author));
+      case 'dateAdded':
+        return sorted.sort((a, b) => {
+          const aTime = a.dateAdded instanceof Date ? a.dateAdded.getTime() : 0;
+          const bTime = b.dateAdded instanceof Date ? b.dateAdded.getTime() : 0;
+          return bTime - aTime;
+        });
+      case 'lastRead':
+        return sorted.sort((a, b) => {
+          const aTime = a.lastRead instanceof Date ? a.lastRead.getTime() : 0;
+          const bTime = b.lastRead instanceof Date ? b.lastRead.getTime() : 0;
+          return bTime - aTime;
+        });
+      default:
+        return sorted;
+    }
+  };
+
   // Load books on mount
   useEffect(() => {
     loadBooks();
@@ -230,30 +254,6 @@ const Library: React.FC = () => {
     }
   };
 
-  const sortBooks = (booksToSort: Book[], option: SortOption): Book[] => {
-    const sorted = [...booksToSort];
-    switch (option) {
-      case 'title':
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
-      case 'author':
-        return sorted.sort((a, b) => a.author.localeCompare(b.author));
-      case 'dateAdded':
-        return sorted.sort((a, b) => {
-          const aTime = a.dateAdded instanceof Date ? a.dateAdded.getTime() : 0;
-          const bTime = b.dateAdded instanceof Date ? b.dateAdded.getTime() : 0;
-          return bTime - aTime;
-        });
-      case 'lastRead':
-        return sorted.sort((a, b) => {
-          const aTime = a.lastRead instanceof Date ? a.lastRead.getTime() : 0;
-          const bTime = b.lastRead instanceof Date ? b.lastRead.getTime() : 0;
-          return bTime - aTime;
-        });
-      default:
-        return sorted;
-    }
-  };
-
   const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
     await loadBooks();
     await loadFilterData();
@@ -318,13 +318,22 @@ const Library: React.FC = () => {
   };
 
   const extractEpubMetadata = async (
-    arrayBuffer: ArrayBuffer
+    arrayBuffer: ArrayBuffer,
+    fileName: string
   ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
     try {
       const { makeBook } = await import('foliate-js/view.js');
-      const blob = new Blob([arrayBuffer], { type: 'application/epub+zip' });
+      // Use File instead of Blob - File has a name property that foliate-js needs
+      const file = new File([arrayBuffer], fileName, { type: 'application/epub+zip' });
 
-      const book = await withTimeout(makeBook(blob), 8000);
+      let book;
+      try {
+        book = await withTimeout(makeBook(file), 8000);
+      } catch (err) {
+        // foliate-js internal errors (e.g., 'endsWith' on undefined) - fall back gracefully
+        console.warn('foliate-js makeBook failed, using fallback metadata:', err);
+        return null;
+      }
       if (!book) return null;
 
       // Extract title — may be a string or a language map
@@ -476,7 +485,19 @@ const Library: React.FC = () => {
       format = 'odt';
     }
 
-    const bookId = crypto.randomUUID();
+    // Generate UUID with fallback for browsers that don't support crypto.randomUUID()
+    const generateUUID = (): string => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      // Fallback: generate a UUID v4
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+    const bookId = generateUUID();
 
     // Read the file into an ArrayBuffer first — this is the critical step
     const arrayBuffer = await file.arrayBuffer();
@@ -492,7 +513,7 @@ const Library: React.FC = () => {
 
     try {
       if (format === 'epub') {
-        const meta = await extractEpubMetadata(arrayBuffer);
+        const meta = await extractEpubMetadata(arrayBuffer, file.name);
         if (meta) {
           title = meta.title || title;
           author = meta.author || author;

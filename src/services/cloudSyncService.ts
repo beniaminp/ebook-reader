@@ -26,7 +26,7 @@ import type { Bookmark, Highlight, ReadingProgress } from '../types/index';
 
 // Constants
 const PREF_KEY_CONFIG = 'cloudsync_config';
-const DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY || '';
+const DROPBOX_APP_KEY = import.meta.env.VITE_DROPBOX_APP_KEY || '';
 const SYNC_DATA_PATH = '/ebook-reader-sync.json';
 const CLOUD_BOOKS_PATH = '/ebook-reader/books';
 const SYNC_VERSION = 1;
