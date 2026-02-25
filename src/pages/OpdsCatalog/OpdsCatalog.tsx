@@ -36,6 +36,7 @@ import {
   arrowBack,
   bookOutline,
   cloudDownloadOutline,
+  createOutline,
   globeOutline,
   lockClosedOutline,
   searchOutline,
@@ -108,7 +109,8 @@ const OpdsCatalogPage: React.FC = () => {
 
   // Catalog list state
   const [catalogs, setCatalogs] = useState<OpdsCatalog[]>([]);
-  const [showAddCatalog, setShowAddCatalog] = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [editingCatalog, setEditingCatalog] = useState<OpdsCatalog | null>(null);
   const [newCatalogName, setNewCatalogName] = useState('');
   const [newCatalogUrl, setNewCatalogUrl] = useState('');
   const [newCatalogDescription, setNewCatalogDescription] = useState('');
@@ -310,25 +312,51 @@ const OpdsCatalogPage: React.FC = () => {
   // CATALOG MANAGEMENT
   // ============================================================================
 
-  const handleAddCatalog = useCallback(() => {
+  const openCatalogModal = useCallback((catalog?: OpdsCatalog) => {
+    if (catalog) {
+      setEditingCatalog(catalog);
+      setNewCatalogName(catalog.name);
+      setNewCatalogUrl(catalog.url);
+      setNewCatalogDescription(catalog.description || '');
+      setNewCatalogUsername(catalog.username || '');
+      setNewCatalogPassword(catalog.password || '');
+    } else {
+      setEditingCatalog(null);
+      setNewCatalogName('');
+      setNewCatalogUrl('');
+      setNewCatalogDescription('');
+      setNewCatalogUsername('');
+      setNewCatalogPassword('');
+    }
+    setShowCatalogModal(true);
+  }, []);
+
+  const handleSaveCatalog = useCallback(() => {
     if (!newCatalogName.trim() || !newCatalogUrl.trim()) return;
 
-    opdsService.addCatalog({
+    const data = {
       name: newCatalogName.trim(),
       url: newCatalogUrl.trim(),
       description: newCatalogDescription.trim() || undefined,
       username: newCatalogUsername.trim() || undefined,
       password: newCatalogPassword.trim() || undefined,
-    });
+    };
+
+    if (editingCatalog) {
+      opdsService.updateCatalog(editingCatalog.id, data);
+    } else {
+      opdsService.addCatalog(data);
+    }
 
     setCatalogs(opdsService.loadSavedCatalogs());
+    setEditingCatalog(null);
     setNewCatalogName('');
     setNewCatalogUrl('');
     setNewCatalogDescription('');
     setNewCatalogUsername('');
     setNewCatalogPassword('');
-    setShowAddCatalog(false);
-  }, [newCatalogName, newCatalogUrl, newCatalogDescription, newCatalogUsername, newCatalogPassword]);
+    setShowCatalogModal(false);
+  }, [newCatalogName, newCatalogUrl, newCatalogDescription, newCatalogUsername, newCatalogPassword, editingCatalog]);
 
   const handleDeleteCatalog = useCallback(() => {
     if (!catalogToDelete) return;
@@ -422,6 +450,10 @@ const OpdsCatalogPage: React.FC = () => {
             key={catalog.id}
             button
             onClick={() => handleCatalogSelect(catalog)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openCatalogModal(catalog);
+            }}
             className="opds-catalog-item"
           >
             <IonIcon icon={globeOutline} slot="start" color="primary" />
@@ -435,6 +467,18 @@ const OpdsCatalogPage: React.FC = () => {
               {catalog.description && <p>{catalog.description}</p>}
               <p className="opds-catalog-url">{catalog.url}</p>
             </IonLabel>
+            <IonButton
+              fill="clear"
+              size="small"
+              slot="end"
+              onClick={(e) => {
+                e.stopPropagation();
+                openCatalogModal(catalog);
+              }}
+              aria-label="Edit catalog"
+            >
+              <IonIcon icon={createOutline} color="primary" />
+            </IonButton>
             <IonButton
               fill="clear"
               size="small"
@@ -616,7 +660,7 @@ const OpdsCatalogPage: React.FC = () => {
               </IonButton>
             )}
             {viewState === 'catalog-list' && (
-              <IonButton onClick={() => setShowAddCatalog(true)} aria-label="Add catalog">
+              <IonButton onClick={() => openCatalogModal()} aria-label="Add catalog">
                 <IonIcon icon={addOutline} />
               </IonButton>
             )}
@@ -626,13 +670,13 @@ const OpdsCatalogPage: React.FC = () => {
 
       {viewState === 'catalog-list' ? renderCatalogList() : renderFeedBrowser()}
 
-      {/* Add Catalog Modal */}
-      <IonModal isOpen={showAddCatalog} onDidDismiss={() => setShowAddCatalog(false)}>
+      {/* Add/Edit Catalog Modal */}
+      <IonModal isOpen={showCatalogModal} onDidDismiss={() => setShowCatalogModal(false)}>
         <IonHeader>
           <IonToolbar>
-            <IonTitle>Add OPDS Catalog</IonTitle>
+            <IonTitle>{editingCatalog ? 'Edit Catalog' : 'Add OPDS Catalog'}</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setShowAddCatalog(false)}>Cancel</IonButton>
+              <IonButton onClick={() => setShowCatalogModal(false)}>Cancel</IonButton>
             </IonButtons>
           </IonToolbar>
         </IonHeader>
@@ -687,10 +731,10 @@ const OpdsCatalogPage: React.FC = () => {
           <div className="ion-padding">
             <IonButton
               expand="block"
-              onClick={handleAddCatalog}
+              onClick={handleSaveCatalog}
               disabled={!newCatalogName.trim() || !newCatalogUrl.trim()}
             >
-              Add Catalog
+              {editingCatalog ? 'Save Changes' : 'Add Catalog'}
             </IonButton>
           </div>
         </IonContent>

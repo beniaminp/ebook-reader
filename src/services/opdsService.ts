@@ -446,6 +446,13 @@ export function addCatalog(catalog: Omit<OpdsCatalog, 'id'>): OpdsCatalog {
   return newCatalog;
 }
 
+export function updateCatalog(id: string, updates: Partial<Omit<OpdsCatalog, 'id'>>): void {
+  const catalogs = loadSavedCatalogs().map(c =>
+    c.id === id ? { ...c, ...updates } : c
+  );
+  saveCatalogs(catalogs);
+}
+
 export function removeCatalog(id: string): void {
   const catalogs = loadSavedCatalogs().filter(c => c.id !== id);
   saveCatalogs(catalogs);
@@ -458,6 +465,7 @@ export const opdsService = {
   loadSavedCatalogs,
   saveCatalogs,
   addCatalog,
+  updateCatalog,
   removeCatalog,
   DEFAULT_OPDS_CATALOGS,
 };
