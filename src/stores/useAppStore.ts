@@ -184,7 +184,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addBookmark: async (bookId, location, pageNumber, chapterTitle, textPreview) => {
     try {
       await databaseService.addBookmark({
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         bookId,
         location,
         pageNumber,
@@ -241,7 +241,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addHighlight: async (bookId, location, text, color, note) => {
     try {
       await databaseService.addHighlight({
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         bookId,
         location,
         text,
