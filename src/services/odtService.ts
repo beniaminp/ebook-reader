@@ -7,7 +7,7 @@
 import * as JSZip from 'jszip';
 import { XMLParser } from 'fast-xml-parser';
 
-interface OdtMetadata {
+export interface OdtMetadata {
   title?: string;
   author?: string;
 }
@@ -83,10 +83,10 @@ function processOdtContent(content: Record<string, unknown>, htmlParts: string[]
   const paragraphs = ensureArray(content['text:p']);
 
   for (const paragraph of paragraphs) {
-    if (!paragraph) continue;
+    if (!paragraph || typeof paragraph !== 'object') continue;
 
     // Extract text content with formatting
-    const textContent = extractTextContent(paragraph);
+    const textContent = extractTextContent(paragraph as Record<string, unknown>);
     if (textContent) {
       htmlParts.push(`<p>${textContent}</p>`);
     }
@@ -95,13 +95,13 @@ function processOdtContent(content: Record<string, unknown>, htmlParts: string[]
   // Process headings (text:h)
   const headings = ensureArray(content['text:h']);
   for (const heading of headings) {
-    if (!heading) continue;
+    if (!heading || typeof heading !== 'object') continue;
 
-    const level = heading['@_text:outline-level'] || '1';
-    const textContent = extractTextContent(heading);
+    const level = (heading as Record<string, unknown>)['@_text:outline-level'] || '1';
+    const textContent = extractTextContent(heading as Record<string, unknown>);
     if (textContent) {
       htmlParts.push(
-        `<h${Math.min(parseInt(level, 10), 6)}>${textContent}</h${Math.min(parseInt(level, 10), 6)}>`
+        `<h${Math.min(parseInt(level as string, 10), 6)}>${textContent}</h${Math.min(parseInt(level as string, 10), 6)}>`
       );
     }
   }
@@ -109,19 +109,19 @@ function processOdtContent(content: Record<string, unknown>, htmlParts: string[]
   // Process lists (text:list)
   const lists = ensureArray(content['text:list']);
   for (const list of lists) {
-    if (!list) continue;
+    if (!list || typeof list !== 'object') continue;
 
     htmlParts.push('<ul>');
-    const listItems = ensureArray(list['text:list-item']);
+    const listItems = ensureArray((list as Record<string, unknown>)['text:list-item']);
     for (const listItem of listItems) {
-      if (!listItem) continue;
+      if (!listItem || typeof listItem !== 'object') continue;
 
-      const itemText = extractTextContent(listItem);
+      const itemText = extractTextContent(listItem as Record<string, unknown>);
       htmlParts.push(`<li>${itemText || ''}</li>`);
 
       // Handle nested lists
-      if (listItem['text:list']) {
-        processOdtContent(listItem, htmlParts);
+      if ((listItem as Record<string, unknown>)['text:list']) {
+        processOdtContent(listItem as Record<string, unknown>, htmlParts);
       }
     }
     htmlParts.push('</ul>');
@@ -130,20 +130,20 @@ function processOdtContent(content: Record<string, unknown>, htmlParts: string[]
   // Process tables (table:table)
   const tables = ensureArray(content['table:table']);
   for (const table of tables) {
-    if (!table) continue;
+    if (!table || typeof table !== 'object') continue;
 
     htmlParts.push('<table border="1" class="odt-table">');
 
-    const rows = ensureArray(table['table:table-row']);
+    const rows = ensureArray((table as Record<string, unknown>)['table:table-row']);
     for (const row of rows) {
-      if (!row) continue;
+      if (!row || typeof row !== 'object') continue;
 
       htmlParts.push('<tr>');
-      const cells = ensureArray(row['table:table-cell']);
+      const cells = ensureArray((row as Record<string, unknown>)['table:table-cell']);
       for (const cell of cells) {
-        if (!cell) continue;
+        if (!cell || typeof cell !== 'object') continue;
 
-        const cellText = extractTextContent(cell);
+        const cellText = extractTextContent(cell as Record<string, unknown>);
         htmlParts.push(`<td>${cellText || ''}</td>`);
       }
       htmlParts.push('</tr>');
@@ -162,25 +162,25 @@ function extractTextContent(element: Record<string, unknown>): string {
   }
 
   // Direct text content
-  if (element['#text']) {
-    return escapeHtml(element['#text']);
+  if (typeof element['#text'] === 'string') {
+    return escapeHtml(element['#text'] as string);
   }
 
   // Process text:span elements (inline formatting)
   const spans = ensureArray(element['text:span']);
   if (spans.length > 0) {
     return spans
-      .map((span: Record<string, unknown>) => {
-        if (!span) return '';
+      .map((span) => {
+        if (!span || typeof span !== 'object') return '';
 
         // Check for formatting attributes
         const styleAttrs: string[] = [];
-        if (span['@_text:style-name']) {
+        if ((span as Record<string, unknown>)['@_text:style-name']) {
           // Could map style names to actual CSS here
           styleAttrs.push('font-style: italic;');
         }
 
-        const spanContent = span['#text'] || extractTextContent(span);
+        const spanContent = (span as Record<string, unknown>)['#text'] || extractTextContent(span as Record<string, unknown>);
         const styleAttr = styleAttrs.length > 0 ? ` style="${styleAttrs.join(' ')}"` : '';
 
         return `<span${styleAttr}>${escapeHtml(String(spanContent))}</span>`;
@@ -192,7 +192,7 @@ function extractTextContent(element: Record<string, unknown>): string {
   const nestedParagraphs = ensureArray(element['text:p']);
   if (nestedParagraphs.length > 0) {
     return nestedParagraphs
-      .map((p: Record<string, unknown>) => extractTextContent(p))
+      .map((p) => extractTextContent(p as Record<string, unknown>))
       .filter(Boolean)
       .join(' ');
   }
@@ -201,9 +201,10 @@ function extractTextContent(element: Record<string, unknown>): string {
   const links = ensureArray(element['text:a']);
   if (links.length > 0) {
     return links
-      .map((link: Record<string, unknown>) => {
-        const href = link['@_xlink:href'] || link['@_office:href'] || '#';
-        const linkText = link['#text'] || extractTextContent(link);
+      .map((link) => {
+        if (!link || typeof link !== 'object') return '';
+        const href = (link as Record<string, unknown>)['@_xlink:href'] || (link as Record<string, unknown>)['@_office:href'] || '#';
+        const linkText = (link as Record<string, unknown>)['#text'] || extractTextContent(link as Record<string, unknown>);
         return `<a href="${escapeHtml(String(href))}">${escapeHtml(String(linkText))}</a>`;
       })
       .join('');
