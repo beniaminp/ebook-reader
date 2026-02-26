@@ -82,7 +82,7 @@ async function convertDocumentToHtml(buffer: ArrayBuffer, format: string): Promi
 }
 
 const Reader: React.FC = () => {
-  const { bookId } = useParams<{ bookId: string }>();
+  const { bookId } = useParams<{ bookId?: string }>();
   const history = useHistory();
 
   const { setCurrentBook, updateProgress } = useAppStore();
@@ -109,6 +109,11 @@ const Reader: React.FC = () => {
 
   // Load book from store or database
   useEffect(() => {
+    if (!bookId || typeof bookId !== 'string' || bookId === 'undefined') {
+      setErrorMessage('Book not found (id: undefined)');
+      setLoadState('error');
+      return;
+    }
     const loadBook = async () => {
       setLoadState('loading');
 
