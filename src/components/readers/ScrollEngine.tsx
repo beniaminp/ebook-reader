@@ -5,7 +5,14 @@
  * ReaderContainer for theme integration.
  */
 
-import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { ReaderContainer } from '../reader-ui/ReaderContainer';
@@ -26,13 +33,47 @@ export interface ScrollEngineProps {
 
 const SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
-    'p', 'br', 'b', 'i', 'em', 'strong', 'u', 's', 'strike',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-    'a', 'img', 'figure', 'figcaption',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td',
-    'div', 'span', 'section', 'article', 'header', 'footer', 'nav',
-    'hr', 'sub', 'sup',
+    'p',
+    'br',
+    'b',
+    'i',
+    'em',
+    'strong',
+    'u',
+    's',
+    'strike',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'ul',
+    'ol',
+    'li',
+    'blockquote',
+    'pre',
+    'code',
+    'a',
+    'img',
+    'figure',
+    'figcaption',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+    'div',
+    'span',
+    'section',
+    'article',
+    'header',
+    'footer',
+    'nav',
+    'hr',
+    'sub',
+    'sup',
   ],
   ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id'],
 };
@@ -117,71 +158,83 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
     return () => ionContent.removeEventListener('ionScroll', handler);
   }, [ionContentRef, handleScroll, loading]);
 
-  const scrollByViewport = useCallback((direction: 1 | -1) => {
-    const ionContent = ionContentRef?.current;
-    if (!ionContent) return;
+  const scrollByViewport = useCallback(
+    (direction: 1 | -1) => {
+      const ionContent = ionContentRef?.current;
+      if (!ionContent) return;
 
-    ionContent.getScrollElement().then(scrollEl => {
-      const viewportH = scrollEl.clientHeight;
-      const newTop = scrollEl.scrollTop + direction * viewportH * 0.9;
-      ionContent.scrollToPoint(0, Math.max(0, newTop), 200);
-    });
-  }, [ionContentRef]);
+      ionContent.getScrollElement().then((scrollEl) => {
+        const viewportH = scrollEl.clientHeight;
+        const newTop = scrollEl.scrollTop + direction * viewportH * 0.9;
+        ionContent.scrollToPoint(0, Math.max(0, newTop), 200);
+      });
+    },
+    [ionContentRef]
+  );
 
-  const scrollToCharIndex = useCallback((charIndex: number) => {
-    const ionContent = ionContentRef?.current;
-    if (!ionContent || !innerRef.current) return;
-
-    const totalChars = plainText.length;
-    if (totalChars === 0) return;
-    const ratio = charIndex / totalChars;
-    ionContent.scrollToPoint(0, ratio * (innerRef.current.scrollHeight || 0), 300);
-  }, [ionContentRef, plainText]);
-
-  useImperativeHandle(ref, () => ({
-    next: () => scrollByViewport(1),
-    prev: () => scrollByViewport(-1),
-    goToLocation: (location: string) => {
-      const pct = parseInt(location, 10);
-      if (isNaN(pct)) return;
+  const scrollToCharIndex = useCallback(
+    (charIndex: number) => {
       const ionContent = ionContentRef?.current;
       if (!ionContent || !innerRef.current) return;
-      const target = (pct / 100) * (innerRef.current.scrollHeight || 0);
-      ionContent.scrollToPoint(0, target, 300);
+
+      const totalChars = plainText.length;
+      if (totalChars === 0) return;
+      const ratio = charIndex / totalChars;
+      ionContent.scrollToPoint(0, ratio * (innerRef.current.scrollHeight || 0), 300);
     },
-    goToChapter: () => { /* scroll content has no chapters */ },
-    getChapters: (): Chapter[] => [],
-    getProgress: (): ReaderProgress => ({
-      current: progressRef.current,
-      total: 100,
-      fraction: progressRef.current / 100,
-      label: `${progressRef.current}%`,
-      locationString: String(progressRef.current),
+    [ionContentRef, plainText]
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      next: () => scrollByViewport(1),
+      prev: () => scrollByViewport(-1),
+      goToLocation: (location: string) => {
+        const pct = parseInt(location, 10);
+        if (isNaN(pct)) return;
+        const ionContent = ionContentRef?.current;
+        if (!ionContent || !innerRef.current) return;
+        const target = (pct / 100) * (innerRef.current.scrollHeight || 0);
+        ionContent.scrollToPoint(0, target, 300);
+      },
+      goToChapter: () => {
+        /* scroll content has no chapters */
+      },
+      getChapters: (): Chapter[] => [],
+      getProgress: (): ReaderProgress => ({
+        current: progressRef.current,
+        total: 100,
+        fraction: progressRef.current / 100,
+        label: `${progressRef.current}%`,
+        locationString: String(progressRef.current),
+      }),
+      search: async (query: string): Promise<SearchResult[]> => {
+        if (!query.trim()) return [];
+        const text = plainText.toLowerCase();
+        const lowerQuery = query.toLowerCase();
+        const results: SearchResult[] = [];
+        let idx = 0;
+
+        while ((idx = text.indexOf(lowerQuery, idx)) !== -1) {
+          const start = Math.max(0, idx - 40);
+          const end = Math.min(plainText.length, idx + query.length + 40);
+          results.push({
+            location: String(idx),
+            excerpt:
+              (start > 0 ? '...' : '') +
+              plainText.slice(start, end) +
+              (end < plainText.length ? '...' : ''),
+            label: `Position ${idx}`,
+          });
+          idx += query.length;
+        }
+
+        return results;
+      },
     }),
-    search: async (query: string): Promise<SearchResult[]> => {
-      if (!query.trim()) return [];
-      const text = plainText.toLowerCase();
-      const lowerQuery = query.toLowerCase();
-      const results: SearchResult[] = [];
-      let idx = 0;
-
-      while ((idx = text.indexOf(lowerQuery, idx)) !== -1) {
-        const start = Math.max(0, idx - 40);
-        const end = Math.min(plainText.length, idx + query.length + 40);
-        results.push({
-          location: String(idx),
-          excerpt:
-            (start > 0 ? '...' : '') +
-            plainText.slice(start, end) +
-            (end < plainText.length ? '...' : ''),
-          label: `Position ${idx}`,
-        });
-        idx += query.length;
-      }
-
-      return results;
-    },
-  }), [scrollByViewport, scrollToCharIndex, ionContentRef, plainText]);
+    [scrollByViewport, scrollToCharIndex, ionContentRef, plainText]
+  );
 
   if (loading) {
     return null; // Parent shows loading spinner

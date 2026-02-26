@@ -18,6 +18,10 @@ export type {
   Theme,
 } from './themeService';
 
+// Font
+export { fontService } from './fontService';
+export type { CustomFont } from './fontService';
+
 // Calibre-Web
 export { calibreWebService, CalibreWebService } from './calibreWebService';
 export { calibreWebDbService } from './calibreWebDbService';
@@ -42,8 +46,18 @@ export type { Fb2Metadata, Fb2TocEntry, Fb2ParsedContent } from './fb2Service';
 export { chmService } from './chmService';
 export type { ChmMetadata, ChmParsedContent } from './chmService';
 
+export { docxService } from './docxService';
+export type { DocxMetadata } from './docxService';
+
+export { odtService } from './odtService';
+export type { OdtMetadata } from './odtService';
+
 // Translation
-export { translationService, TranslationService, TranslationServiceError } from './translationService';
+export {
+  translationService,
+  TranslationService,
+  TranslationServiceError,
+} from './translationService';
 export type {
   TranslationServiceConfig,
   LanguageCode,
@@ -55,13 +69,7 @@ export type {
 
 // Dictionary
 export { dictionaryService } from './dictionaryService';
-export type {
-  Phonetic,
-  Definition,
-  Meaning,
-  DefinitionResult,
-  VocabularyWord,
-} from '../types';
+export type { Phonetic, Definition, Meaning, DefinitionResult, VocabularyWord } from '../types';
 
 // Cloud Sync
 export { cloudSyncService, CloudSyncService } from './cloudSyncService';
@@ -77,3 +85,11 @@ export type {
   SyncResult,
   SyncConflict,
 } from '../types/cloudSync';
+
+// Backup
+export { backupService } from './backupService';
+export type {
+  BackupInfo,
+  BackupResult,
+  RestoreResult,
+} from './backupService';

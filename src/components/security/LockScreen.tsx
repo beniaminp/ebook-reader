@@ -5,13 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  IonButton,
-  IonIcon,
-  IonSpinner,
-  IonInput,
-  IonText,
-} from '@ionic/react';
+import { IonButton, IonIcon, IonSpinner, IonInput, IonText } from '@ionic/react';
 import {
   fingerPrintOutline,
   backspaceOutline,
@@ -164,7 +158,7 @@ const LockScreen: React.FC = () => {
       setError('');
       setPin((prev) => prev + digit);
     },
-    [pin, loading],
+    [pin, loading]
   );
 
   const handleBackspace = useCallback(() => {
@@ -187,7 +181,7 @@ const LockScreen: React.FC = () => {
         setLoading(false);
       }
     },
-    [loading, verifyAndUnlock, triggerShake],
+    [loading, verifyAndUnlock, triggerShake]
   );
 
   const handlePasswordSubmit = useCallback(async () => {
@@ -378,11 +372,7 @@ const LockScreen: React.FC = () => {
           disabled={loading}
           aria-label="Use biometric authentication"
         >
-          <IonIcon
-            icon={fingerPrintOutline}
-            slot="start"
-            style={{ fontSize: '22px' }}
-          />
+          <IonIcon icon={fingerPrintOutline} slot="start" style={{ fontSize: '22px' }} />
           Use Biometrics
         </IonButton>
       )}

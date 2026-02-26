@@ -13,7 +13,22 @@ export interface Book {
   author: string;
   filePath: string;
   coverPath?: string;
-  format: 'epub' | 'pdf' | 'mobi' | 'fb2' | 'cbz' | 'txt' | 'html' | 'htm' | 'md' | 'markdown' | 'chm' | 'docx' | 'odt';
+  format:
+    | 'epub'
+    | 'pdf'
+    | 'mobi'
+    | 'azw3'
+    | 'fb2'
+    | 'cbz'
+    | 'cbr'
+    | 'txt'
+    | 'html'
+    | 'htm'
+    | 'md'
+    | 'markdown'
+    | 'chm'
+    | 'docx'
+    | 'odt';
   totalPages: number;
   currentPage: number;
   progress: number;
@@ -156,9 +171,33 @@ export interface DatabaseSchema {
 
 // Translation types
 export type TranslationLanguageCode =
-  | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ru' | 'zh' | 'ja' | 'ko'
-  | 'ar' | 'nl' | 'pl' | 'tr' | 'sv' | 'da' | 'fi' | 'no' | 'cs' | 'el'
-  | 'he' | 'hi' | 'th' | 'vi' | 'id' | 'uk' | 'auto';
+  | 'en'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'pt'
+  | 'ru'
+  | 'zh'
+  | 'ja'
+  | 'ko'
+  | 'ar'
+  | 'nl'
+  | 'pl'
+  | 'tr'
+  | 'sv'
+  | 'da'
+  | 'fi'
+  | 'no'
+  | 'cs'
+  | 'el'
+  | 'he'
+  | 'hi'
+  | 'th'
+  | 'vi'
+  | 'id'
+  | 'uk'
+  | 'auto';
 
 export interface TranslationSettings {
   targetLanguage: TranslationLanguageCode;

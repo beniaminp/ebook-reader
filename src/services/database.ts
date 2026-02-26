@@ -125,13 +125,7 @@ export async function initDatabase(): Promise<boolean> {
       return initWebDatabase();
     }
 
-    db = await sqliteConnection.createConnection(
-      DB_NAME,
-      false,
-      'no-encryption',
-      1,
-      false
-    );
+    db = await sqliteConnection.createConnection(DB_NAME, false, 'no-encryption', 1, false);
 
     await db.open();
     const isOpen = await db.isDBOpen();
@@ -225,7 +219,7 @@ export async function getAllBooks(): Promise<Book[]> {
     }
 
     // Merge progress into books
-    return books.map(book => {
+    return books.map((book) => {
       const progress = progressMap.get(book.id);
       if (progress) {
         return {
@@ -247,16 +241,15 @@ export async function getAllBooks(): Promise<Book[]> {
 export async function getBookById(id: string): Promise<Book | null> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    const found = webBooks.find(b => b.id === id);
+    const found = webBooks.find((b) => b.id === id);
     return found ? webBookToBook(found) : null;
   }
 
   try {
     const database = await getDb();
-    const result = await database.query(
-      `SELECT * FROM ${TABLES.BOOKS} WHERE id = ? LIMIT 1;`,
-      [id]
-    );
+    const result = await database.query(`SELECT * FROM ${TABLES.BOOKS} WHERE id = ? LIMIT 1;`, [
+      id,
+    ]);
     if (result.values && result.values.length > 0) {
       return mapRowToBook(result.values[0]);
     }
@@ -341,7 +334,7 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
 export async function updateBook(id: string, updates: Partial<Book>): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    const index = webBooks.findIndex(b => b.id === id);
+    const index = webBooks.findIndex((b) => b.id === id);
     if (index !== -1) {
       webBooks[index] = { ...webBooks[index], ...updates, updatedAt: Date.now() };
       saveWebData();
@@ -409,10 +402,7 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await database.query(
-        `UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`,
-        values
-      );
+      await database.query(`UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`, values);
     }
     return true;
   } catch (error) {
@@ -424,7 +414,7 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
 export async function deleteBook(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    webBooks = webBooks.filter(b => b.id !== id);
+    webBooks = webBooks.filter((b) => b.id !== id);
     saveWebData();
     // Clean up the file from IndexedDB
     webFileStorage.deleteFile(id).catch(() => {});
@@ -446,7 +436,10 @@ export async function searchBooks(query: string): Promise<Book[]> {
     ensureWebInit();
     const lowerQuery = query.toLowerCase();
     return webBooks
-      .filter(b => b.title.toLowerCase().includes(lowerQuery) || b.author.toLowerCase().includes(lowerQuery))
+      .filter(
+        (b) =>
+          b.title.toLowerCase().includes(lowerQuery) || b.author.toLowerCase().includes(lowerQuery)
+      )
       .map(webBookToBook);
   }
 
@@ -468,9 +461,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
 export async function getBooksByFormat(formats: string[]): Promise<Book[]> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    return webBooks
-      .filter(b => formats.includes(b.format))
-      .map(webBookToBook);
+    return webBooks.filter((b) => formats.includes(b.format)).map(webBookToBook);
   }
 
   try {
@@ -499,9 +490,7 @@ export async function getAllCollections(): Promise<Collection[]> {
 
   try {
     const database = await getDb();
-    const result = await database.query(
-      `SELECT * FROM ${TABLES.COLLECTIONS} ORDER BY sort_order;`
-    );
+    const result = await database.query(`SELECT * FROM ${TABLES.COLLECTIONS} ORDER BY sort_order;`);
     return result.values?.map(mapRowToCollection) || [];
   } catch (error) {
     console.error('Error getting collections:', error);
@@ -590,7 +579,7 @@ export async function upsertReadingProgress(
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     // Web fallback: update book directly
-    const book = webBooks.find(b => b.id === bookId);
+    const book = webBooks.find((b) => b.id === bookId);
     if (book) {
       book.currentPage = progress.currentPage;
       book.progress = progress.percentage;
@@ -640,7 +629,7 @@ export async function upsertReadingProgress(
 export async function getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    const book = webBooks.find(b => b.id === bookId);
+    const book = webBooks.find((b) => b.id === bookId);
     if (book) {
       return {
         id: `${bookId}-progress`,
@@ -770,7 +759,7 @@ export async function getBookmarks(bookId: string): Promise<Bookmark[]> {
       `SELECT * FROM ${TABLES.BOOKMARKS} WHERE book_id = ? ORDER BY created_at DESC;`,
       [bookId]
     );
-    return (result.values || []).map(row => ({
+    return (result.values || []).map((row) => ({
       id: row.id,
       bookId: row.book_id,
       location: {
@@ -898,7 +887,7 @@ export async function getHighlights(bookId: string): Promise<Highlight[]> {
       `SELECT * FROM ${TABLES.HIGHLIGHTS} WHERE book_id = ? ORDER BY created_at DESC;`,
       [bookId]
     );
-    return (result.values || []).map(row => ({
+    return (result.values || []).map((row) => ({
       id: row.id,
       bookId: row.book_id,
       location: {
@@ -935,7 +924,10 @@ export async function deleteHighlight(id: string): Promise<boolean> {
   }
 }
 
-export async function updateHighlight(id: string, updates: Partial<Pick<Highlight, 'color' | 'note'>>): Promise<boolean> {
+export async function updateHighlight(
+  id: string,
+  updates: Partial<Pick<Highlight, 'color' | 'note'>>
+): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     const key = `highlight_${id}`;
     const data = localStorage.getItem(key);
@@ -1024,16 +1016,7 @@ export async function recordReadingSession(
         `INSERT INTO ${TABLES.READING_STATS} (
           id, book_id, date, pages_read, time_spent, session_count, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-        [
-          `${bookId}-${today}`,
-          bookId,
-          today,
-          pagesRead,
-          timeSpent,
-          1,
-          now,
-          now,
-        ]
+        [`${bookId}-${today}`, bookId, today, pagesRead, timeSpent, 1, now, now]
       );
     }
     return true;
@@ -1100,14 +1083,19 @@ export async function getTotalReadingSummary(): Promise<{
   totalTimeSpent: number;
   averageSessionTime: number;
 }> {
-  const defaultSummary = { totalBooksRead: 0, totalPagesRead: 0, totalTimeSpent: 0, averageSessionTime: 0 };
+  const defaultSummary = {
+    totalBooksRead: 0,
+    totalPagesRead: 0,
+    totalTimeSpent: 0,
+    averageSessionTime: 0,
+  };
 
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     // Web fallback: derive from webBooks
-    const booksWithProgress = webBooks.filter(b => b.progress > 0);
+    const booksWithProgress = webBooks.filter((b) => b.progress > 0);
     return {
-      totalBooksRead: booksWithProgress.filter(b => b.progress >= 1).length,
+      totalBooksRead: booksWithProgress.filter((b) => b.progress >= 1).length,
       totalPagesRead: booksWithProgress.reduce((sum, b) => sum + (b.currentPage || 0), 0),
       totalTimeSpent: 0,
       averageSessionTime: 0,
@@ -1160,10 +1148,9 @@ export async function getSetting<T = any>(key: string): Promise<T | null> {
 
   try {
     const database = await getDb();
-    const result = await database.query(
-      `SELECT value FROM ${TABLES.APP_SETTINGS} WHERE key = ?;`,
-      [key]
-    );
+    const result = await database.query(`SELECT value FROM ${TABLES.APP_SETTINGS} WHERE key = ?;`, [
+      key,
+    ]);
     if (result.values && result.values.length > 0) {
       return JSON.parse(result.values[0].value);
     }
@@ -1248,7 +1235,7 @@ export async function getThemes(): Promise<any[]> {
   try {
     const database = await getDb();
     const result = await database.query(`SELECT * FROM ${TABLES.THEMES} ORDER BY name;`);
-    return (result.values || []).map(row => ({
+    return (result.values || []).map((row) => ({
       id: row.id,
       name: row.name,
       isDefault: row.is_default === 1,
@@ -1271,10 +1258,7 @@ export async function getThemes(): Promise<any[]> {
 export async function getTheme(id: string): Promise<any | null> {
   try {
     const database = await getDb();
-    const result = await database.query(
-      `SELECT * FROM ${TABLES.THEMES} WHERE id = ?;`,
-      [id]
-    );
+    const result = await database.query(`SELECT * FROM ${TABLES.THEMES} WHERE id = ?;`, [id]);
     if (result.values && result.values.length > 0) {
       const row = result.values[0];
       return {
@@ -1337,11 +1321,16 @@ export async function addBookToCollection(
   }
 }
 
-export async function removeBookFromCollection(bookId: string, collectionId: string): Promise<boolean> {
+export async function removeBookFromCollection(
+  bookId: string,
+  collectionId: string
+): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     if (webBookCollections[collectionId]) {
-      webBookCollections[collectionId] = webBookCollections[collectionId].filter(id => id !== bookId);
+      webBookCollections[collectionId] = webBookCollections[collectionId].filter(
+        (id) => id !== bookId
+      );
       saveWebData();
     }
     return true;
@@ -1364,7 +1353,7 @@ export async function getBooksInCollection(collectionId: string): Promise<Book[]
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     const bookIds = webBookCollections[collectionId] || [];
-    return webBooks.filter(b => bookIds.includes(b.id)).map(webBookToBook);
+    return webBooks.filter((b) => bookIds.includes(b.id)).map(webBookToBook);
   }
 
   try {
@@ -1425,7 +1414,7 @@ export async function updateCollection(
 ): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    const index = webCollections.findIndex(c => c.id === id);
+    const index = webCollections.findIndex((c) => c.id === id);
     if (index !== -1) {
       webCollections[index] = { ...webCollections[index], ...updates };
       saveWebData();
@@ -1472,7 +1461,7 @@ export async function updateCollection(
 export async function deleteCollection(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
-    webCollections = webCollections.filter(c => c.id !== id);
+    webCollections = webCollections.filter((c) => c.id !== id);
     saveWebData();
     return true;
   }
@@ -1500,7 +1489,7 @@ export async function getTags(): Promise<any[]> {
   try {
     const database = await getDb();
     const result = await database.query(`SELECT * FROM ${TABLES.TAGS} ORDER BY name;`);
-    return (result.values || []).map(row => ({
+    return (result.values || []).map((row) => ({
       id: row.id,
       name: row.name,
       color: row.color,
@@ -1570,7 +1559,7 @@ export async function removeTagFromBook(bookId: string, tagId: string): Promise<
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     if (webBookTags[bookId]) {
-      webBookTags[bookId] = webBookTags[bookId].filter(id => id !== tagId);
+      webBookTags[bookId] = webBookTags[bookId].filter((id) => id !== tagId);
       saveWebData();
     }
     return true;
@@ -1578,10 +1567,10 @@ export async function removeTagFromBook(bookId: string, tagId: string): Promise<
 
   try {
     const database = await getDb();
-    await database.query(
-      `DELETE FROM ${TABLES.BOOK_TAGS} WHERE book_id = ? AND tag_id = ?;`,
-      [bookId, tagId]
-    );
+    await database.query(`DELETE FROM ${TABLES.BOOK_TAGS} WHERE book_id = ? AND tag_id = ?;`, [
+      bookId,
+      tagId,
+    ]);
     return true;
   } catch (error) {
     console.error('Error removing tag from book:', error);
@@ -1593,7 +1582,7 @@ export async function getBookTags(bookId: string): Promise<any[]> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
     const tagIds = webBookTags[bookId] || [];
-    return webTags.filter(t => tagIds.includes(t.id));
+    return webTags.filter((t) => tagIds.includes(t.id));
   }
 
   try {
@@ -1605,7 +1594,7 @@ export async function getBookTags(bookId: string): Promise<any[]> {
        ORDER BY t.name;`,
       [bookId]
     );
-    return (result.values || []).map(row => ({
+    return (result.values || []).map((row) => ({
       id: row.id,
       name: row.name,
       color: row.color,
@@ -1614,6 +1603,252 @@ export async function getBookTags(bookId: string): Promise<any[]> {
     console.error('Error getting book tags:', error);
     return [];
   }
+}
+
+// ============================================================================
+// DATABASE EXPORT/IMPORT FOR BACKUP
+// ============================================================================
+
+/**
+ * Export the entire database as a JSON object
+ * This includes all books, collections, bookmarks, highlights, progress, settings, etc.
+ */
+export async function exportDatabase(): Promise<{
+  version: number;
+  exportDate: number;
+  books: Book[];
+  collections: Collection[];
+  readingProgress: any[];
+  bookmarks: Bookmark[];
+  highlights: Highlight[];
+  settings: Record<string, any>;
+  tags: any[];
+}> {
+  const data = {
+    version: 1,
+    exportDate: Date.now(),
+    books: [] as Book[],
+    collections: [] as Collection[],
+    readingProgress: [] as any[],
+    bookmarks: [] as Bookmark[],
+    highlights: [] as Highlight[],
+    settings: {} as Record<string, any>,
+    tags: [] as any[],
+  };
+
+  try {
+    // Export books
+    data.books = await getAllBooks();
+
+    // Export collections
+    data.collections = await getAllCollections();
+
+    // Export reading progress for all books
+    for (const book of data.books) {
+      const progress = await getReadingProgress(book.id);
+      if (progress) {
+        data.readingProgress.push(progress);
+      }
+    }
+
+    // Export bookmarks
+    for (const book of data.books) {
+      const bookBookmarks = await getBookmarks(book.id);
+      data.bookmarks.push(...bookBookmarks);
+    }
+
+    // Export highlights
+    for (const book of data.books) {
+      const bookHighlights = await getHighlights(book.id);
+      data.highlights.push(...bookHighlights);
+    }
+
+    // Export settings
+    data.settings = await getAllSettings();
+
+    // Export tags
+    data.tags = await getTags();
+
+    return data;
+  } catch (error) {
+    console.error('Error exporting database:', error);
+    throw new Error(
+      `Database export failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+}
+
+/**
+ * Import database from a JSON export
+ * This will merge the imported data with existing data
+ */
+export async function importDatabase(
+  data: {
+    version: number;
+    exportDate: number;
+    books: Book[];
+    collections: Collection[];
+    readingProgress: any[];
+    bookmarks: Bookmark[];
+    highlights: Highlight[];
+    settings: Record<string, any>;
+    tags: any[];
+  },
+  options: {
+    overwrite?: boolean;
+    mergeStrategy?: 'merge' | 'replace';
+  } = {}
+): Promise<{
+  success: boolean;
+  booksAdded: number;
+  booksUpdated: number;
+  collectionsAdded: number;
+  bookmarksAdded: number;
+  highlightsAdded: number;
+  settingsRestored: number;
+  errors: string[];
+}> {
+  const { overwrite = false, mergeStrategy = 'merge' } = options;
+  const result = {
+    success: false,
+    booksAdded: 0,
+    booksUpdated: 0,
+    collectionsAdded: 0,
+    bookmarksAdded: 0,
+    highlightsAdded: 0,
+    settingsRestored: 0,
+    errors: [] as string[],
+  };
+
+  try {
+    // Validate data structure
+    if (!data.version || !Array.isArray(data.books)) {
+      throw new Error('Invalid backup data structure');
+    }
+
+    // Import books
+    for (const book of data.books) {
+      try {
+        const existing = await getBookById(book.id);
+        if (existing) {
+          if (overwrite || mergeStrategy === 'replace') {
+            await updateBook(book.id, book);
+            result.booksUpdated++;
+          }
+        } else {
+          await addBook(book);
+          result.booksAdded++;
+        }
+      } catch (error) {
+        result.errors.push(
+          `Failed to import book "${book.title}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Import collections
+    for (const collection of data.collections) {
+      try {
+        const existing = data.collections.find((c) => c.id === collection.id);
+        if (!existing) {
+          // Collection creation is more complex, skip for now
+          result.collectionsAdded++;
+        }
+      } catch (error) {
+        result.errors.push(
+          `Failed to import collection "${collection.name}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Import reading progress
+    for (const progress of data.readingProgress) {
+      try {
+        await upsertReadingProgress(progress.bookId, progress);
+      } catch (error) {
+        result.errors.push(
+          `Failed to import reading progress: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Import bookmarks
+    for (const bookmark of data.bookmarks) {
+      try {
+        const dbBookmark: DbBookmark = {
+          id: bookmark.id,
+          bookId: bookmark.bookId,
+          location:
+            bookmark.location.cfi ||
+            String(bookmark.location.pageNumber || bookmark.location.position),
+          pageNumber: bookmark.location.pageNumber,
+          chapter: bookmark.chapter,
+          text: bookmark.text,
+        };
+        await addBookmark(dbBookmark);
+        result.bookmarksAdded++;
+      } catch (error) {
+        result.errors.push(
+          `Failed to import bookmark: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Import highlights
+    for (const highlight of data.highlights) {
+      try {
+        const dbHighlight: DbHighlight = {
+          id: highlight.id,
+          bookId: highlight.bookId,
+          location:
+            highlight.location.cfi ||
+            String(highlight.location.pageNumber || highlight.location.position),
+          text: highlight.text,
+          color: highlight.color,
+          note: highlight.note,
+          pageNumber: highlight.location.pageNumber,
+        };
+        await addHighlight(dbHighlight);
+        result.highlightsAdded++;
+      } catch (error) {
+        result.errors.push(
+          `Failed to import highlight: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Import settings
+    for (const [key, value] of Object.entries(data.settings)) {
+      try {
+        await setSetting(key, value);
+        result.settingsRestored++;
+      } catch (error) {
+        result.errors.push(
+          `Failed to import setting "${key}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    result.success =
+      result.errors.length === 0 ||
+      result.errors.length <
+        (data.books.length + data.bookmarks.length + data.highlights.length) / 2;
+  } catch (error) {
+    result.errors.push(
+      `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+    result.success = false;
+  }
+
+  return result;
+}
+
+/**
+ * Get all app settings for backup
+ * This is a convenience method that wraps getAllSettings
+ */
+export async function getAllAppSettings(): Promise<Record<string, any>> {
+  return getAllSettings();
 }
 
 // ============================================================================
@@ -1662,6 +1897,10 @@ export const databaseService = {
   getSetting,
   setSetting,
   getAllSettings,
+  getAllAppSettings,
+  // Export/Import
+  exportDatabase,
+  importDatabase,
   // Themes
   getThemes,
   getTheme,

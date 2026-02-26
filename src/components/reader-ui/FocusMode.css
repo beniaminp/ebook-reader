@@ -23,13 +23,17 @@
 .focus-active {
   opacity: 1 !important;
   filter: none !important;
-  transition: opacity 0.3s ease, filter 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
 }
 
 /* Smooth transition for all affected elements */
 .focus-dimmed,
 .focus-active {
-  transition: opacity 0.3s ease, filter 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
 }
 
 /* Special handling for nested elements */

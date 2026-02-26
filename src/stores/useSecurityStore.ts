@@ -113,7 +113,10 @@ export const useSecurityStore = create<SecurityState>()(
         }
 
         const credToStore = credential ?? '';
-        await securityService.setCredential(credToStore, lockType as 'pin' | 'password' | 'biometric');
+        await securityService.setCredential(
+          credToStore,
+          lockType as 'pin' | 'password' | 'biometric'
+        );
 
         set({
           lockType,

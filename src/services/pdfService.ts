@@ -95,9 +95,7 @@ export class PdfService {
     const textContent = await page.getTextContent();
 
     if (preserveWhitespace) {
-      return textContent.items
-        .map((item: any) => item.str)
-        .join('');
+      return textContent.items.map((item: any) => item.str).join('');
     }
 
     return textContent.items
@@ -205,10 +203,7 @@ export class PdfService {
 
     const items: PdfOutlineItem[] = [];
 
-    const processOutline = async (
-      entries: any[],
-      level: number = 0
-    ): Promise<void> => {
+    const processOutline = async (entries: any[], level: number = 0): Promise<void> => {
       for (const entry of entries) {
         let pageNumber = 0;
 
@@ -308,12 +303,8 @@ export class PdfService {
       keywords: info?.Keywords || '',
       creator: info?.Creator || '',
       producer: info?.Producer || '',
-      creationDate: info?.CreationDate
-        ? new Date(info.CreationDate)
-        : null,
-      modificationDate: info?.ModDate
-        ? new Date(info.ModDate)
-        : null,
+      creationDate: info?.CreationDate ? new Date(info.CreationDate) : null,
+      modificationDate: info?.ModDate ? new Date(info.ModDate) : null,
       isEncrypted: (metadata as any).isEncrypted || false,
     };
   }
@@ -350,11 +341,12 @@ export class PdfService {
     return {
       minutes,
       hours,
-      displayText: hours < 1
-        ? `${minutes} min read`
-        : hours < 24
-          ? `${hours} hr read`
-          : `${Math.round(hours / 24 * 10) / 10} days read`,
+      displayText:
+        hours < 1
+          ? `${minutes} min read`
+          : hours < 24
+            ? `${hours} hr read`
+            : `${Math.round((hours / 24) * 10) / 10} days read`,
     };
   }
 

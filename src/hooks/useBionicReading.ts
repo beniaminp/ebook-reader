@@ -32,7 +32,9 @@ export interface UseBionicReadingReturn {
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
-const DEFAULT_OPTIONS: Required<Omit<BionicReadingOptions, 'contentSelector'>> & { contentSelector?: string } = {
+const DEFAULT_OPTIONS: Required<Omit<BionicReadingOptions, 'contentSelector'>> & {
+  contentSelector?: string;
+} = {
   enabled: false,
   boldFraction: 0.5,
   boldClassName: 'word-bold',
@@ -43,8 +45,19 @@ const DEFAULT_OPTIONS: Required<Omit<BionicReadingOptions, 'contentSelector'>> &
 
 // Tags to skip when processing (script, style, code, pre, etc.)
 const SKIP_TAGS = new Set([
-  'script', 'style', 'code', 'pre', 'samp', 'kbd', 'var',
-  'math', 'svg', 'canvas', 'video', 'audio', 'iframe',
+  'script',
+  'style',
+  'code',
+  'pre',
+  'samp',
+  'kbd',
+  'var',
+  'math',
+  'svg',
+  'canvas',
+  'video',
+  'audio',
+  'iframe',
 ]);
 
 /**
@@ -160,9 +173,7 @@ function processTextNode(
 /**
  * Main hook for bionic reading functionality
  */
-export const useBionicReading = (
-  options: BionicReadingOptions = {}
-): UseBionicReadingReturn => {
+export const useBionicReading = (options: BionicReadingOptions = {}): UseBionicReadingReturn => {
   const mergedOptions = useMemo(
     () => ({
       ...DEFAULT_OPTIONS,
@@ -196,30 +207,26 @@ export const useBionicReading = (
     if (!rootElement) return;
 
     // Use TreeWalker to find all text nodes
-    const walker = document.createTreeWalker(
-      rootElement,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          // Skip empty nodes
-          if (!node.textContent?.trim()) {
+    const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        // Skip empty nodes
+        if (!node.textContent?.trim()) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        // Skip nodes inside certain tags
+        let parent = node.parentElement;
+        while (parent) {
+          if (shouldSkipNode(parent)) {
             return NodeFilter.FILTER_REJECT;
           }
+          if (parent === rootElement) break;
+          parent = parent.parentElement;
+        }
 
-          // Skip nodes inside certain tags
-          let parent = node.parentElement;
-          while (parent) {
-            if (shouldSkipNode(parent)) {
-              return NodeFilter.FILTER_REJECT;
-            }
-            if (parent === rootElement) break;
-            parent = parent.parentElement;
-          }
-
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      }
-    );
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
 
     const textNodes: Text[] = [];
     let node: Node | null;

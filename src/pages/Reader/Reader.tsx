@@ -18,6 +18,8 @@ import { calibreWebService } from '../../services/calibreWebService';
 import { useCalibreWebStore } from '../../stores/calibreWebStore';
 import { webFileStorage } from '../../services/webFileStorage';
 import { chmService } from '../../services/chmService';
+import { docxService } from '../../services/docxService';
+import { odtService } from '../../services/odtService';
 import { UnifiedReaderContainer } from '../../components/readers/UnifiedReaderContainer';
 import type { Book } from '../../types/index';
 import type { ReadingProgress } from '../../types/database';
@@ -36,8 +38,10 @@ function detectFormat(filePath: string, bookFormat?: string): string {
   if (ext === 'html' || ext === 'htm') return 'html';
   if (ext === 'md' || ext === 'markdown') return 'md';
   if (ext === 'mobi') return 'mobi';
+  if (ext === 'azw' || ext === 'azw3') return 'azw3';
   if (ext === 'fb2') return 'fb2';
   if (ext === 'cbz') return 'cbz';
+  if (ext === 'cbr') return 'cbr';
   if (ext === 'chm') return 'chm';
   if (ext === 'docx') return 'docx';
   if (ext === 'odt') return 'odt';
@@ -45,7 +49,22 @@ function detectFormat(filePath: string, bookFormat?: string): string {
   return bookFormat || 'txt';
 }
 
-const SUPPORTED_FORMATS = ['epub', 'pdf', 'txt', 'html', 'htm', 'md', 'markdown', 'mobi', 'fb2', 'cbz', 'docx', 'odt'];
+const SUPPORTED_FORMATS = [
+  'epub',
+  'pdf',
+  'txt',
+  'html',
+  'htm',
+  'md',
+  'markdown',
+  'mobi',
+  'azw3',
+  'fb2',
+  'cbz',
+  'cbr',
+  'docx',
+  'odt',
+];
 const UNSUPPORTED_FORMATS = ['chm'];
 
 /** Formats that should be loaded as text rather than ArrayBuffer. */
@@ -54,43 +73,10 @@ const TEXT_FORMATS = new Set(['txt', 'html', 'htm', 'md', 'markdown']);
 /** Convert DOCX or ODT binary data to HTML string. */
 async function convertDocumentToHtml(buffer: ArrayBuffer, format: string): Promise<string> {
   if (format === 'docx') {
-    const mammoth = await import('mammoth');
-    const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
-    return result.value;
+    return await docxService.convertDocxToHtml(buffer);
   }
   if (format === 'odt') {
-    const JSZip = (await import('jszip')).default;
-    const zip = await JSZip.loadAsync(buffer);
-    const contentXml = await zip.file('content.xml')?.async('string');
-    if (!contentXml) throw new Error('Invalid ODT file: missing content.xml');
-    // Parse ODT XML and convert to basic HTML
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(contentXml, 'application/xml');
-    const body = doc.getElementsByTagNameNS('urn:oasis:names:tc:opendocument:xmlns:office:1.0', 'body')[0];
-    if (!body) throw new Error('Invalid ODT file: missing body element');
-    const textNode = doc.getElementsByTagNameNS('urn:oasis:names:tc:opendocument:xmlns:office:1.0', 'text')[0];
-    const root = textNode || body;
-    const html: string[] = [];
-    for (let i = 0; i < root.childNodes.length; i++) {
-      const node = root.childNodes[i] as Element;
-      const tag = node.localName;
-      const text = node.textContent || '';
-      if (tag === 'p') html.push(`<p>${text}</p>`);
-      else if (tag === 'h') html.push(`<h2>${text}</h2>`);
-      else if (tag === 'list') {
-        const items: string[] = [];
-        for (let j = 0; j < node.childNodes.length; j++) {
-          const li = node.childNodes[j] as Element;
-          if (li.localName === 'list-item') items.push(`<li>${li.textContent || ''}</li>`);
-        }
-        html.push(`<ul>${items.join('')}</ul>`);
-      } else if (tag === 'table') {
-        html.push(`<table border="1">${text}</table>`);
-      } else if (text.trim()) {
-        html.push(`<p>${text}</p>`);
-      }
-    }
-    return html.join('\n');
+    return await odtService.convertOdtToHtml(buffer);
   }
   throw new Error(`Unsupported conversion format: ${format}`);
 }
@@ -118,7 +104,8 @@ const Reader: React.FC = () => {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState('');
 
-  const { setDownloadProgress: storeSetDownloadProgress, removeDownloadProgress } = useCalibreWebStore();
+  const { setDownloadProgress: storeSetDownloadProgress, removeDownloadProgress } =
+    useCalibreWebStore();
 
   // Load book from store or database
   useEffect(() => {
@@ -149,7 +136,9 @@ const Reader: React.FC = () => {
 
       // Validate filePath early to prevent crashes
       if (!foundBook.filePath) {
-        setErrorMessage(`Book has missing file path. The book data may be corrupted. Please re-import the book.`);
+        setErrorMessage(
+          `Book has missing file path. The book data may be corrupted. Please re-import the book.`
+        );
         setLoadState('error');
         return;
       }
@@ -157,7 +146,9 @@ const Reader: React.FC = () => {
       // Validate format field - try to detect from filePath if missing
       if (!foundBook.format) {
         const detectedFormat = detectFormat(foundBook.filePath, undefined);
-        console.warn(`Book ${foundBook.id} has missing format, detected: ${detectedFormat} from filePath`);
+        console.warn(
+          `Book ${foundBook.id} has missing format, detected: ${detectedFormat} from filePath`
+        );
         // Update the book with the detected format
         foundBook = { ...foundBook, format: detectedFormat as Book['format'] };
       }
@@ -190,7 +181,8 @@ const Reader: React.FC = () => {
               throw new Error('Could not fetch book metadata from server');
             }
             const formats = calibreWebService.getAvailableFormats(cwBook);
-            const preferredFormat = formats.find(f => f === 'EPUB') || formats.find(f => f === 'PDF') || formats[0];
+            const preferredFormat =
+              formats.find((f) => f === 'EPUB') || formats.find((f) => f === 'PDF') || formats[0];
             if (!preferredFormat) {
               throw new Error('No downloadable format available');
             }
@@ -209,7 +201,10 @@ const Reader: React.FC = () => {
             if (!localPath) {
               throw new Error('Download failed — no file path returned');
             }
-            await databaseService.updateBook(foundBook.id, { downloaded: true, filePath: localPath });
+            await databaseService.updateBook(foundBook.id, {
+              downloaded: true,
+              filePath: localPath,
+            });
             resolvedFilePath = localPath;
             foundBook = { ...foundBook, downloaded: true, filePath: localPath };
             removeDownloadProgress(calibreBookId);
@@ -334,7 +329,9 @@ const Reader: React.FC = () => {
   const handleBookmark = useCallback(
     async (bookIdParam: string, location: string, textPreview?: string) => {
       try {
-        await useAppStore.getState().addBookmark(bookIdParam, location, undefined, undefined, textPreview);
+        await useAppStore
+          .getState()
+          .addBookmark(bookIdParam, location, undefined, undefined, textPreview);
         setToastMessage('Bookmark added');
       } catch {
         setToastMessage('Failed to add bookmark');
@@ -348,7 +345,16 @@ const Reader: React.FC = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: '16px',
+            }}
+          >
             <IonSpinner name="crescent" />
             <p>Loading book...</p>
           </div>
@@ -362,7 +368,17 @@ const Reader: React.FC = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', padding: '0 32px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: '16px',
+              padding: '0 32px',
+            }}
+          >
             <IonSpinner name="crescent" />
             <IonText>
               <p style={{ textAlign: 'center' }}>{downloadStatus || 'Downloading book...'}</p>
@@ -385,8 +401,21 @@ const Reader: React.FC = () => {
     return (
       <IonPage>
         <IonContent className="ion-padding">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', textAlign: 'center' }}>
-            <IonIcon icon={arrowBack} style={{ fontSize: '48px', color: 'var(--ion-color-danger)' }} />
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: '16px',
+              textAlign: 'center',
+            }}
+          >
+            <IonIcon
+              icon={arrowBack}
+              style={{ fontSize: '48px', color: 'var(--ion-color-danger)' }}
+            />
             <p style={{ color: 'var(--ion-color-danger)', maxWidth: '300px' }}>{errorMessage}</p>
             <IonButton onClick={handleBack} fill="outline">
               Back to Library

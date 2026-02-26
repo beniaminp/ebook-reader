@@ -50,7 +50,7 @@ export class CalibreWebService {
     const activeServerId = await Preferences.get({ key: PREF_KEY_ACTIVE_SERVER });
     if (activeServerId.value) {
       const servers = await this.loadServers();
-      const server = servers.find(s => s.id === activeServerId.value && s.isActive);
+      const server = servers.find((s) => s.id === activeServerId.value && s.isActive);
       if (server) {
         this.currentConfig = server;
         await this.createHttpClient(server);
@@ -109,7 +109,11 @@ export class CalibreWebService {
   /**
    * Test connection to a Calibre-Web server
    */
-  async testConnection(serverUrl: string, username: string, password: string): Promise<CalibreWebConnectionTest> {
+  async testConnection(
+    serverUrl: string,
+    username: string,
+    password: string
+  ): Promise<CalibreWebConnectionTest> {
     const startTime = Date.now();
     try {
       // Normalize URL
@@ -189,7 +193,7 @@ export class CalibreWebService {
 
         // Check if server already exists
         const servers = await this.loadServers();
-        let server = servers.find(s => s.serverUrl === normalizedUrl && s.username === username);
+        let server = servers.find((s) => s.serverUrl === normalizedUrl && s.username === username);
 
         if (server) {
           // Update existing server
@@ -240,7 +244,9 @@ export class CalibreWebService {
   /**
    * Fetch all books from Calibre-Web server
    */
-  async fetchAllBooks(onProgress?: (current: number, total: number) => void): Promise<CalibreWebBook[]> {
+  async fetchAllBooks(
+    onProgress?: (current: number, total: number) => void
+  ): Promise<CalibreWebBook[]> {
     if (!this.httpClient || !this.currentConfig) {
       throw new Error('Not connected to Calibre-Web server');
     }
@@ -342,7 +348,7 @@ export class CalibreWebService {
     }
 
     // Check if format exists
-    const formatData = book.formats?.find(f => f.format.toLowerCase() === format.toLowerCase());
+    const formatData = book.formats?.find((f) => f.format.toLowerCase() === format.toLowerCase());
     if (!formatData) {
       throw new Error(`Format ${format} not available for this book`);
     }
@@ -364,18 +370,21 @@ export class CalibreWebService {
       progress.status = 'downloading';
       onProgress?.(progress);
 
-      const response = await this.httpClient.get(formatData.download_url || `/api/download/${book.id}/${format}`, {
-        responseType: 'arraybuffer',
-        signal: abortController.signal,
-        onDownloadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            progress.progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-            progress.bytesDownloaded = progressEvent.loaded;
-            progress.totalBytes = progressEvent.total;
-            onProgress?.(progress);
-          }
-        },
-      });
+      const response = await this.httpClient.get(
+        formatData.download_url || `/api/download/${book.id}/${format}`,
+        {
+          responseType: 'arraybuffer',
+          signal: abortController.signal,
+          onDownloadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              progress.progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              progress.bytesDownloaded = progressEvent.loaded;
+              progress.totalBytes = progressEvent.total;
+              onProgress?.(progress);
+            }
+          },
+        }
+      );
 
       // Save to filesystem
       const ext = format.toLowerCase();
@@ -496,13 +505,16 @@ export class CalibreWebService {
    * Get available formats for a book
    */
   getAvailableFormats(book: CalibreWebBook): string[] {
-    return book.formats?.map(f => f.format.toUpperCase()) || [];
+    return book.formats?.map((f) => f.format.toUpperCase()) || [];
   }
 
   /**
    * Sync books from Calibre-Web
    */
-  async syncBooks(options: CalibreWebSyncOptions, onProgress?: (progress: DownloadProgress) => void): Promise<CalibreWebSyncResult> {
+  async syncBooks(
+    options: CalibreWebSyncOptions,
+    onProgress?: (progress: DownloadProgress) => void
+  ): Promise<CalibreWebSyncResult> {
     const startTime = Date.now();
     const result: CalibreWebSyncResult = {
       success: false,
@@ -546,12 +558,12 @@ export class CalibreWebService {
         for (const book of books) {
           // Prefer EPUB, fallback to PDF
           const formats = this.getAvailableFormats(book);
-          const format = formats.find(f => f === 'EPUB') || formats[0];
+          const format = formats.find((f) => f === 'EPUB') || formats[0];
 
           if (format) {
             // Limit concurrent downloads
             while (activeDownloads >= options.maxConcurrentDownloads) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise((resolve) => setTimeout(resolve, 100));
             }
 
             activeDownloads++;
@@ -577,7 +589,7 @@ export class CalibreWebService {
       // Update last sync time
       this.currentConfig.lastSyncAt = Date.now();
       const servers = await this.loadServers();
-      const serverIndex = servers.findIndex(s => s.id === this.currentConfig!.id);
+      const serverIndex = servers.findIndex((s) => s.id === this.currentConfig!.id);
       if (serverIndex !== -1) {
         servers[serverIndex] = this.currentConfig;
         await this.saveServers(servers);
@@ -626,7 +638,7 @@ export class CalibreWebService {
    */
   async deleteServer(serverId: string): Promise<void> {
     const servers = await this.loadServers();
-    const filtered = servers.filter(s => s.id !== serverId);
+    const filtered = servers.filter((s) => s.id !== serverId);
     await this.saveServers(filtered);
 
     if (this.currentConfig?.id === serverId) {

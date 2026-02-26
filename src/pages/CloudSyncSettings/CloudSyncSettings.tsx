@@ -37,6 +37,8 @@ import {
   IonProgressBar,
   IonChip,
   IonText,
+  IonActionSheet,
+  IonLoading,
 } from '@ionic/react';
 import {
   cloudUploadOutline,
@@ -48,11 +50,16 @@ import {
   logoDropbox,
   cloudOutline,
   wifiOutline,
+  saveOutline,
+  timeOutline,
+  downloadOutline,
 } from 'ionicons/icons';
 import { useCloudSyncStore } from '../../stores/cloudSyncStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
+import { backupService } from '../../services/backupService';
 import type { CloudProviderType, ConflictResolution } from '../../types/cloudSync';
+import type { BackupInfo, BackupResult, RestoreResult } from '../../services/backupService';
 import './CloudSyncSettings.css';
 
 const CloudSyncSettings: React.FC = () => {
@@ -82,6 +89,7 @@ const CloudSyncSettings: React.FC = () => {
     setSyncInterval,
     setSyncOnWifiOnly,
     setConflictResolution,
+    setError,
     clearError,
   } = useCloudSyncStore();
 
@@ -93,6 +101,17 @@ const CloudSyncSettings: React.FC = () => {
   const [showSyncResult, setShowSyncResult] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  // Backup UI state
+  const [backups, setBackups] = useState<BackupInfo[]>([]);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [selectedBackup, setSelectedBackup] = useState<BackupInfo | null>(null);
+  const [showBackupActionSheet, setShowBackupActionSheet] = useState(false);
+  const [showBackupResult, setShowBackupResult] = useState(false);
+  const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
+  const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null);
+
   // Form state
   const [dropboxToken, setDropboxToken] = useState('');
   const [webdavUrl, setWebdavUrl] = useState('');
@@ -101,7 +120,15 @@ const CloudSyncSettings: React.FC = () => {
 
   useEffect(() => {
     initialize();
+    loadBackups();
   }, []);
+
+  // Load backups when connected
+  useEffect(() => {
+    if (isConnected) {
+      loadBackups();
+    }
+  }, [isConnected, selectedProvider]);
 
   // Format bytes
   const formatBytes = (bytes: number | null): string => {
@@ -196,6 +223,98 @@ const CloudSyncSettings: React.FC = () => {
     await listCloudBooks();
   };
 
+  // Load available backups
+  const loadBackups = async () => {
+    if (!isConnected) return;
+
+    setIsLoadingBackups(true);
+    try {
+      const backupList = await backupService.listBackups(selectedProvider);
+      setBackups(backupList);
+    } catch (error) {
+      console.error('Failed to load backups:', error);
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  // Handle create backup
+  const handleCreateBackup = async () => {
+    setIsCreatingBackup(true);
+    clearError();
+
+    try {
+      const result = await backupService.fullBackup(selectedProvider);
+      setBackupResult(result);
+      setShowBackupResult(true);
+
+      if (result.success) {
+        await loadBackups();
+      }
+    } catch (error) {
+      console.error('Backup creation failed:', error);
+      setError(error instanceof Error ? error.message : 'Backup failed');
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  // Handle restore backup
+  const handleRestoreBackup = async (backup: BackupInfo) => {
+    setSelectedBackup(backup);
+    setShowBackupActionSheet(true);
+  };
+
+  // Confirm restore backup
+  const confirmRestoreBackup = async (mergeStrategy?: 'merge' | 'replace') => {
+    if (!selectedBackup) return;
+
+    setIsRestoringBackup(true);
+    setShowBackupActionSheet(false);
+    clearError();
+
+    try {
+      const result = await backupService.restoreBackup(selectedProvider, selectedBackup.path, {
+        overwrite: mergeStrategy === 'replace',
+        mergeStrategy: mergeStrategy || 'merge',
+        restoreThemes: true,
+      });
+      setRestoreResult(result);
+      setShowBackupResult(true);
+
+      // Refresh app data
+      if (result.success) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Backup restoration failed:', error);
+      setError(error instanceof Error ? error.message : 'Restore failed');
+    } finally {
+      setIsRestoringBackup(false);
+      setSelectedBackup(null);
+    }
+  };
+
+  // Handle delete backup
+  const handleDeleteBackup = async (backup: BackupInfo) => {
+    const success = await backupService.deleteBackup(selectedProvider, backup.path);
+    if (success) {
+      await loadBackups();
+    }
+  };
+
+  // Get backup size as formatted string
+  const formatBackupSize = (bytes: number): string => {
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  // Get backup date as formatted string
+  const formatBackupDate = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleString();
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -236,22 +355,22 @@ const CloudSyncSettings: React.FC = () => {
               <div className="provider-description">
                 {selectedProvider === 'dropbox' ? (
                   <IonNote>
-                    Connect to your Dropbox account to sync your reading data.
-                    You'll need a Dropbox access token.
+                    Connect to your Dropbox account to sync your reading data. You'll need a Dropbox
+                    access token.
                   </IonNote>
                 ) : (
                   <IonNote>
-                    Connect to any WebDAV-compatible cloud storage (Nextcloud,
-                    ownCloud, etc.) to sync your reading data.
+                    Connect to any WebDAV-compatible cloud storage (Nextcloud, ownCloud, etc.) to
+                    sync your reading data.
                   </IonNote>
                 )}
               </div>
 
-              <IonButton
-                expand="block"
-                onClick={() => setShowAuthModal(true)}
-              >
-                <IonIcon icon={selectedProvider === 'dropbox' ? logoDropbox : cloudOutline} slot="start" />
+              <IonButton expand="block" onClick={() => setShowAuthModal(true)}>
+                <IonIcon
+                  icon={selectedProvider === 'dropbox' ? logoDropbox : cloudOutline}
+                  slot="start"
+                />
                 Connect to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}
               </IonButton>
             </IonCardContent>
@@ -283,11 +402,7 @@ const CloudSyncSettings: React.FC = () => {
               </div>
 
               <div className="action-buttons">
-                <IonButton
-                  expand="block"
-                  onClick={handleSync}
-                  disabled={syncStatus === 'syncing'}
-                >
+                <IonButton expand="block" onClick={handleSync} disabled={syncStatus === 'syncing'}>
                   {syncStatus === 'syncing' ? (
                     <>
                       <IonSpinner name="crescent" slot="start" />
@@ -301,12 +416,7 @@ const CloudSyncSettings: React.FC = () => {
                   )}
                 </IonButton>
 
-                <IonButton
-                  expand="block"
-                  fill="outline"
-                  color="danger"
-                  onClick={handleDisconnect}
-                >
+                <IonButton expand="block" fill="outline" color="danger" onClick={handleDisconnect}>
                   <IonIcon icon={trashOutline} slot="start" />
                   Disconnect
                 </IonButton>
@@ -327,7 +437,9 @@ const CloudSyncSettings: React.FC = () => {
             <IonCardContent>
               <IonProgressBar value={syncProgress.progress / 100} />
               <div className="progress-details">
-                <p>{syncProgress.currentOperation && formatOperation(syncProgress.currentOperation)}</p>
+                <p>
+                  {syncProgress.currentOperation && formatOperation(syncProgress.currentOperation)}
+                </p>
                 {syncProgress.currentFile && (
                   <IonNote className="file-name">{syncProgress.currentFile}</IonNote>
                 )}
@@ -351,10 +463,7 @@ const CloudSyncSettings: React.FC = () => {
                 <h3>Auto Sync</h3>
                 <p>Automatically sync your reading data</p>
               </IonLabel>
-              <IonToggle
-                checked={autoSync}
-                onIonChange={(e) => setAutoSync(e.detail.checked)}
-              />
+              <IonToggle checked={autoSync} onIonChange={(e) => setAutoSync(e.detail.checked)} />
             </IonItem>
 
             {autoSync && (
@@ -413,16 +522,80 @@ const CloudSyncSettings: React.FC = () => {
                     {book.format.toUpperCase()} · {formatBytes(book.size)}
                   </p>
                 </IonLabel>
-                <IonButton
-                  fill="clear"
-                  color="danger"
-                  onClick={() => handleDeleteBook(book.path)}
-                >
+                <IonButton fill="clear" color="danger" onClick={() => handleDeleteBook(book.path)}>
                   <IonIcon icon={trashOutline} />
                 </IonButton>
               </IonItem>
             ))}
           </IonList>
+        )}
+
+        {/* Backup & Restore Section */}
+        {isConnected && (
+          <IonCard className="backup-card">
+            <IonCardHeader>
+              <IonCardTitle>Backup & Restore</IonCardTitle>
+              <IonCardSubtitle>
+                Create full backups or restore from previous backups
+              </IonCardSubtitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonButton expand="block" onClick={handleCreateBackup} disabled={isCreatingBackup}>
+                {isCreatingBackup ? (
+                  <>
+                    <IonSpinner name="crescent" slot="start" />
+                    Creating Backup...
+                  </>
+                ) : (
+                  <>
+                    <IonIcon icon={saveOutline} slot="start" />
+                    Create Backup
+                  </>
+                )}
+              </IonButton>
+
+              {isLoadingBackups && (
+                <div className="loading-backups">
+                  <IonSpinner name="crescent" />
+                  <IonText>Loading backups...</IonText>
+                </div>
+              )}
+
+              {!isLoadingBackups && backups.length > 0 && (
+                <IonList className="backups-list">
+                  <IonListHeader>
+                    <IonLabel>Available Backups ({backups.length})</IonLabel>
+                  </IonListHeader>
+
+                  {backups.map((backup) => (
+                    <IonItem key={backup.path} className="backup-item">
+                      <IonLabel>
+                        <h3>{formatBackupDate(backup.timestamp)}</h3>
+                        <p>
+                          <IonIcon icon={timeOutline} />
+                          {formatBackupSize(backup.size)}
+                        </p>
+                      </IonLabel>
+                      <IonButton fill="clear" onClick={() => handleRestoreBackup(backup)}>
+                        <IonIcon icon={downloadOutline} />
+                      </IonButton>
+                      <IonButton
+                        fill="clear"
+                        color="danger"
+                        onClick={() => handleDeleteBackup(backup)}
+                      >
+                        <IonIcon icon={trashOutline} />
+                      </IonButton>
+                    </IonItem>
+                  ))}
+                </IonList>
+              )}
+
+              {!isLoadingBackups && backups.length === 0 && (
+                <IonNote>No backups found. Create a backup to save your current data.</IonNote>
+              )}
+            </IonCardContent>
+          </IonCard>
         )}
 
         {/* Info Card */}
@@ -432,7 +605,8 @@ const CloudSyncSettings: React.FC = () => {
           </IonCardHeader>
           <IonCardContent>
             <p>
-              Cloud sync keeps your reading progress, bookmarks, and highlights synchronized across all your devices.
+              Cloud sync keeps your reading progress, bookmarks, and highlights synchronized across
+              all your devices.
             </p>
             <p>
               <strong>What gets synced:</strong>
@@ -454,9 +628,7 @@ const CloudSyncSettings: React.FC = () => {
       <IonModal isOpen={showAuthModal} onDidDismiss={() => setShowAuthModal(false)}>
         <IonHeader>
           <IonToolbar>
-            <IonTitle>
-              Connect to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}
-            </IonTitle>
+            <IonTitle>Connect to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}</IonTitle>
             <IonButtons slot="end">
               <IonButton onClick={() => setShowAuthModal(false)}>Close</IonButton>
             </IonButtons>
@@ -477,8 +649,8 @@ const CloudSyncSettings: React.FC = () => {
                 </IonItem>
                 <IonItem lines="none">
                   <IonNote className="auth-help-text">
-                    To get an access token, go to the Dropbox App Console, create an app, and generate an access token.
-                    The app needs "Files" permissions.
+                    To get an access token, go to the Dropbox App Console, create an app, and
+                    generate an access token. The app needs "Files" permissions.
                   </IonNote>
                 </IonItem>
               </>
@@ -520,11 +692,7 @@ const CloudSyncSettings: React.FC = () => {
           </IonList>
 
           <div className="modal-actions">
-            <IonButton
-              expand="block"
-              onClick={handleConnect}
-              disabled={isConnecting}
-            >
+            <IonButton expand="block" onClick={handleConnect} disabled={isConnecting}>
               {isConnecting ? (
                 <>
                   <IonSpinner name="crescent" slot="start" />
@@ -532,7 +700,10 @@ const CloudSyncSettings: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <IonIcon icon={selectedProvider === 'dropbox' ? logoDropbox : cloudOutline} slot="start" />
+                  <IonIcon
+                    icon={selectedProvider === 'dropbox' ? logoDropbox : cloudOutline}
+                    slot="start"
+                  />
                   Connect
                 </>
               )}
@@ -565,6 +736,58 @@ const CloudSyncSettings: React.FC = () => {
         duration={3000}
         color="danger"
       />
+
+      {/* Backup Restore Action Sheet */}
+      <IonActionSheet
+        isOpen={showBackupActionSheet}
+        onDidDismiss={() => setShowBackupActionSheet(false)}
+        header="Restore Backup"
+        buttons={[
+          {
+            text: 'Merge with existing data',
+            handler: () => confirmRestoreBackup('merge'),
+          },
+          {
+            text: 'Replace all data',
+            handler: () => confirmRestoreBackup('replace'),
+          },
+          {
+            text: 'Cancel',
+            role: 'cancel',
+          },
+        ]}
+      />
+
+      {/* Backup Result Alert */}
+      <IonAlert
+        isOpen={showBackupResult}
+        onDidDismiss={() => {
+          setShowBackupResult(false);
+          setBackupResult(null);
+          setRestoreResult(null);
+        }}
+        header={
+          backupResult?.success
+            ? 'Backup Complete'
+            : restoreResult?.success
+              ? 'Restore Complete'
+              : 'Operation Failed'
+        }
+        message={getBackupResultMessage(backupResult, restoreResult)}
+        buttons={[
+          {
+            text: 'OK',
+            handler: () => {
+              setShowBackupResult(false);
+              setBackupResult(null);
+              setRestoreResult(null);
+            },
+          },
+        ]}
+      />
+
+      {/* Loading overlay for restore */}
+      <IonLoading isOpen={isRestoringBackup} message="Restoring backup..." duration={0} />
     </IonPage>
   );
 };
@@ -593,14 +816,10 @@ function getSyncResultMessage(result: any): string {
   if (result.success) {
     const parts = [];
     if (result.bookmarksAdded || result.bookmarksUpdated) {
-      parts.push(
-        `${result.bookmarksAdded + result.bookmarksUpdated} bookmarks synced`
-      );
+      parts.push(`${result.bookmarksAdded + result.bookmarksUpdated} bookmarks synced`);
     }
     if (result.highlightsAdded || result.highlightsUpdated) {
-      parts.push(
-        `${result.highlightsAdded + result.highlightsUpdated} highlights synced`
-      );
+      parts.push(`${result.highlightsAdded + result.highlightsUpdated} highlights synced`);
     }
     if (result.progressUpdated) {
       parts.push(`${result.progressUpdated} reading progress updates`);
@@ -609,6 +828,45 @@ function getSyncResultMessage(result: any): string {
   }
 
   return result.errors?.join(', ') || 'Sync failed';
+}
+
+function getBackupResultMessage(
+  backupResult: BackupResult | null,
+  restoreResult: RestoreResult | null
+): string {
+  if (backupResult) {
+    if (backupResult.success) {
+      return `Backup created successfully!\n\nFilename: ${backupResult.filename}\nSize: ${backupResult.size ? `${(backupResult.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}`;
+    }
+    return backupResult.error || 'Backup failed';
+  }
+
+  if (restoreResult) {
+    if (restoreResult.success) {
+      const parts = [];
+      if (restoreResult.booksAdded) parts.push(`${restoreResult.booksAdded} books added`);
+      if (restoreResult.booksUpdated) parts.push(`${restoreResult.booksUpdated} books updated`);
+      if (restoreResult.bookmarksAdded)
+        parts.push(`${restoreResult.bookmarksAdded} bookmarks restored`);
+      if (restoreResult.highlightsAdded)
+        parts.push(`${restoreResult.highlightsAdded} highlights restored`);
+      if (restoreResult.settingsRestored)
+        parts.push(`${restoreResult.settingsRestored} settings restored`);
+      if (restoreResult.themesRestored) parts.push('Theme settings restored');
+
+      let message = parts.join(', ') || 'Restore completed';
+      if (restoreResult.errors.length > 0) {
+        message += `\n\nSome items had errors:\n${restoreResult.errors.slice(0, 3).join('\n')}`;
+        if (restoreResult.errors.length > 3) {
+          message += `\n...and ${restoreResult.errors.length - 3} more`;
+        }
+      }
+      return message;
+    }
+    return restoreResult.errors?.join(', ') || 'Restore failed';
+  }
+
+  return '';
 }
 
 export default CloudSyncSettings;

@@ -126,8 +126,8 @@ export const useCalibreWebStore = create<CalibreWebState>((set, get) => ({
   setConnected: (connected) => set({ isConnected: connected }),
   addServer: (server) => {
     set((state) => {
-      const updated = state.servers.find(s => s.id === server.id)
-        ? state.servers.map(s => s.id === server.id ? server : s)
+      const updated = state.servers.find((s) => s.id === server.id)
+        ? state.servers.map((s) => (s.id === server.id ? server : s))
         : [...state.servers, server];
       savePersistedState({ ...get(), servers: updated });
       return { servers: updated };
@@ -135,8 +135,12 @@ export const useCalibreWebStore = create<CalibreWebState>((set, get) => ({
   },
   removeServer: (serverId) => {
     set((state) => {
-      const updated = state.servers.filter(s => s.id !== serverId);
-      savePersistedState({ ...get(), servers: updated, activeServerId: state.activeServerId === serverId ? null : state.activeServerId });
+      const updated = state.servers.filter((s) => s.id !== serverId);
+      savePersistedState({
+        ...get(),
+        servers: updated,
+        activeServerId: state.activeServerId === serverId ? null : state.activeServerId,
+      });
       return {
         servers: updated,
         activeServerId: state.activeServerId === serverId ? null : state.activeServerId,
@@ -145,9 +149,7 @@ export const useCalibreWebStore = create<CalibreWebState>((set, get) => ({
   },
   updateServer: (serverId, updates) => {
     set((state) => {
-      const updated = state.servers.map(s =>
-        s.id === serverId ? { ...s, ...updates } : s
-      );
+      const updated = state.servers.map((s) => (s.id === serverId ? { ...s, ...updates } : s));
       savePersistedState({ ...get(), servers: updated });
       return { servers: updated };
     });
@@ -160,9 +162,9 @@ export const useCalibreWebStore = create<CalibreWebState>((set, get) => ({
   },
   addSyncedBook: (book) => {
     set((state) => {
-      const exists = state.syncedBooks.find(b => b.id === book.id);
+      const exists = state.syncedBooks.find((b) => b.id === book.id);
       const updated = exists
-        ? state.syncedBooks.map(b => b.id === book.id ? book : b)
+        ? state.syncedBooks.map((b) => (b.id === book.id ? book : b))
         : [...state.syncedBooks, book];
       savePersistedState({ ...get(), syncedBooks: updated });
       return { syncedBooks: updated };
@@ -170,16 +172,14 @@ export const useCalibreWebStore = create<CalibreWebState>((set, get) => ({
   },
   removeSyncedBook: (bookId) => {
     set((state) => {
-      const updated = state.syncedBooks.filter(b => b.id !== bookId);
+      const updated = state.syncedBooks.filter((b) => b.id !== bookId);
       savePersistedState({ ...get(), syncedBooks: updated });
       return { syncedBooks: updated };
     });
   },
   updateSyncedBook: (bookId, updates) => {
     set((state) => {
-      const updated = state.syncedBooks.map(b =>
-        b.id === bookId ? { ...b, ...updates } : b
-      );
+      const updated = state.syncedBooks.map((b) => (b.id === bookId ? { ...b, ...updates } : b));
       savePersistedState({ ...get(), syncedBooks: updated });
       return { syncedBooks: updated };
     });
@@ -241,16 +241,16 @@ export const useCalibreWebStore = create<CalibreWebState>((set, get) => ({
   // Getters
   getActiveServer: () => {
     const state = get();
-    return state.servers.find(s => s.id === state.activeServerId) || null;
+    return state.servers.find((s) => s.id === state.activeServerId) || null;
   },
   getBookByCalibreId: (calibreBookId) => {
-    return get().syncedBooks.find(b => b.calibreBookId === calibreBookId);
+    return get().syncedBooks.find((b) => b.calibreBookId === calibreBookId);
   },
   getDownloadedBooks: () => {
-    return get().syncedBooks.filter(b => b.isDownloaded);
+    return get().syncedBooks.filter((b) => b.isDownloaded);
   },
   getCloudOnlyBooks: () => {
-    return get().syncedBooks.filter(b => !b.isDownloaded);
+    return get().syncedBooks.filter((b) => !b.isDownloaded);
   },
 }));
 

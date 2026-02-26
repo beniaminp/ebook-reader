@@ -19,15 +19,7 @@ import {
   IonSegmentButton,
   IonLabel,
 } from '@ionic/react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { databaseService } from '../../services/database';
 
 interface DailyStats {
@@ -92,7 +84,7 @@ const Statistics: React.FC = () => {
     }
   };
 
-  const chartData = dailyStats.map(row => ({
+  const chartData = dailyStats.map((row) => ({
     date: formatDate(row.date),
     pages: row.pages_read,
     minutes: Math.round(row.time_spent / 60),
@@ -111,7 +103,14 @@ const Statistics: React.FC = () => {
 
       <IonContent>
         {isLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60%' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '60%',
+            }}
+          >
             <IonSpinner name="crescent" />
           </div>
         ) : (
@@ -121,20 +120,36 @@ const Statistics: React.FC = () => {
                 <IonCol size="6">
                   <IonCard>
                     <IonCardContent style={{ textAlign: 'center', padding: '12px' }}>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--ion-color-primary)' }}>
+                      <div
+                        style={{
+                          fontSize: '28px',
+                          fontWeight: 'bold',
+                          color: 'var(--ion-color-primary)',
+                        }}
+                      >
                         {summary.totalBooksRead}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>Books Read</div>
+                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                        Books Read
+                      </div>
                     </IonCardContent>
                   </IonCard>
                 </IonCol>
                 <IonCol size="6">
                   <IonCard>
                     <IonCardContent style={{ textAlign: 'center', padding: '12px' }}>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--ion-color-success)' }}>
+                      <div
+                        style={{
+                          fontSize: '28px',
+                          fontWeight: 'bold',
+                          color: 'var(--ion-color-success)',
+                        }}
+                      >
                         {summary.totalPagesRead.toLocaleString()}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>Pages Read</div>
+                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                        Pages Read
+                      </div>
                     </IonCardContent>
                   </IonCard>
                 </IonCol>
@@ -143,20 +158,36 @@ const Statistics: React.FC = () => {
                 <IonCol size="6">
                   <IonCard>
                     <IonCardContent style={{ textAlign: 'center', padding: '12px' }}>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--ion-color-tertiary)' }}>
+                      <div
+                        style={{
+                          fontSize: '28px',
+                          fontWeight: 'bold',
+                          color: 'var(--ion-color-tertiary)',
+                        }}
+                      >
                         {formatMinutes(summary.totalTimeSpent)}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>Total Time</div>
+                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                        Total Time
+                      </div>
                     </IonCardContent>
                   </IonCard>
                 </IonCol>
                 <IonCol size="6">
                   <IonCard>
                     <IonCardContent style={{ textAlign: 'center', padding: '12px' }}>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--ion-color-warning)' }}>
+                      <div
+                        style={{
+                          fontSize: '28px',
+                          fontWeight: 'bold',
+                          color: 'var(--ion-color-warning)',
+                        }}
+                      >
                         {formatMinutes(summary.averageSessionTime)}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>Avg Session</div>
+                      <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                        Avg Session
+                      </div>
                     </IonCardContent>
                   </IonCard>
                 </IonCol>
@@ -164,10 +195,7 @@ const Statistics: React.FC = () => {
             </IonGrid>
 
             <div style={{ padding: '0 16px 8px' }}>
-              <IonSegment
-                value={period}
-                onIonChange={(e) => setPeriod(e.detail.value as Period)}
-              >
+              <IonSegment value={period} onIonChange={(e) => setPeriod(e.detail.value as Period)}>
                 <IonSegmentButton value="7">
                   <IonLabel>7 Days</IonLabel>
                 </IonSegmentButton>
@@ -186,7 +214,13 @@ const Statistics: React.FC = () => {
               </IonCardHeader>
               <IonCardContent>
                 {chartData.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '32px', color: 'var(--ion-color-medium)' }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '32px',
+                      color: 'var(--ion-color-medium)',
+                    }}
+                  >
                     No reading data for this period.
                     <br />
                     Start reading to see your stats!
@@ -195,11 +229,7 @@ const Statistics: React.FC = () => {
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--ion-color-light-shade)" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10 }}
-                        interval="preserveStartEnd"
-                      />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                       <YAxis tick={{ fontSize: 10 }} />
                       <Tooltip
                         formatter={(value: number | undefined) => [`${value ?? 0} pages`, 'Pages']}
@@ -218,24 +248,30 @@ const Statistics: React.FC = () => {
               </IonCardHeader>
               <IonCardContent>
                 {chartData.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '32px', color: 'var(--ion-color-medium)' }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '32px',
+                      color: 'var(--ion-color-medium)',
+                    }}
+                  >
                     No reading data for this period.
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--ion-color-light-shade)" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10 }}
-                        interval="preserveStartEnd"
-                      />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                       <YAxis tick={{ fontSize: 10 }} />
                       <Tooltip
                         formatter={(value: number | undefined) => [`${value ?? 0} min`, 'Time']}
                         contentStyle={{ fontSize: '12px' }}
                       />
-                      <Bar dataKey="minutes" fill="var(--ion-color-success)" radius={[3, 3, 0, 0]} />
+                      <Bar
+                        dataKey="minutes"
+                        fill="var(--ion-color-success)"
+                        radius={[3, 3, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

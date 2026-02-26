@@ -43,8 +43,8 @@
   color: var(--ion-color-dark);
 }
 
-.theme-preview[data-theme="dark"] ion-icon,
-.theme-preview[data-theme="night"] ion-icon {
+.theme-preview[data-theme='dark'] ion-icon,
+.theme-preview[data-theme='night'] ion-icon {
   color: var(--ion-color-light);
 }
 
@@ -56,12 +56,12 @@
 }
 
 /* Checked state */
-ion-segment-button[aria-checked="true"] .theme-preview {
+ion-segment-button[aria-checked='true'] .theme-preview {
   transform: scale(1.1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-ion-segment-button[aria-checked="true"] .theme-option-label {
+ion-segment-button[aria-checked='true'] .theme-option-label {
   color: var(--ion-color-primary);
   font-weight: 600;
 }

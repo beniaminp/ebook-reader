@@ -144,12 +144,7 @@ function handleApiError(error: unknown): TranslationServiceError {
       }
 
       if (status === 401) {
-        return new TranslationServiceError(
-          'Invalid API key.',
-          'INVALID_API_KEY',
-          false,
-          false
-        );
+        return new TranslationServiceError('Invalid API key.', 'INVALID_API_KEY', false, false);
       }
 
       if (status === 503) {
@@ -161,12 +156,7 @@ function handleApiError(error: unknown): TranslationServiceError {
         );
       }
 
-      return new TranslationServiceError(
-        `Server error: ${status}`,
-        'SERVER_ERROR',
-        false,
-        false
-      );
+      return new TranslationServiceError(`Server error: ${status}`, 'SERVER_ERROR', false, false);
     }
 
     if (axiosError.request) {
@@ -275,14 +265,10 @@ class TranslationService {
     }
 
     try {
-      const response = await axios.post(
-        this.config.apiUrl,
-        requestData,
-        {
-          headers,
-          timeout: this.config.timeout,
-        }
-      );
+      const response = await axios.post(this.config.apiUrl, requestData, {
+        headers,
+        timeout: this.config.timeout,
+      });
 
       const result: TranslationResponse = {
         translatedText: response.data.translatedText,
@@ -317,13 +303,10 @@ class TranslationService {
         headers['Authorization'] = `Bearer ${this.config.apiKey}`;
       }
 
-      const response = await axios.get(
-        this.config.apiUrl.replace('/translate', '/languages'),
-        {
-          headers,
-          timeout: this.config.timeout,
-        }
-      );
+      const response = await axios.get(this.config.apiUrl.replace('/translate', '/languages'), {
+        headers,
+        timeout: this.config.timeout,
+      });
 
       // Map API response to our format
       const languages: LanguageCode[] = response.data.map((lang: any) => ({

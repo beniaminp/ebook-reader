@@ -98,13 +98,15 @@ class Fb2Service {
       const authors = titleInfo?.author || [];
       const authorArray = Array.isArray(authors) ? authors : [authors];
 
-      const authorNames = authorArray.map((auth: any) => {
-        const firstName = auth?.['first-name'] || auth?.firstName || '';
-        const middleName = auth?.['middle-name'] || auth?.middleName || '';
-        const lastName = auth?.['last-name'] || auth?.lastName || '';
-        const parts = [firstName, middleName, lastName].filter(Boolean);
-        return parts.length > 0 ? parts.join(' ') : null;
-      }).filter(Boolean);
+      const authorNames = authorArray
+        .map((auth: any) => {
+          const firstName = auth?.['first-name'] || auth?.firstName || '';
+          const middleName = auth?.['middle-name'] || auth?.middleName || '';
+          const lastName = auth?.['last-name'] || auth?.lastName || '';
+          const parts = [firstName, middleName, lastName].filter(Boolean);
+          return parts.length > 0 ? parts.join(' ') : null;
+        })
+        .filter(Boolean);
 
       if (authorNames.length > 0) {
         author = authorNames.join(', ');
@@ -114,9 +116,13 @@ class Fb2Service {
       let genres: string[] | undefined;
       const genreNodes = titleInfo?.genre || [];
       if (Array.isArray(genreNodes)) {
-        genres = genreNodes.map((g: any) => typeof g === 'string' ? g : g?.['#text']).filter(Boolean);
+        genres = genreNodes
+          .map((g: any) => (typeof g === 'string' ? g : g?.['#text']))
+          .filter(Boolean);
       } else if (genreNodes) {
-        genres = [typeof genreNodes === 'string' ? genreNodes : genreNodes?.['#text']].filter(Boolean);
+        genres = [typeof genreNodes === 'string' ? genreNodes : genreNodes?.['#text']].filter(
+          Boolean
+        );
       }
 
       // Extract language
@@ -136,7 +142,9 @@ class Fb2Service {
           bookDescription = annotation;
         } else if (annotation?.p) {
           const paragraphs = Array.isArray(annotation.p) ? annotation.p : [annotation.p];
-          bookDescription = paragraphs.map((p: any) => typeof p === 'string' ? p : p?.['#text'] || '').join('\n\n');
+          bookDescription = paragraphs
+            .map((p: any) => (typeof p === 'string' ? p : p?.['#text'] || ''))
+            .join('\n\n');
         }
       }
 
@@ -224,7 +232,8 @@ class Fb2Service {
 
       if (coverBinary) {
         const data = typeof coverBinary === 'string' ? coverBinary : coverBinary?.['#text'];
-        const contentType = typeof coverBinary === 'object' ? coverBinary?.['@_content-type'] : 'image/jpeg';
+        const contentType =
+          typeof coverBinary === 'object' ? coverBinary?.['@_content-type'] : 'image/jpeg';
 
         if (data) {
           return `data:${contentType};base64,${data}`;
@@ -268,7 +277,9 @@ class Fb2Service {
       return html;
     } catch (error) {
       console.error('FB2 to HTML conversion failed:', error);
-      throw new Error(`Failed to convert FB2 to HTML: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to convert FB2 to HTML: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -422,7 +433,9 @@ class Fb2Service {
 
     // Process strikethrough
     if (element['strikethrough']) {
-      const strike = Array.isArray(element['strikethrough']) ? element['strikethrough'] : [element['strikethrough']];
+      const strike = Array.isArray(element['strikethrough'])
+        ? element['strikethrough']
+        : [element['strikethrough']];
       strike.forEach((s: any) => {
         html += `<s>${this.processInlineElements(s)}</s>`;
       });
@@ -496,7 +509,9 @@ class Fb2Service {
     }
 
     if (epigraph['text-author']) {
-      const authors = Array.isArray(epigraph['text-author']) ? epigraph['text-author'] : [epigraph['text-author']];
+      const authors = Array.isArray(epigraph['text-author'])
+        ? epigraph['text-author']
+        : [epigraph['text-author']];
       html += '<p class="fb2-text-author">';
       authors.forEach((a: any) => {
         html += `<em>${this.processInlineElements(a)}</em>`;
@@ -549,7 +564,9 @@ class Fb2Service {
 
     // Process text-author if present
     if (poem['text-author']) {
-      const authors = Array.isArray(poem['text-author']) ? poem['text-author'] : [poem['text-author']];
+      const authors = Array.isArray(poem['text-author'])
+        ? poem['text-author']
+        : [poem['text-author']];
       html += '<p class="fb2-text-author">';
       authors.forEach((a: any) => {
         html += `<em>${this.processInlineElements(a)}</em>`;
@@ -587,7 +604,9 @@ class Fb2Service {
 
     // Process text-author if present
     if (cite['text-author']) {
-      const authors = Array.isArray(cite['text-author']) ? cite['text-author'] : [cite['text-author']];
+      const authors = Array.isArray(cite['text-author'])
+        ? cite['text-author']
+        : [cite['text-author']];
       html += '<p class="fb2-text-author">';
       authors.forEach((a: any) => {
         html += `<em>${this.processInlineElements(a)}</em>`;
@@ -676,7 +695,7 @@ class Fb2Service {
           } else if (section.title?.p) {
             const paragraphs = Array.isArray(section.title.p) ? section.title.p : [section.title.p];
             title = paragraphs
-              .map((p: any) => typeof p === 'string' ? p : p?.['#text'] || '')
+              .map((p: any) => (typeof p === 'string' ? p : p?.['#text'] || ''))
               .join(' ');
           } else if (section.title?.['#text']) {
             title = section.title['#text'];

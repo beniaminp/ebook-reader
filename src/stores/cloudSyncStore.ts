@@ -50,11 +50,7 @@ interface CloudSyncState {
   testConnection: () => Promise<boolean>;
 
   // Sync actions
-  syncData: (
-    bookmarks: any[],
-    highlights: any[],
-    progress: any[]
-  ) => Promise<SyncResult>;
+  syncData: (bookmarks: any[], highlights: any[], progress: any[]) => Promise<SyncResult>;
   manualSync: () => Promise<void>;
   cancelSync: () => void;
 

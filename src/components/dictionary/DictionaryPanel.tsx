@@ -103,25 +103,28 @@ export const DictionaryPanel: React.FC<DictionaryPanelProps> = ({
     }
   };
 
-  const handlePlayAudio = useCallback(async (audioUrl: string) => {
-    if (playingAudio) return; // Already playing
+  const handlePlayAudio = useCallback(
+    async (audioUrl: string) => {
+      if (playingAudio) return; // Already playing
 
-    setPlayingAudio(audioUrl);
-    try {
-      const audio = new Audio(audioUrl);
-      audio.onended = () => setPlayingAudio(null);
-      audio.onerror = () => {
+      setPlayingAudio(audioUrl);
+      try {
+        const audio = new Audio(audioUrl);
+        audio.onended = () => setPlayingAudio(null);
+        audio.onerror = () => {
+          setToastMessage('Could not play audio');
+          setShowToast(true);
+          setPlayingAudio(null);
+        };
+        await audio.play();
+      } catch {
         setToastMessage('Could not play audio');
         setShowToast(true);
         setPlayingAudio(null);
-      };
-      await audio.play();
-    } catch {
-      setToastMessage('Could not play audio');
-      setShowToast(true);
-      setPlayingAudio(null);
-    }
-  }, [playingAudio]);
+      }
+    },
+    [playingAudio]
+  );
 
   const handleSaveToVocabulary = async () => {
     if (!result || !result.meanings.length) return;
@@ -162,7 +165,7 @@ export const DictionaryPanel: React.FC<DictionaryPanelProps> = ({
     if (!result?.phonetic && !result?.phonetics?.length) return null;
 
     const phoneticText = result?.phonetic || result?.phonetics?.[0]?.text;
-    const audioUrl = result?.phonetics?.find(p => p.audio)?.audio;
+    const audioUrl = result?.phonetics?.find((p) => p.audio)?.audio;
 
     return (
       <div className="dict-phonetic">
@@ -190,9 +193,7 @@ export const DictionaryPanel: React.FC<DictionaryPanelProps> = ({
       <div className="def-number">{index + 1}.</div>
       <div className="def-content">
         <p className="def-text">{def.definition}</p>
-        {def.example && (
-          <p className="def-example">"{def.example}"</p>
-        )}
+        {def.example && <p className="def-example">"{def.example}"</p>}
         {def.synonyms && def.synonyms.length > 0 && (
           <div className="def-synonyms">
             <IonText color="medium">
@@ -214,7 +215,9 @@ export const DictionaryPanel: React.FC<DictionaryPanelProps> = ({
       <IonItem slot="header" className="meaning-header">
         <IonLabel>
           <h2 className="part-of-speech">{meaning.partOfSpeech}</h2>
-          <p>{meaning.definitions.length} definition{meaning.definitions.length !== 1 ? 's' : ''}</p>
+          <p>
+            {meaning.definitions.length} definition{meaning.definitions.length !== 1 ? 's' : ''}
+          </p>
         </IonLabel>
       </IonItem>
       <div className="meaning-content" slot="content">
@@ -239,7 +242,12 @@ export const DictionaryPanel: React.FC<DictionaryPanelProps> = ({
 
   return (
     <>
-      <IonModal isOpen={isOpen} onDidDismiss={onDismiss} initialBreakpoint={0.75} breakpoints={[0, 0.5, 0.75, 1]}>
+      <IonModal
+        isOpen={isOpen}
+        onDidDismiss={onDismiss}
+        initialBreakpoint={0.75}
+        breakpoints={[0, 0.5, 0.75, 1]}
+      >
         <IonHeader>
           <IonToolbar>
             <IonTitle>Dictionary</IonTitle>
@@ -317,7 +325,9 @@ export const DictionaryPanel: React.FC<DictionaryPanelProps> = ({
                   <div className="dict-cache-info">
                     <IonText color="medium">
                       <p className="cache-hint">
-                        {error?.includes('offline') ? 'Showing cached result (offline mode)' : 'Cached for offline use'}
+                        {error?.includes('offline')
+                          ? 'Showing cached result (offline mode)'
+                          : 'Cached for offline use'}
                       </p>
                     </IonText>
                   </div>

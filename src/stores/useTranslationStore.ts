@@ -5,7 +5,11 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { TranslationSettings, TranslationHistoryEntry, TranslationLanguageCode } from '../types';
+import type {
+  TranslationSettings,
+  TranslationHistoryEntry,
+  TranslationLanguageCode,
+} from '../types';
 import { SUPPORTED_LANGUAGES } from '../services/translationService';
 
 const DEFAULT_SETTINGS: TranslationSettings = {
@@ -77,32 +81,36 @@ export const useTranslationStore = create<TranslationState>()(
       setSaveHistory: (save) => set({ saveHistory: save }),
 
       // UI actions
-      openTranslationPanel: (selection) => set({
-        isTranslationPanelOpen: true,
-        currentSelection: selection,
-        currentTranslation: null,
-        detectedLanguage: null,
-        error: null,
-      }),
+      openTranslationPanel: (selection) =>
+        set({
+          isTranslationPanelOpen: true,
+          currentSelection: selection,
+          currentTranslation: null,
+          detectedLanguage: null,
+          error: null,
+        }),
 
-      closeTranslationPanel: () => set({
-        isTranslationPanelOpen: false,
-        currentSelection: null,
-        currentTranslation: null,
-        detectedLanguage: null,
-        error: null,
-      }),
+      closeTranslationPanel: () =>
+        set({
+          isTranslationPanelOpen: false,
+          currentSelection: null,
+          currentTranslation: null,
+          detectedLanguage: null,
+          error: null,
+        }),
 
-      setCurrentTranslation: (translation, sourceLang) => set({
-        currentTranslation: translation,
-        detectedLanguage: sourceLang,
-      }),
+      setCurrentTranslation: (translation, sourceLang) =>
+        set({
+          currentTranslation: translation,
+          detectedLanguage: sourceLang,
+        }),
 
-      clearCurrentTranslation: () => set({
-        currentTranslation: null,
-        detectedLanguage: null,
-        error: null,
-      }),
+      clearCurrentTranslation: () =>
+        set({
+          currentTranslation: null,
+          detectedLanguage: null,
+          error: null,
+        }),
 
       setLoading: (loading) => set({ isLoading: loading }),
 
@@ -126,9 +134,10 @@ export const useTranslationStore = create<TranslationState>()(
 
       clearHistory: () => set({ translationHistory: [] }),
 
-      clearHistoryForBook: (bookId) => set((state) => ({
-        translationHistory: state.translationHistory.filter((entry) => entry.bookId !== bookId),
-      })),
+      clearHistoryForBook: (bookId) =>
+        set((state) => ({
+          translationHistory: state.translationHistory.filter((entry) => entry.bookId !== bookId),
+        })),
 
       getHistoryForBook: (bookId) => {
         return get().translationHistory.filter((entry) => entry.bookId === bookId);
@@ -137,9 +146,10 @@ export const useTranslationStore = create<TranslationState>()(
       // Settings actions
       updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
 
-      resetSettings: () => set({
-        ...DEFAULT_SETTINGS,
-      }),
+      resetSettings: () =>
+        set({
+          ...DEFAULT_SETTINGS,
+        }),
     }),
     {
       name: 'translation-storage',
@@ -163,9 +173,10 @@ export function getLanguageName(code: string): string {
 
 // Helper to get supported target languages
 export function getTargetLanguages(): Array<{ code: string; name: string }> {
-  return SUPPORTED_LANGUAGES
-    .filter((l) => l.target !== false && l.code !== 'auto')
-    .map((l) => ({ code: l.code, name: l.name }));
+  return SUPPORTED_LANGUAGES.filter((l) => l.target !== false && l.code !== 'auto').map((l) => ({
+    code: l.code,
+    name: l.name,
+  }));
 }
 
 // Re-export types

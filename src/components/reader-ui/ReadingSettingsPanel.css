@@ -131,3 +131,53 @@ ion-item {
 .reading-settings-panel {
   animation: slideUp 0.3s ease-out;
 }
+
+/* Custom Background Section Styles */
+.custom-background-section {
+  padding: 16px;
+}
+
+.custom-background-preview {
+  width: 100%;
+  height: 60px;
+  border-radius: 8px;
+  margin-top: 8px;
+  border: 1px solid var(--ion-color-medium, #ccc);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.custom-background-preview-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.custom-background-color-picker {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.custom-background-color-picker:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.custom-background-file-input {
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: -1;
+}

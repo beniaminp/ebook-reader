@@ -20,22 +20,47 @@ interface AppState {
   addBook: (book: Omit<Book, 'dateAdded'>) => Promise<Book | null>;
   removeBook: (bookId: string) => Promise<boolean>;
   setCurrentBook: (book: Book | null) => void;
-  updateBook: (bookId: string, updates: Partial<Omit<Book, 'id' | 'dateAdded'>>) => Promise<boolean>;
+  updateBook: (
+    bookId: string,
+    updates: Partial<Omit<Book, 'id' | 'dateAdded'>>
+  ) => Promise<boolean>;
 
   // Progress actions
-  updateProgress: (bookId: string, location: number, total: number, locationStr?: string, chapterTitle?: string) => Promise<void>;
+  updateProgress: (
+    bookId: string,
+    location: number,
+    total: number,
+    locationStr?: string,
+    chapterTitle?: string
+  ) => Promise<void>;
 
   // Bookmark actions
   loadBookmarks: (bookId: string) => Promise<void>;
-  addBookmark: (bookId: string, location: string, pageNumber?: number, chapterTitle?: string, textPreview?: string) => Promise<void>;
+  addBookmark: (
+    bookId: string,
+    location: string,
+    pageNumber?: number,
+    chapterTitle?: string,
+    textPreview?: string
+  ) => Promise<void>;
   removeBookmark: (bookmarkId: string) => Promise<void>;
   hasBookmark: (bookId: string, location: number) => boolean;
 
   // Highlight actions
   loadHighlights: (bookId: string) => Promise<void>;
-  addHighlight: (bookId: string, location: string, text: string, color: string, note?: string, pageNumber?: number, chapterTitle?: string) => Promise<void>;
+  addHighlight: (
+    bookId: string,
+    location: string,
+    text: string,
+    color: string,
+    note?: string,
+    pageNumber?: number,
+    chapterTitle?: string
+  ) => Promise<void>;
   removeHighlight: (highlightId: string) => Promise<void>;
-  getHighlights: (bookId: string) => Array<{ location: number; text: string; color: string; note?: string }>;
+  getHighlights: (
+    bookId: string
+  ) => Array<{ location: number; text: string; color: string; note?: string }>;
 
   // Search
   searchBooks: (query: string) => Promise<Book[]>;
@@ -58,7 +83,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const books = await databaseService.getAllBooks();
       set({ books, isLoading: false });
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to load books', isLoading: false });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to load books',
+        isLoading: false,
+      });
     }
   },
 
@@ -78,7 +106,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isLoading: false });
       return null;
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to add book', isLoading: false });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to add book',
+        isLoading: false,
+      });
       return null;
     }
   },
@@ -96,15 +127,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       return success;
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to remove book', isLoading: false });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to remove book',
+        isLoading: false,
+      });
       return false;
     }
   },
 
-  setCurrentBook: (book) => set({
-    currentBook: book,
-    currentLocation: 0,
-  }),
+  setCurrentBook: (book) =>
+    set({
+      currentBook: book,
+      currentLocation: 0,
+    }),
 
   updateBook: async (bookId, updates) => {
     set({ isLoading: true, error: null });
@@ -112,18 +147,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       const success = await databaseService.updateBook(bookId, updates);
       if (success) {
         set((state) => ({
-          books: state.books.map((b) =>
-            b.id === bookId ? { ...b, ...updates } : b
-          ),
-          currentBook: state.currentBook?.id === bookId
-            ? { ...state.currentBook, ...updates }
-            : state.currentBook,
+          books: state.books.map((b) => (b.id === bookId ? { ...b, ...updates } : b)),
+          currentBook:
+            state.currentBook?.id === bookId
+              ? { ...state.currentBook, ...updates }
+              : state.currentBook,
           isLoading: false,
         }));
       }
       return success;
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to update book', isLoading: false });
+      set({
+        error: error instanceof Error ? error.message : 'Failed to update book',
+        isLoading: false,
+      });
       return false;
     }
   },
@@ -131,7 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Progress actions
   updateProgress: async (bookId, location, total, locationStr, chapterTitle) => {
     try {
-      const progressPercentage = total > 0 ? (location / total) : 0;
+      const progressPercentage = total > 0 ? location / total : 0;
       await databaseService.upsertReadingProgress(bookId, {
         currentPage: location,
         totalPages: total,
@@ -154,9 +191,16 @@ export const useAppStore = create<AppState>((set, get) => ({
             : b
         ),
         currentLocation: location,
-        currentBook: state.currentBook?.id === bookId
-          ? { ...state.currentBook, totalPages: total, currentPage: location, progress: progressPercentage, lastRead: new Date() }
-          : state.currentBook,
+        currentBook:
+          state.currentBook?.id === bookId
+            ? {
+                ...state.currentBook,
+                totalPages: total,
+                currentPage: location,
+                progress: progressPercentage,
+                lastRead: new Date(),
+              }
+            : state.currentBook,
       }));
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update progress' });

@@ -42,7 +42,7 @@ export async function syncCalibreWebBooksToDb(
       try {
         // Check if book already exists in database
         const sourceId = `${serverConfig.id}:${book.id}`;
-        const existingBook = existingBooks.find(b => b.sourceId === sourceId);
+        const existingBook = existingBooks.find((b) => b.sourceId === sourceId);
 
         if (existingBook) {
           // Update existing book metadata
@@ -55,7 +55,9 @@ export async function syncCalibreWebBooksToDb(
         result.synced++;
       } catch (error) {
         result.failed++;
-        result.errors.push(`Failed to sync "${book.title}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        result.errors.push(
+          `Failed to sync "${book.title}": ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -75,16 +77,14 @@ export async function addCalibreWebBookToDb(
 ): Promise<Book> {
   // Determine best format
   const formats = calibreWebService.getAvailableFormats(book);
-  const preferredFormat = formats.find(f => f === 'EPUB') || formats[0] || 'EPUB';
+  const preferredFormat = formats.find((f) => f === 'EPUB') || formats[0] || 'EPUB';
 
   // Generate file path (placeholder until downloaded)
   const formatLower = preferredFormat.toLowerCase();
   const filePath = `${CALIBRE_WEB_BOOKS_DIR}/${serverConfig.id}/${book.id}.${formatLower}`;
 
   // Get cover URL if available
-  const coverUrl = book.cover
-    ? `${serverConfig.serverUrl}${book.cover}`
-    : undefined;
+  const coverUrl = book.cover ? `${serverConfig.serverUrl}${book.cover}` : undefined;
 
   // Generate unique ID
   const bookId = `cw_${serverConfig.id}_${book.id}`;
@@ -188,20 +188,16 @@ export async function downloadCalibreWebBook(
   onProgress?: (progress: number, downloaded: number, total: number) => void
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
   try {
-    const formatData = book.formats?.find(f => f.format.toLowerCase() === format.toLowerCase());
+    const formatData = book.formats?.find((f) => f.format.toLowerCase() === format.toLowerCase());
 
     if (!formatData) {
       return { success: false, error: `Format ${format} not available` };
     }
 
     // Download using axios through the service
-    const filePath = await calibreWebService.downloadBook(
-      book,
-      format,
-      (progress) => {
-        onProgress?.(progress.progress, progress.bytesDownloaded, progress.totalBytes);
-      }
-    );
+    const filePath = await calibreWebService.downloadBook(book, format, (progress) => {
+      onProgress?.(progress.progress, progress.bytesDownloaded, progress.totalBytes);
+    });
 
     if (!filePath) {
       return { success: false, error: 'Download failed' };
@@ -210,7 +206,7 @@ export async function downloadCalibreWebBook(
     // Update book in database to mark as downloaded
     const sourceId = `${serverConfig.id}:${book.id}`;
     const allBooks = await getAllBooks();
-    const localBook = allBooks.find(b => b.sourceId === sourceId);
+    const localBook = allBooks.find((b) => b.sourceId === sourceId);
 
     if (localBook) {
       await updateBook(localBook.id, {
@@ -237,7 +233,7 @@ export async function getCalibreWebBookStatus(
 ): Promise<CalibreWebSyncStatus> {
   const sourceId = `${serverConfig.id}:${calibreBookId}`;
   const allBooks = await getAllBooks();
-  const localBook = allBooks.find(b => b.sourceId === sourceId);
+  const localBook = allBooks.find((b) => b.sourceId === sourceId);
 
   return {
     calibreBookId,
@@ -252,9 +248,7 @@ export async function getCalibreWebBookStatus(
 /**
  * Delete a Calibre-Web book from local storage
  */
-export async function deleteCalibreWebBook(
-  localBookId: string
-): Promise<boolean> {
+export async function deleteCalibreWebBook(localBookId: string): Promise<boolean> {
   try {
     const book = await getBookById(localBookId);
 
@@ -293,10 +287,10 @@ export async function getCalibreWebBooks(serverId?: string): Promise<Book[]> {
   const allBooks = await getAllBooks();
 
   if (serverId) {
-    return allBooks.filter(b => b.source === 'calibre-web' && b.sourceId?.startsWith(serverId));
+    return allBooks.filter((b) => b.source === 'calibre-web' && b.sourceId?.startsWith(serverId));
   }
 
-  return allBooks.filter(b => b.source === 'calibre-web');
+  return allBooks.filter((b) => b.source === 'calibre-web');
 }
 
 /**
@@ -304,7 +298,7 @@ export async function getCalibreWebBooks(serverId?: string): Promise<Book[]> {
  */
 export async function getDownloadedCalibreWebBooks(): Promise<Book[]> {
   const allBooks = await getAllBooks();
-  return allBooks.filter(b => b.source === 'calibre-web' && b.downloaded);
+  return allBooks.filter((b) => b.source === 'calibre-web' && b.downloaded);
 }
 
 /**
@@ -312,7 +306,7 @@ export async function getDownloadedCalibreWebBooks(): Promise<Book[]> {
  */
 export async function getCloudOnlyCalibreWebBooks(): Promise<Book[]> {
   const allBooks = await getAllBooks();
-  return allBooks.filter(b => b.source === 'calibre-web' && !b.downloaded);
+  return allBooks.filter((b) => b.source === 'calibre-web' && !b.downloaded);
 }
 
 /**

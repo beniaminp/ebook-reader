@@ -47,9 +47,7 @@ export interface UseTTSReturn {
 function splitIntoSentences(text: string): string[] {
   // Split on sentence-ending punctuation followed by whitespace or end of string
   const sentences = text.match(/[^.!?…]+[.!?…]+(?:\s|$)|[^.!?…]+$/g) || [];
-  return sentences
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  return sentences.map((s) => s.trim()).filter((s) => s.length > 0);
 }
 
 export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
@@ -87,7 +85,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(
-        voices.map(v => ({
+        voices.map((v) => ({
           name: v.name,
           lang: v.lang,
           voiceURI: v.voiceURI,
@@ -148,9 +146,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
 
       const voiceURI = selectedVoiceURIRef.current;
       if (voiceURI) {
-        const voice = window.speechSynthesis
-          .getVoices()
-          .find(v => v.voiceURI === voiceURI);
+        const voice = window.speechSynthesis.getVoices().find((v) => v.voiceURI === voiceURI);
         if (voice) utterance.voice = voice;
       }
 

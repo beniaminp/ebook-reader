@@ -23,14 +23,18 @@ describe('chmService', () => {
   describe('extractChmMetadata', () => {
     it('should throw an error indicating CHM is not supported', () => {
       const arrayBuffer = new ArrayBuffer(10);
-      expect(() => chmService.extractChmMetadata(arrayBuffer)).toThrow('CHM format is not currently supported');
+      expect(() => chmService.extractChmMetadata(arrayBuffer)).toThrow(
+        'CHM format is not currently supported'
+      );
     });
   });
 
   describe('extractChmContent', () => {
     it('should throw an error when trying to extract CHM content', async () => {
       const arrayBuffer = new ArrayBuffer(10);
-      await expect(chmService.extractChmContent(arrayBuffer)).rejects.toThrow('CHM format is not currently supported');
+      await expect(chmService.extractChmContent(arrayBuffer)).rejects.toThrow(
+        'CHM format is not currently supported'
+      );
     });
   });
 
@@ -48,7 +52,7 @@ describe('chmService', () => {
       expect(Array.isArray(tools)).toBe(true);
       expect(tools.length).toBeGreaterThan(0);
 
-      tools.forEach(tool => {
+      tools.forEach((tool) => {
         expect(tool).toHaveProperty('name');
         expect(tool).toHaveProperty('url');
         expect(tool).toHaveProperty('description');
@@ -57,7 +61,7 @@ describe('chmService', () => {
 
     it('should include Calibre in conversion tools', () => {
       const tools = chmService.getConversionTools();
-      const calibre = tools.find(t => t.name === 'Calibre');
+      const calibre = tools.find((t) => t.name === 'Calibre');
 
       expect(calibre).toBeDefined();
       expect(calibre?.url).toContain('calibre');
@@ -65,7 +69,7 @@ describe('chmService', () => {
 
     it('should include Online-Convert in conversion tools', () => {
       const tools = chmService.getConversionTools();
-      const onlineConvert = tools.find(t => t.name === 'Online-Convert');
+      const onlineConvert = tools.find((t) => t.name === 'Online-Convert');
 
       expect(onlineConvert).toBeDefined();
       expect(onlineConvert?.url).toContain('online-convert');
@@ -75,7 +79,9 @@ describe('chmService', () => {
   describe('parseChm', () => {
     it('should throw an error when trying to parse CHM', async () => {
       const arrayBuffer = new ArrayBuffer(10);
-      await expect(chmService.parseChm(arrayBuffer)).rejects.toThrow('CHM format is not currently supported');
+      await expect(chmService.parseChm(arrayBuffer)).rejects.toThrow(
+        'CHM format is not currently supported'
+      );
     });
   });
 });

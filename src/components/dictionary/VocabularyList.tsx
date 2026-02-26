@@ -34,11 +34,7 @@ import {
   RefresherEventDetail,
   IonProgressBar,
 } from '@ionic/react';
-import {
-  trashOutline,
-  bookOutline,
-  closeCircleOutline,
-} from 'ionicons/icons';
+import { trashOutline, bookOutline, closeCircleOutline } from 'ionicons/icons';
 import { dictionaryService } from '../../services/dictionaryService';
 import type { VocabularyWord } from '../../types';
 
@@ -65,7 +61,7 @@ export const VocabularyList: React.FC = () => {
       const query = searchQuery.toLowerCase();
       setFilteredWords(
         words.filter(
-          word =>
+          (word) =>
             word.word.toLowerCase().includes(query) ||
             word.definition.toLowerCase().includes(query) ||
             word.partOfSpeech.toLowerCase().includes(query)
@@ -96,7 +92,7 @@ export const VocabularyList: React.FC = () => {
   const handleDelete = async (word: string) => {
     try {
       await dictionaryService.removeFromVocabulary(word);
-      setWords(prev => prev.filter(w => w.word !== word));
+      setWords((prev) => prev.filter((w) => w.word !== word));
       setToastMessage(`Removed "${word}" from vocabulary`);
       setShowToast(true);
     } catch {
@@ -137,11 +133,7 @@ export const VocabularyList: React.FC = () => {
       <IonCardHeader>
         <div className="vocab-header">
           <IonCardTitle className="vocab-word">{vocabWord.word}</IonCardTitle>
-          <IonButton
-            fill="clear"
-            size="small"
-            onClick={() => handleDelete(vocabWord.word)}
-          >
+          <IonButton fill="clear" size="small" onClick={() => handleDelete(vocabWord.word)}>
             <IonIcon icon={trashOutline} />
           </IonButton>
         </div>
@@ -154,9 +146,7 @@ export const VocabularyList: React.FC = () => {
       </IonCardHeader>
       <IonCardContent>
         <p className="vocab-definition">{vocabWord.definition}</p>
-        {vocabWord.example && (
-          <p className="vocab-example">"{vocabWord.example}"</p>
-        )}
+        {vocabWord.example && <p className="vocab-example">"{vocabWord.example}"</p>}
         {vocabWord.context && (
           <IonText color="medium">
             <p className="vocab-context">{vocabWord.context}</p>
@@ -172,11 +162,7 @@ export const VocabularyList: React.FC = () => {
         <IonToolbar>
           <IonTitle>Vocabulary</IonTitle>
           <IonButtons slot="end">
-            {words.length > 0 && (
-              <IonButton onClick={handleClearAll}>
-                Clear All
-              </IonButton>
-            )}
+            {words.length > 0 && <IonButton onClick={handleClearAll}>Clear All</IonButton>}
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -191,7 +177,7 @@ export const VocabularyList: React.FC = () => {
           <div className="vocab-search-container">
             <IonSearchbar
               value={searchQuery}
-              onIonInput={e => setSearchQuery(e.detail.value || '')}
+              onIonInput={(e) => setSearchQuery(e.detail.value || '')}
               placeholder="Search vocabulary..."
               showCancelButton="focus"
             />
@@ -214,16 +200,16 @@ export const VocabularyList: React.FC = () => {
 
           {/* Vocabulary list */}
           {!loading && filteredWords.length > 0 && (
-            <div className="vocab-list">
-              {filteredWords.map(renderWordCard)}
-            </div>
+            <div className="vocab-list">{filteredWords.map(renderWordCard)}</div>
           )}
 
           {/* Stats footer */}
           {!loading && words.length > 0 && (
             <div className="vocab-stats">
               <IonText color="medium">
-                <p>{words.length} word{words.length !== 1 ? 's' : ''} in vocabulary</p>
+                <p>
+                  {words.length} word{words.length !== 1 ? 's' : ''} in vocabulary
+                </p>
               </IonText>
             </div>
           )}

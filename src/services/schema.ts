@@ -42,7 +42,7 @@ export const CREATE_TABLES = {
       file_path TEXT NOT NULL UNIQUE,
       file_name TEXT NOT NULL,
       file_size INTEGER NOT NULL DEFAULT 0,
-      format TEXT NOT NULL CHECK(format IN ('EPUB', 'PDF', 'TXT', 'HTML', 'MD', 'MOBI', 'AZW3', 'CBZ', 'CBR', 'DOCX', 'FB2', 'CHM')),
+      format TEXT NOT NULL CHECK(format IN ('EPUB', 'PDF', 'TXT', 'HTML', 'MD', 'MOBI', 'AZW3', 'CBZ', 'CBR', 'DOCX', 'ODT', 'FB2', 'CHM')),
       cover_path TEXT,
       total_pages INTEGER,
       language TEXT,

@@ -119,11 +119,7 @@ const FORMAT_TYPES: Record<string, OpdsDownloadLink['format']> = {
   'text/plain;charset=utf-8': 'txt',
 };
 
-const COVER_RELS = [
-  'http://opds-spec.org/image',
-  'http://opds-spec.org/cover',
-  'cover',
-];
+const COVER_RELS = ['http://opds-spec.org/image', 'http://opds-spec.org/cover', 'cover'];
 
 const THUMBNAIL_RELS = [
   'http://opds-spec.org/image/thumbnail',
@@ -139,8 +135,7 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   textNodeName: '#text',
-  isArray: (tagName) =>
-    ['entry', 'link', 'author', 'category'].includes(tagName),
+  isArray: (tagName) => ['entry', 'link', 'author', 'category'].includes(tagName),
   parseAttributeValue: true,
 });
 
@@ -166,7 +161,7 @@ function extractText(value: unknown): string {
   if (typeof value === 'object' && value !== null) {
     const obj = value as Record<string, unknown>;
     return Object.values(obj)
-      .filter(v => typeof v === 'string')
+      .filter((v) => typeof v === 'string')
       .join(' ');
   }
   return '';
@@ -179,13 +174,13 @@ function parseLinks(entry: Record<string, unknown>): OpdsLink[] {
   const links = Array.isArray(rawLinks) ? rawLinks : [rawLinks];
   return links
     .filter((l): l is Record<string, unknown> => typeof l === 'object' && l !== null)
-    .map(link => ({
+    .map((link) => ({
       href: String(link['@_href'] || ''),
       rel: String(link['@_rel'] || ''),
       type: String(link['@_type'] || ''),
       title: link['@_title'] ? String(link['@_title']) : undefined,
     }))
-    .filter(l => l.href);
+    .filter((l) => l.href);
 }
 
 function detectFormat(type: string): OpdsDownloadLink['format'] {
@@ -207,7 +202,7 @@ function parseFeedEntry(entry: Record<string, unknown>): OpdsBook | OpdsNavEntry
     const authors = Array.isArray(rawAuthor) ? rawAuthor : [rawAuthor];
     const authorNames = authors
       .filter((a): a is Record<string, unknown> => typeof a === 'object' && a !== null)
-      .map(a => normalizeText(a['name']));
+      .map((a) => normalizeText(a['name']));
     if (authorNames.length > 0) author = authorNames.join(', ');
   }
 
@@ -216,7 +211,7 @@ function parseFeedEntry(entry: Record<string, unknown>): OpdsBook | OpdsNavEntry
   const categories: string[] = [];
   if (rawCategories) {
     const cats = Array.isArray(rawCategories) ? rawCategories : [rawCategories];
-    cats.forEach(c => {
+    cats.forEach((c) => {
       if (typeof c === 'object' && c !== null) {
         const cat = c as Record<string, unknown>;
         const label = cat['@_label'] || cat['@_term'];
@@ -228,15 +223,15 @@ function parseFeedEntry(entry: Record<string, unknown>): OpdsBook | OpdsNavEntry
   const links = parseLinks(entry);
 
   // Find cover and thumbnail
-  const coverLink = links.find(l => COVER_RELS.includes(l.rel));
-  const thumbnailLink = links.find(l => THUMBNAIL_RELS.includes(l.rel));
+  const coverLink = links.find((l) => COVER_RELS.includes(l.rel));
+  const thumbnailLink = links.find((l) => THUMBNAIL_RELS.includes(l.rel));
   const coverUrl = coverLink?.href;
   const thumbnailUrl = thumbnailLink?.href;
 
   // Find download links (acquisition links)
   const downloadLinks: OpdsDownloadLink[] = links
-    .filter(l => ACQUISITION_RELS.includes(l.rel))
-    .map(l => ({
+    .filter((l) => ACQUISITION_RELS.includes(l.rel))
+    .map((l) => ({
       href: l.href,
       type: l.type,
       format: detectFormat(l.type),
@@ -283,11 +278,11 @@ export function parseOpdsFeed(xmlString: string, baseUrl?: string): OpdsFeed {
   // Parse feed-level links
   const feedLinks = parseLinks(feed);
 
-  const nextPageUrl = feedLinks.find(l => l.rel === 'next')?.href;
-  const prevPageUrl = feedLinks.find(l => l.rel === 'previous' || l.rel === 'prev')?.href;
-  const startUrl = feedLinks.find(l => l.rel === 'start')?.href;
+  const nextPageUrl = feedLinks.find((l) => l.rel === 'next')?.href;
+  const prevPageUrl = feedLinks.find((l) => l.rel === 'previous' || l.rel === 'prev')?.href;
+  const startUrl = feedLinks.find((l) => l.rel === 'start')?.href;
   const searchLink = feedLinks.find(
-    l => l.type === 'application/opensearchdescription+xml' || l.rel === 'search'
+    (l) => l.type === 'application/opensearchdescription+xml' || l.rel === 'search'
   );
   const searchUrl = searchLink?.href;
 
@@ -303,7 +298,7 @@ export function parseOpdsFeed(xmlString: string, baseUrl?: string): OpdsFeed {
     .map(parseFeedEntry);
 
   // Detect if this is an acquisition feed (has books with download links)
-  const isAcquisitionFeed = parsedEntries.some(e => e.isAcquisition);
+  const isAcquisitionFeed = parsedEntries.some((e) => e.isAcquisition);
 
   // Resolve relative URLs against the feed's base URL
   const resolve = (href: string | undefined) => {
@@ -443,14 +438,12 @@ export function addCatalog(catalog: Omit<OpdsCatalog, 'id'>): OpdsCatalog {
 }
 
 export function updateCatalog(id: string, updates: Partial<Omit<OpdsCatalog, 'id'>>): void {
-  const catalogs = loadSavedCatalogs().map(c =>
-    c.id === id ? { ...c, ...updates } : c
-  );
+  const catalogs = loadSavedCatalogs().map((c) => (c.id === id ? { ...c, ...updates } : c));
   saveCatalogs(catalogs);
 }
 
 export function removeCatalog(id: string): void {
-  const catalogs = loadSavedCatalogs().filter(c => c.id !== id);
+  const catalogs = loadSavedCatalogs().filter((c) => c.id !== id);
   saveCatalogs(catalogs);
 }
 

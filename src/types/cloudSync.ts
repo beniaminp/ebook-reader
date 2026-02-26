@@ -26,8 +26,16 @@ export interface CloudProvider {
 
   // File operations
   listBooks(): Promise<CloudBookFile[]>;
-  uploadBook(localPath: string, remotePath: string, onProgress?: (progress: number) => void): Promise<string>;
-  downloadBook(remotePath: string, localPath: string, onProgress?: (progress: number) => void): Promise<string>;
+  uploadBook(
+    localPath: string,
+    remotePath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string>;
+  downloadBook(
+    remotePath: string,
+    localPath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string>;
   deleteBook(remotePath: string): Promise<boolean>;
 
   // Sync data operations
@@ -142,7 +150,12 @@ export interface CloudSyncConfig {
 // Sync progress info
 export interface SyncProgress {
   status: SyncStatus;
-  currentOperation?: 'uploading' | 'downloading' | 'merging' | 'uploading-book' | 'downloading-book';
+  currentOperation?:
+    | 'uploading'
+    | 'downloading'
+    | 'merging'
+    | 'uploading-book'
+    | 'downloading-book';
   currentFile?: string;
   progress: number; // 0-100
   itemsCompleted: number;

@@ -60,8 +60,16 @@ import { databaseService } from '../../services/database';
 import { webFileStorage } from '../../services/webFileStorage';
 import { fb2Service } from '../../services/fb2Service';
 import { chmService } from '../../services/chmService';
+import { comicService } from '../../services/comicService';
+import { docxService } from '../../services/docxService';
+import { odtService } from '../../services/odtService';
 import type { Book, Collection } from '../../types/index';
-import { useLibraryPrefsStore, DEFAULT_FILTERS, type SortOption, type ReadStatus } from '../../stores/useLibraryPrefsStore';
+import {
+  useLibraryPrefsStore,
+  DEFAULT_FILTERS,
+  type SortOption,
+  type ReadStatus,
+} from '../../stores/useLibraryPrefsStore';
 import './Library.css';
 
 const Library: React.FC = () => {
@@ -98,12 +106,11 @@ const Library: React.FC = () => {
   const [showShelfAssign, setShowShelfAssign] = useState(false);
   const [bookShelfIds, setBookShelfIds] = useState<string[]>([]);
 
-  const activeFilterCount = (
+  const activeFilterCount =
     (filters.format !== 'all' ? 1 : 0) +
     (filters.collectionId !== 'all' ? 1 : 0) +
     (filters.readStatus !== 'all' ? 1 : 0) +
-    filters.tagIds.length
-  );
+    filters.tagIds.length;
 
   const toTime = (d: unknown): number => {
     if (d instanceof Date) return d.getTime();
@@ -156,20 +163,19 @@ const Library: React.FC = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        book =>
-          book.title.toLowerCase().includes(query) ||
-          book.author.toLowerCase().includes(query)
+        (book) =>
+          book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
       );
     }
 
     // Apply format filter
     if (filters.format !== 'all') {
-      result = result.filter(book => book.format === filters.format);
+      result = result.filter((book) => book.format === filters.format);
     }
 
     // Apply read status filter
     if (filters.readStatus !== 'all') {
-      result = result.filter(book => {
+      result = result.filter((book) => {
         const prog = book.progress ?? 0;
         switch (filters.readStatus) {
           case 'unread':
@@ -187,14 +193,14 @@ const Library: React.FC = () => {
     // Apply collection filter
     if (filters.collectionId !== 'all') {
       const booksInCollection = bookCollectionMap[filters.collectionId] || [];
-      result = result.filter(book => booksInCollection.includes(book.id));
+      result = result.filter((book) => booksInCollection.includes(book.id));
     }
 
     // Apply tag filter
     if (filters.tagIds.length > 0) {
-      result = result.filter(book => {
+      result = result.filter((book) => {
         const bookTags = bookTagMap[book.id] || [];
-        return filters.tagIds.every(tagId => bookTags.includes(tagId));
+        return filters.tagIds.every((tagId) => bookTags.includes(tagId));
       });
     }
 
@@ -227,7 +233,7 @@ const Library: React.FC = () => {
       const cols = await databaseService.getAllCollections();
       for (const col of cols) {
         const booksInCol = await databaseService.getBooksInCollection(col.id);
-        colMap[col.id] = booksInCol.map(b => b.id);
+        colMap[col.id] = booksInCol.map((b) => b.id);
       }
 
       // Load tags for each book (limit to web platform gracefully)
@@ -307,52 +313,61 @@ const Library: React.FC = () => {
     if (!shelfToDelete) return;
     await databaseService.deleteCollection(shelfToDelete.id);
     if (filters.collectionId === shelfToDelete.id) {
-      setFilters(prev => ({ ...prev, collectionId: 'all' }));
+      setFilters((prev) => ({ ...prev, collectionId: 'all' }));
     }
     setShelfToDelete(null);
     await loadFilterData();
     await loadBookMappings(books);
   }, [shelfToDelete, filters.collectionId, setFilters, books]);
 
-  const handleShelfLongPress = useCallback((shelf: Collection, e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openShelfModal(shelf);
-  }, [openShelfModal]);
+  const handleShelfLongPress = useCallback(
+    (shelf: Collection, e: React.MouseEvent | React.TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openShelfModal(shelf);
+    },
+    [openShelfModal]
+  );
 
   // "Add to Shelf" handlers
-  const openShelfAssign = useCallback(async (book: Book) => {
-    // Find which shelves this book belongs to
-    const ids: string[] = [];
-    for (const [colId, bookIds] of Object.entries(bookCollectionMap)) {
-      if (bookIds.includes(book.id)) ids.push(colId);
-    }
-    setBookShelfIds(ids);
-    setShowShelfAssign(true);
-  }, [bookCollectionMap]);
-
-  const toggleBookShelf = useCallback(async (collectionId: string) => {
-    if (!selectedBook) return;
-    const isIn = bookShelfIds.includes(collectionId);
-    if (isIn) {
-      await databaseService.removeBookFromCollection(selectedBook.id, collectionId);
-      setBookShelfIds(prev => prev.filter(id => id !== collectionId));
-    } else {
-      await databaseService.addBookToCollection(selectedBook.id, collectionId);
-      setBookShelfIds(prev => [...prev, collectionId]);
-    }
-    // Update collection map
-    setBookCollectionMap(prev => {
-      const updated = { ...prev };
-      const list = updated[collectionId] ? [...updated[collectionId]] : [];
-      if (isIn) {
-        updated[collectionId] = list.filter(id => id !== selectedBook.id);
-      } else {
-        updated[collectionId] = [...list, selectedBook.id];
+  const openShelfAssign = useCallback(
+    async (book: Book) => {
+      // Find which shelves this book belongs to
+      const ids: string[] = [];
+      for (const [colId, bookIds] of Object.entries(bookCollectionMap)) {
+        if (bookIds.includes(book.id)) ids.push(colId);
       }
-      return updated;
-    });
-  }, [selectedBook, bookShelfIds]);
+      setBookShelfIds(ids);
+      setShowShelfAssign(true);
+    },
+    [bookCollectionMap]
+  );
+
+  const toggleBookShelf = useCallback(
+    async (collectionId: string) => {
+      if (!selectedBook) return;
+      const isIn = bookShelfIds.includes(collectionId);
+      if (isIn) {
+        await databaseService.removeBookFromCollection(selectedBook.id, collectionId);
+        setBookShelfIds((prev) => prev.filter((id) => id !== collectionId));
+      } else {
+        await databaseService.addBookToCollection(selectedBook.id, collectionId);
+        setBookShelfIds((prev) => [...prev, collectionId]);
+      }
+      // Update collection map
+      setBookCollectionMap((prev) => {
+        const updated = { ...prev };
+        const list = updated[collectionId] ? [...updated[collectionId]] : [];
+        if (isIn) {
+          updated[collectionId] = list.filter((id) => id !== selectedBook.id);
+        } else {
+          updated[collectionId] = [...list, selectedBook.id];
+        }
+        return updated;
+      });
+    },
+    [selectedBook, bookShelfIds]
+  );
 
   const [importingCount, setImportingCount] = useState(0);
 
@@ -379,7 +394,7 @@ const Library: React.FC = () => {
 
     setImportingCount(0);
     // Reset input to allow importing the same file again
-    setFileInputKey(prev => prev + 1);
+    setFileInputKey((prev) => prev + 1);
     await loadBooks();
 
     if (errors.length > 0) {
@@ -420,11 +435,12 @@ const Library: React.FC = () => {
 
       // Extract title — may be a string or a language map
       const rawTitle = book.metadata?.title;
-      const title = typeof rawTitle === 'string'
-        ? rawTitle
-        : rawTitle && typeof rawTitle === 'object'
-          ? Object.values(rawTitle)[0] ?? ''
-          : '';
+      const title =
+        typeof rawTitle === 'string'
+          ? rawTitle
+          : rawTitle && typeof rawTitle === 'object'
+            ? (Object.values(rawTitle)[0] ?? '')
+            : '';
 
       // Extract author — may be a string, object, or array
       const rawAuthor = book.metadata?.author;
@@ -433,12 +449,18 @@ const Library: React.FC = () => {
         author = rawAuthor;
       } else if (Array.isArray(rawAuthor)) {
         author = rawAuthor
-          .map((a: any) => typeof a === 'string' ? a : typeof a?.name === 'string' ? a.name : Object.values(a?.name ?? {})[0] ?? '')
+          .map((a: any) =>
+            typeof a === 'string'
+              ? a
+              : typeof a?.name === 'string'
+                ? a.name
+                : (Object.values(a?.name ?? {})[0] ?? '')
+          )
           .filter(Boolean)
           .join(', ');
       } else if (rawAuthor && typeof rawAuthor === 'object' && 'name' in rawAuthor) {
         const name = (rawAuthor as any).name;
-        author = typeof name === 'string' ? name : Object.values(name ?? {})[0] as string ?? '';
+        author = typeof name === 'string' ? name : ((Object.values(name ?? {})[0] as string) ?? '');
       }
 
       let coverDataUrl: string | undefined;
@@ -538,6 +560,136 @@ const Library: React.FC = () => {
     }
   };
 
+  const extractOdtMetadata = async (
+    arrayBuffer: ArrayBuffer
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
+    try {
+      const metadata = await odtService.extractOdtMetadata(arrayBuffer);
+
+      return {
+        title: metadata.title || '',
+        author: metadata.author || 'Unknown',
+      };
+    } catch (err) {
+      console.error('ODT metadata extraction failed:', err);
+      return null;
+    }
+  };
+
+  const extractDocxMetadata = async (
+    arrayBuffer: ArrayBuffer
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
+    try {
+      const metadata = await docxService.extractDocxMetadata(arrayBuffer);
+
+      return {
+        title: metadata.title || '',
+        author: metadata.author || 'Unknown',
+      };
+    } catch (err) {
+      console.error('DOCX metadata extraction failed:', err);
+      return null;
+    }
+  };
+
+  const extractMobiMetadata = async (
+    arrayBuffer: ArrayBuffer,
+    fileName: string
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
+    try {
+      const { makeBook } = await import('foliate-js/view.js');
+      // MOBI/AZW3 files use the MIME type application/x-mobipocket-ebook
+      const file = new File([arrayBuffer], fileName, { type: 'application/x-mobipocket-ebook' });
+
+      let book;
+      try {
+        book = await withTimeout(makeBook(file), 8000);
+      } catch (err) {
+        console.warn('foliate-js makeBook failed for MOBI/AZW3, using fallback metadata:', err);
+        return null;
+      }
+      if (!book) return null;
+
+      // Extract title — may be a string or a language map
+      const rawTitle = book.metadata?.title;
+      const title =
+        typeof rawTitle === 'string'
+          ? rawTitle
+          : rawTitle && typeof rawTitle === 'object'
+            ? (Object.values(rawTitle)[0] ?? '')
+            : '';
+
+      // Extract author — may be a string, object, or array
+      const rawAuthor = book.metadata?.author;
+      let author = '';
+      if (typeof rawAuthor === 'string') {
+        author = rawAuthor;
+      } else if (Array.isArray(rawAuthor)) {
+        author = rawAuthor
+          .map((a: any) =>
+            typeof a === 'string'
+              ? a
+              : typeof a?.name === 'string'
+                ? a.name
+                : (Object.values(a?.name ?? {})[0] ?? '')
+          )
+          .filter(Boolean)
+          .join(', ');
+      } else if (rawAuthor && typeof rawAuthor === 'object' && 'name' in rawAuthor) {
+        const name = (rawAuthor as any).name;
+        author = typeof name === 'string' ? name : ((Object.values(name ?? {})[0] as string) ?? '');
+      }
+
+      let coverDataUrl: string | undefined;
+      try {
+        if (book.getCover) {
+          const coverBlob = await withTimeout(book.getCover(), 5000);
+          if (coverBlob) {
+            coverDataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(coverBlob as Blob);
+            });
+          }
+        }
+      } catch {
+        // Cover extraction is optional
+      }
+
+      if (book.destroy) book.destroy();
+
+      return {
+        title: title || '',
+        author: author || 'Unknown',
+        coverDataUrl,
+      };
+    } catch (err) {
+      console.error('MOBI/AZW3 metadata extraction failed:', err);
+      return null;
+    }
+  };
+
+  const extractComicMetadata = async (
+    arrayBuffer: ArrayBuffer,
+    format: 'cbz' | 'cbr'
+  ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
+    try {
+      // Extract cover from comic archive
+      const coverDataUrl = await comicService.extractComicCover(arrayBuffer, format);
+      const pageCount = await comicService.getComicPageCount(arrayBuffer, format);
+
+      return {
+        title: '', // Comic archives typically don't have metadata, use filename
+        author: 'Unknown',
+        coverDataUrl: coverDataUrl || undefined,
+      };
+    } catch (err) {
+      console.error('Comic metadata extraction failed:', err);
+      return null;
+    }
+  };
+
   const importBook = async (file: File): Promise<void> => {
     // Validate File object to prevent crashes
     if (!file || !file.name) {
@@ -553,8 +705,14 @@ const Library: React.FC = () => {
       format = 'pdf';
     } else if (fileName.endsWith('.mobi')) {
       format = 'mobi';
+    } else if (fileName.endsWith('.azw') || fileName.endsWith('.azw3')) {
+      format = 'azw3';
     } else if (fileName.endsWith('.fb2')) {
       format = 'fb2';
+    } else if (fileName.endsWith('.cbz')) {
+      format = 'cbz';
+    } else if (fileName.endsWith('.cbr')) {
+      format = 'cbr';
     } else if (fileName.endsWith('.chm')) {
       throw new Error(chmService.getUnsupportedReason());
     } else if (fileName.endsWith('.html') || fileName.endsWith('.htm')) {
@@ -573,9 +731,9 @@ const Library: React.FC = () => {
         return crypto.randomUUID();
       }
       // Fallback: generate a UUID v4
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
       });
     };
@@ -614,6 +772,31 @@ const Library: React.FC = () => {
           title = meta.title || title;
           author = meta.author || author;
           coverPath = meta.coverDataUrl;
+        }
+      } else if (format === 'cbz' || format === 'cbr') {
+        const meta = await extractComicMetadata(arrayBuffer, format);
+        if (meta) {
+          author = meta.author || author;
+          coverPath = meta.coverDataUrl;
+        }
+      } else if (format === 'mobi' || format === 'azw3') {
+        const meta = await extractMobiMetadata(arrayBuffer, file.name);
+        if (meta) {
+          title = meta.title || title;
+          author = meta.author || author;
+          coverPath = meta.coverDataUrl;
+        }
+      } else if (format === 'docx') {
+        const meta = await extractDocxMetadata(arrayBuffer);
+        if (meta) {
+          title = meta.title || title;
+          author = meta.author || author;
+        }
+      } else if (format === 'odt') {
+        const meta = await extractOdtMetadata(arrayBuffer);
+        if (meta) {
+          title = meta.title || title;
+          author = meta.author || author;
         }
       }
     } catch (err) {
@@ -660,7 +843,11 @@ const Library: React.FC = () => {
       case 'pdf':
         return 'warning';
       case 'mobi':
+      case 'azw3':
         return 'tertiary';
+      case 'cbz':
+      case 'cbr':
+        return 'secondary';
       default:
         return 'medium';
     }
@@ -674,11 +861,11 @@ const Library: React.FC = () => {
   };
 
   const toggleTagFilter = useCallback((tagId: string) => {
-    setFilters(prev => {
+    setFilters((prev) => {
       const isActive = prev.tagIds.includes(tagId);
       return {
         ...prev,
-        tagIds: isActive ? prev.tagIds.filter(id => id !== tagId) : [...prev.tagIds, tagId],
+        tagIds: isActive ? prev.tagIds.filter((id) => id !== tagId) : [...prev.tagIds, tagId],
       };
     });
   }, []);
@@ -730,7 +917,7 @@ const Library: React.FC = () => {
   const renderGridView = () => (
     <IonGrid className="book-grid">
       <IonRow>
-        {filteredBooks.map(book => (
+        {filteredBooks.map((book) => (
           <IonCol size="6" sizeMd="4" sizeLg="3" key={book.id}>
             <IonCard
               className="book-card"
@@ -778,7 +965,7 @@ const Library: React.FC = () => {
 
   const renderListView = () => (
     <IonList className="book-list">
-      {filteredBooks.map(book => (
+      {filteredBooks.map((book) => (
         <IonItem
           key={book.id}
           className="book-list-item"
@@ -824,11 +1011,7 @@ const Library: React.FC = () => {
               </div>
             )}
           </IonLabel>
-          <IonChip
-            outline={true}
-            color={getFormatColor(book.format)}
-            slot="end"
-          >
+          <IonChip outline={true} color={getFormatColor(book.format)} slot="end">
             {book.format.toUpperCase()}
           </IonChip>
         </IonItem>
@@ -849,7 +1032,7 @@ const Library: React.FC = () => {
 
   const renderContinueReading = () => {
     const recentBooks = filteredBooks
-      .filter(b => b.progress > 0 && b.progress < 1)
+      .filter((b) => b.progress > 0 && b.progress < 1)
       .sort((a, b) => {
         const aTime = a.lastRead instanceof Date ? a.lastRead.getTime() : 0;
         const bTime = b.lastRead instanceof Date ? b.lastRead.getTime() : 0;
@@ -863,12 +1046,9 @@ const Library: React.FC = () => {
       <div className="continue-reading-section">
         <h3>Continue Reading</h3>
         <IonRow>
-          {recentBooks.map(book => (
+          {recentBooks.map((book) => (
             <IonCol size="4" key={`continue-${book.id}`}>
-              <div
-                className="continue-reading-card"
-                onClick={() => handleBookClick(book)}
-              >
+              <div className="continue-reading-card" onClick={() => handleBookClick(book)}>
                 <div className="continue-reading-cover">
                   {book.coverPath ? (
                     <img src={book.coverPath} alt={book.title} />
@@ -915,7 +1095,7 @@ const Library: React.FC = () => {
             <IonLabel>Format</IonLabel>
             <IonSelect
               value={filters.format}
-              onIonChange={e => setFilters(prev => ({ ...prev, format: e.detail.value }))}
+              onIonChange={(e) => setFilters((prev) => ({ ...prev, format: e.detail.value }))}
               slot="end"
             >
               <IonSelectOption value="all">All</IonSelectOption>
@@ -933,7 +1113,9 @@ const Library: React.FC = () => {
             <IonLabel>Read Status</IonLabel>
             <IonSelect
               value={filters.readStatus}
-              onIonChange={e => setFilters(prev => ({ ...prev, readStatus: e.detail.value as ReadStatus }))}
+              onIonChange={(e) =>
+                setFilters((prev) => ({ ...prev, readStatus: e.detail.value as ReadStatus }))
+              }
               slot="end"
             >
               <IonSelectOption value="all">All</IonSelectOption>
@@ -948,12 +1130,16 @@ const Library: React.FC = () => {
               <IonLabel>Collection</IonLabel>
               <IonSelect
                 value={filters.collectionId}
-                onIonChange={e => setFilters(prev => ({ ...prev, collectionId: e.detail.value }))}
+                onIonChange={(e) =>
+                  setFilters((prev) => ({ ...prev, collectionId: e.detail.value }))
+                }
                 slot="end"
               >
                 <IonSelectOption value="all">All Collections</IonSelectOption>
-                {collections.map(col => (
-                  <IonSelectOption key={col.id} value={col.id}>{col.name}</IonSelectOption>
+                {collections.map((col) => (
+                  <IonSelectOption key={col.id} value={col.id}>
+                    {col.name}
+                  </IonSelectOption>
                 ))}
               </IonSelect>
             </IonItem>
@@ -962,11 +1148,18 @@ const Library: React.FC = () => {
 
         {allTags.length > 0 && (
           <div style={{ padding: '8px 16px' }}>
-            <IonLabel style={{ fontSize: '14px', color: 'var(--ion-color-medium)', display: 'block', marginBottom: '8px' }}>
+            <IonLabel
+              style={{
+                fontSize: '14px',
+                color: 'var(--ion-color-medium)',
+                display: 'block',
+                marginBottom: '8px',
+              }}
+            >
               Tags
             </IonLabel>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {allTags.map(tag => (
+              {allTags.map((tag) => (
                 <IonChip
                   key={tag.id}
                   outline={!filters.tagIds.includes(tag.id)}
@@ -1011,7 +1204,10 @@ const Library: React.FC = () => {
             <IonButton onClick={() => setShowFilterPanel(true)}>
               <IonIcon icon={filterOutline} />
               {activeFilterCount > 0 && (
-                <IonBadge color="primary" style={{ position: 'absolute', top: 4, right: 4, fontSize: '10px' }}>
+                <IonBadge
+                  color="primary"
+                  style={{ position: 'absolute', top: 4, right: 4, fontSize: '10px' }}
+                >
                   {activeFilterCount}
                 </IonBadge>
               )}
@@ -1037,7 +1233,7 @@ const Library: React.FC = () => {
         <div className="library-controls">
           <IonSearchbar
             value={searchQuery}
-            onIonInput={e => setSearchQuery(e.detail.value || '')}
+            onIonInput={(e) => setSearchQuery(e.detail.value || '')}
             placeholder="Search books..."
             animated
           />
@@ -1045,7 +1241,7 @@ const Library: React.FC = () => {
           <div className="library-filters">
             <IonSelect
               value={sortBy}
-              onIonChange={e => setSortBy(e.detail.value as SortOption)}
+              onIonChange={(e) => setSortBy(e.detail.value as SortOption)}
               label="Sort by"
               labelPlacement="start"
             >
@@ -1060,26 +1256,39 @@ const Library: React.FC = () => {
           {activeFilterCount > 0 && (
             <div className="active-filters">
               {filters.format !== 'all' && (
-                <IonChip color="primary" onClick={() => setFilters(p => ({ ...p, format: 'all' }))}>
+                <IonChip
+                  color="primary"
+                  onClick={() => setFilters((p) => ({ ...p, format: 'all' }))}
+                >
                   {filters.format.toUpperCase()}
                   <IonIcon icon={closeOutline} />
                 </IonChip>
               )}
               {filters.readStatus !== 'all' && (
-                <IonChip color="primary" onClick={() => setFilters(p => ({ ...p, readStatus: 'all' }))}>
-                  {filters.readStatus === 'unread' ? 'Unread' : filters.readStatus === 'reading' ? 'In Progress' : 'Finished'}
+                <IonChip
+                  color="primary"
+                  onClick={() => setFilters((p) => ({ ...p, readStatus: 'all' }))}
+                >
+                  {filters.readStatus === 'unread'
+                    ? 'Unread'
+                    : filters.readStatus === 'reading'
+                      ? 'In Progress'
+                      : 'Finished'}
                   <IonIcon icon={closeOutline} />
                 </IonChip>
               )}
               {filters.collectionId !== 'all' && (
-                <IonChip color="primary" onClick={() => setFilters(p => ({ ...p, collectionId: 'all' }))}>
-                  {collections.find(c => c.id === filters.collectionId)?.name || 'Collection'}
+                <IonChip
+                  color="primary"
+                  onClick={() => setFilters((p) => ({ ...p, collectionId: 'all' }))}
+                >
+                  {collections.find((c) => c.id === filters.collectionId)?.name || 'Collection'}
                   <IonIcon icon={closeOutline} />
                 </IonChip>
               )}
-              {filters.tagIds.map(tagId => (
+              {filters.tagIds.map((tagId) => (
                 <IonChip key={tagId} color="primary" onClick={() => toggleTagFilter(tagId)}>
-                  {allTags.find(t => t.id === tagId)?.name || tagId}
+                  {allTags.find((t) => t.id === tagId)?.name || tagId}
                   <IonIcon icon={closeOutline} />
                 </IonChip>
               ))}
@@ -1096,16 +1305,16 @@ const Library: React.FC = () => {
             <IonChip
               color={filters.collectionId === 'all' ? 'primary' : undefined}
               outline={filters.collectionId !== 'all'}
-              onClick={() => setFilters(p => ({ ...p, collectionId: 'all' }))}
+              onClick={() => setFilters((p) => ({ ...p, collectionId: 'all' }))}
             >
               All
             </IonChip>
-            {collections.map(shelf => (
+            {collections.map((shelf) => (
               <IonChip
                 key={shelf.id}
                 color={filters.collectionId === shelf.id ? 'primary' : undefined}
                 outline={filters.collectionId !== shelf.id}
-                onClick={() => setFilters(p => ({ ...p, collectionId: shelf.id }))}
+                onClick={() => setFilters((p) => ({ ...p, collectionId: shelf.id }))}
                 onContextMenu={(e) => handleShelfLongPress(shelf, e)}
               >
                 {shelf.name}
@@ -1125,7 +1334,9 @@ const Library: React.FC = () => {
         {importingCount > 0 && (
           <div className="loading-state" style={{ paddingBottom: 0 }}>
             <IonSpinner name="crescent" />
-            <p>Importing {importingCount} book{importingCount > 1 ? 's' : ''}...</p>
+            <p>
+              Importing {importingCount} book{importingCount > 1 ? 's' : ''}...
+            </p>
           </div>
         )}
 
@@ -1170,7 +1381,7 @@ const Library: React.FC = () => {
         id="file-input"
         type="file"
         key={fileInputKey}
-        accept=".epub,.pdf,.mobi,.fb2,.cbz,.txt,.html,.htm,.md,.docx,.odt"
+        accept=".epub,.pdf,.mobi,.azw,.azw3,.fb2,.cbz,.cbr,.txt,.html,.htm,.md,.docx,.odt"
         style={{ display: 'none' }}
         onChange={handleFileImport}
         multiple
@@ -1213,10 +1424,7 @@ const Library: React.FC = () => {
         ]}
       />
 
-      <IonModal
-        isOpen={showBookDetails}
-        onDidDismiss={() => setShowBookDetails(false)}
-      >
+      <IonModal isOpen={showBookDetails} onDidDismiss={() => setShowBookDetails(false)}>
         <IonHeader>
           <IonToolbar>
             <IonTitle>Book Details</IonTitle>
@@ -1244,14 +1452,23 @@ const Library: React.FC = () => {
               {/* Title and Author */}
               <div>
                 <h2 style={{ margin: '0 0 8px 0' }}>{selectedBook.title}</h2>
-                <p style={{ margin: '0', color: 'var(--ion-color-medium)' }}>{selectedBook.author}</p>
+                <p style={{ margin: '0', color: 'var(--ion-color-medium)' }}>
+                  {selectedBook.author}
+                </p>
               </div>
 
               {/* Description */}
               {selectedBook.metadata?.description && (
                 <div>
                   <h3 style={{ margin: '0 0 4px 0' }}>Description</h3>
-                  <p style={{ margin: '0', color: 'var(--ion-color-medium)', fontSize: '14px', lineHeight: '1.5' }}>
+                  <p
+                    style={{
+                      margin: '0',
+                      color: 'var(--ion-color-medium)',
+                      fontSize: '14px',
+                      lineHeight: '1.5',
+                    }}
+                  >
                     {selectedBook.metadata.description}
                   </p>
                 </div>
@@ -1280,13 +1497,21 @@ const Library: React.FC = () => {
                 <IonItem>
                   <IonLabel>
                     <h3>Date Added</h3>
-                    <p>{selectedBook.dateAdded instanceof Date ? selectedBook.dateAdded.toLocaleDateString() : 'Unknown'}</p>
+                    <p>
+                      {selectedBook.dateAdded instanceof Date
+                        ? selectedBook.dateAdded.toLocaleDateString()
+                        : 'Unknown'}
+                    </p>
                   </IonLabel>
                 </IonItem>
                 <IonItem>
                   <IonLabel>
                     <h3>Last Read</h3>
-                    <p>{selectedBook.lastRead instanceof Date ? selectedBook.lastRead.toLocaleDateString() : 'Never'}</p>
+                    <p>
+                      {selectedBook.lastRead instanceof Date
+                        ? selectedBook.lastRead.toLocaleDateString()
+                        : 'Never'}
+                    </p>
                   </IonLabel>
                 </IonItem>
                 <IonItem>
@@ -1358,7 +1583,7 @@ const Library: React.FC = () => {
             <IonLabel position="stacked">Shelf Name *</IonLabel>
             <IonInput
               value={shelfName}
-              onIonInput={e => setShelfName(e.detail.value || '')}
+              onIonInput={(e) => setShelfName(e.detail.value || '')}
               placeholder="e.g. Sci-Fi, Work, Summer Reading"
               clearInput
             />
@@ -1367,17 +1592,13 @@ const Library: React.FC = () => {
             <IonLabel position="stacked">Description</IonLabel>
             <IonInput
               value={shelfDescription}
-              onIonInput={e => setShelfDescription(e.detail.value || '')}
+              onIonInput={(e) => setShelfDescription(e.detail.value || '')}
               placeholder="Optional description"
               clearInput
             />
           </IonItem>
           <div className="ion-padding">
-            <IonButton
-              expand="block"
-              onClick={handleSaveShelf}
-              disabled={!shelfName.trim()}
-            >
+            <IonButton expand="block" onClick={handleSaveShelf} disabled={!shelfName.trim()}>
               {editingShelf ? 'Save Changes' : 'Create Shelf'}
             </IonButton>
             {editingShelf && (
@@ -1436,7 +1657,7 @@ const Library: React.FC = () => {
         </IonHeader>
         <IonContent>
           <IonList>
-            {collections.map(shelf => (
+            {collections.map((shelf) => (
               <IonItem key={shelf.id} button onClick={() => toggleBookShelf(shelf.id)}>
                 <IonCheckbox
                   slot="start"
@@ -1450,10 +1671,13 @@ const Library: React.FC = () => {
           {collections.length === 0 && (
             <div className="ion-padding ion-text-center">
               <p>No shelves yet</p>
-              <IonButton fill="outline" onClick={() => {
-                setShowShelfAssign(false);
-                openShelfModal();
-              }}>
+              <IonButton
+                fill="outline"
+                onClick={() => {
+                  setShowShelfAssign(false);
+                  openShelfModal();
+                }}
+              >
                 Create a Shelf
               </IonButton>
             </div>

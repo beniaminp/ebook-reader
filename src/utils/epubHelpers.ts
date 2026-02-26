@@ -148,10 +148,7 @@ export const flattenChapters = (
 /**
  * Find chapter by href
  */
-export const findChapterByHref = (
-  chapters: Chapter[],
-  href: string
-): Chapter | null => {
+export const findChapterByHref = (chapters: Chapter[], href: string): Chapter | null => {
   for (const chapter of chapters) {
     if (chapter.href === href) {
       return chapter;
@@ -167,10 +164,7 @@ export const findChapterByHref = (
 /**
  * Find chapter by ID
  */
-export const findChapterById = (
-  chapters: Chapter[],
-  id: string
-): Chapter | null => {
+export const findChapterById = (chapters: Chapter[], id: string): Chapter | null => {
   for (const chapter of chapters) {
     if (chapter.id === id) {
       return chapter;
@@ -186,10 +180,7 @@ export const findChapterById = (
 /**
  * Get chapter path (array of parent chapters)
  */
-export const getChapterPath = (
-  chapters: Chapter[],
-  targetId: string
-): Chapter[] => {
+export const getChapterPath = (chapters: Chapter[], targetId: string): Chapter[] => {
   const path: Chapter[] = [];
 
   const search = (items: Chapter[], parentPath: Chapter[] = []): boolean => {
@@ -247,9 +238,7 @@ export const formatReadingTime = (wordCount: number): string => {
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
 
-  return remainingMinutes > 0
-    ? `${hours}h ${remainingMinutes}m`
-    : `${hours}h`;
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
 /**

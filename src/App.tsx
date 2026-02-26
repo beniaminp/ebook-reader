@@ -1,4 +1,5 @@
 import { Redirect, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import {
   IonApp,
   IonIcon,
@@ -7,7 +8,7 @@ import {
   IonTabBar,
   IonTabButton,
   IonTabs,
-  setupIonicReact
+  setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { library, settings, globeOutline } from 'ionicons/icons';
@@ -18,7 +19,7 @@ import CalibreWebSettings from './pages/CalibreWebSettings';
 import Statistics from './pages/Statistics/Statistics';
 import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
 import CloudSyncSettings from './pages/CloudSyncSettings/CloudSyncSettings';
-
+import { useThemeStore } from './stores/useThemeStore';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -55,6 +56,12 @@ setupIonicReact();
 const AppTabs: React.FC = () => {
   const location = useLocation();
   const isReaderRoute = location.pathname.startsWith('/reader/');
+  const loadCustomFonts = useThemeStore((state) => state.loadCustomFonts);
+
+  useEffect(() => {
+    // Load custom fonts on app startup
+    loadCustomFonts();
+  }, [loadCustomFonts]);
 
   return (
     <IonTabs>

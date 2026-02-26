@@ -189,12 +189,7 @@ export interface PdfError extends Error {
 }
 
 // PDF Loading State
-export type PdfLoadingState =
-  | 'idle'
-  | 'loading'
-  | 'loaded'
-  | 'error'
-  | 'password_required';
+export type PdfLoadingState = 'idle' | 'loading' | 'loaded' | 'error' | 'password_required';
 
 // Helper type for PDF.js compatibility
 export type PdfDocument = PDFDocumentProxy;

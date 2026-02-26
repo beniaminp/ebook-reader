@@ -14,10 +14,11 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
+    "@capacitor-community/screen-brightness": "^8.0.0",
     "@capacitor-community/sqlite": "^8.0.0",
+    "@capacitor/android": "8.1.0",
     "@capacitor/app": "8.0.1",
     "@capacitor/app-launcher": "^8.0.1",
-    "@capacitor/android": "8.1.0",
     "@capacitor/core": "8.1.0",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/haptics": "8.0.0",
@@ -52,6 +53,7 @@
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
     "recharts": "^3.7.0",
+    "unrar.js": "^0.2.5",
     "webdav": "^5.9.0",
     "zustand": "^5.0.11"
   },

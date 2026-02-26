@@ -24,13 +24,7 @@ import {
   IonTextarea,
   IonToast,
 } from '@ionic/react';
-import {
-  bookmark,
-  bookmarkOutline,
-  trashOutline,
-  createOutline,
-  close,
-} from 'ionicons/icons';
+import { bookmark, bookmarkOutline, trashOutline, createOutline, close } from 'ionicons/icons';
 
 import type { EpubBookmark } from '../../services/annotationsService';
 

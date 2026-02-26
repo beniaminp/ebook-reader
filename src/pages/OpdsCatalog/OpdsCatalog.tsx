@@ -78,21 +78,31 @@ interface BreadcrumbItem {
 
 function getFormatBadgeColor(format: string): string {
   switch (format) {
-    case 'epub': return 'success';
-    case 'pdf': return 'warning';
-    case 'mobi': return 'tertiary';
-    case 'fb2': return 'secondary';
-    default: return 'medium';
+    case 'epub':
+      return 'success';
+    case 'pdf':
+      return 'warning';
+    case 'mobi':
+      return 'tertiary';
+    case 'fb2':
+      return 'secondary';
+    default:
+      return 'medium';
   }
 }
 
 function formatToBookFormat(format: string): Book['format'] {
   switch (format) {
-    case 'epub': return 'epub';
-    case 'pdf': return 'pdf';
-    case 'mobi': return 'mobi';
-    case 'fb2': return 'fb2';
-    default: return 'txt';
+    case 'epub':
+      return 'epub';
+    case 'pdf':
+      return 'pdf';
+    case 'mobi':
+      return 'mobi';
+    case 'fb2':
+      return 'fb2';
+    default:
+      return 'txt';
   }
 }
 
@@ -169,7 +179,7 @@ const OpdsCatalogPage: React.FC = () => {
     setSearchQuery('');
 
     if (pushBreadcrumb) {
-      setBreadcrumbs(prev => [...prev, { title, url }]);
+      setBreadcrumbs((prev) => [...prev, { title, url }]);
     }
 
     try {
@@ -188,30 +198,39 @@ const OpdsCatalogPage: React.FC = () => {
     }
   }, []);
 
-  const handleCatalogSelect = useCallback((catalog: OpdsCatalog) => {
-    activeCatalogRef.current = catalog;
-    setBreadcrumbs([{ title: catalog.name, url: catalog.url }]);
-    loadFeed(catalog.url, catalog.name, false);
-  }, [loadFeed]);
+  const handleCatalogSelect = useCallback(
+    (catalog: OpdsCatalog) => {
+      activeCatalogRef.current = catalog;
+      setBreadcrumbs([{ title: catalog.name, url: catalog.url }]);
+      loadFeed(catalog.url, catalog.name, false);
+    },
+    [loadFeed]
+  );
 
-  const handleEntryNav = useCallback((entry: OpdsNavEntry) => {
-    const navLink = entry.links.find(
-      l =>
-        l.type === 'application/atom+xml;profile=opds-catalog' ||
-        l.type === 'application/atom+xml;type=feed' ||
-        l.type === 'application/atom+xml'
-    );
-    if (navLink) {
-      loadFeed(navLink.href, entry.title);
-    }
-  }, [loadFeed]);
+  const handleEntryNav = useCallback(
+    (entry: OpdsNavEntry) => {
+      const navLink = entry.links.find(
+        (l) =>
+          l.type === 'application/atom+xml;profile=opds-catalog' ||
+          l.type === 'application/atom+xml;type=feed' ||
+          l.type === 'application/atom+xml'
+      );
+      if (navLink) {
+        loadFeed(navLink.href, entry.title);
+      }
+    },
+    [loadFeed]
+  );
 
-  const handleBreadcrumbNav = useCallback((index: number) => {
-    const crumb = breadcrumbs[index];
-    if (!crumb) return;
-    setBreadcrumbs(prev => prev.slice(0, index + 1));
-    loadFeed(crumb.url, crumb.title, false);
-  }, [breadcrumbs, loadFeed]);
+  const handleBreadcrumbNav = useCallback(
+    (index: number) => {
+      const crumb = breadcrumbs[index];
+      if (!crumb) return;
+      setBreadcrumbs((prev) => prev.slice(0, index + 1));
+      loadFeed(crumb.url, crumb.title, false);
+    },
+    [breadcrumbs, loadFeed]
+  );
 
   const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
     if (currentFeedUrl) {
@@ -245,68 +264,76 @@ const OpdsCatalogPage: React.FC = () => {
   // DOWNLOAD
   // ============================================================================
 
-  const handleDownloadBook = useCallback(async (entry: OpdsBook, link: OpdsDownloadLink) => {
-    if (downloadingBookId === entry.id) return;
+  const handleDownloadBook = useCallback(
+    async (entry: OpdsBook, link: OpdsDownloadLink) => {
+      if (downloadingBookId === entry.id) return;
 
-    setDownloadingBookId(entry.id);
-    try {
-      const downloadHeaders: Record<string, string> = {};
-      if (activeCatalogRef.current?.username && activeCatalogRef.current?.password) {
-        const credentials = btoa(`${activeCatalogRef.current.username}:${activeCatalogRef.current.password}`);
-        downloadHeaders['Authorization'] = `Basic ${credentials}`;
+      setDownloadingBookId(entry.id);
+      try {
+        const downloadHeaders: Record<string, string> = {};
+        if (activeCatalogRef.current?.username && activeCatalogRef.current?.password) {
+          const credentials = btoa(
+            `${activeCatalogRef.current.username}:${activeCatalogRef.current.password}`
+          );
+          downloadHeaders['Authorization'] = `Basic ${credentials}`;
+        }
+        const response = await fetch(proxyUrl(link.href), { headers: downloadHeaders });
+        if (!response.ok) {
+          throw new Error(`Download failed: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        const format = formatToBookFormat(link.format);
+
+        const newBook: Book = {
+          id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          title: entry.title,
+          author: entry.author || 'Unknown',
+          filePath: objectUrl,
+          coverPath: entry.thumbnailUrl || entry.coverUrl,
+          format,
+          totalPages: 100,
+          currentPage: 0,
+          progress: 0,
+          lastRead: new Date(),
+          dateAdded: new Date(),
+          source: 'opds',
+          sourceUrl: link.href,
+          downloaded: true,
+          metadata: {
+            description: entry.summary || entry.content,
+          },
+        };
+
+        await addBook(newBook);
+
+        setToastMessage(`"${entry.title}" added to library`);
+        setShowToast(true);
+      } catch (err: any) {
+        setToastMessage(`Download failed: ${err.message}`);
+        setShowToast(true);
+      } finally {
+        setDownloadingBookId(null);
+        setShowFormatSheet(false);
+        setSelectedEntry(null);
       }
-      const response = await fetch(proxyUrl(link.href), { headers: downloadHeaders });
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.statusText}`);
+    },
+    [downloadingBookId, addBook]
+  );
+
+  const handleBookEntryClick = useCallback(
+    (entry: OpdsBook) => {
+      if (entry.downloadLinks.length === 1) {
+        handleDownloadBook(entry, entry.downloadLinks[0]);
+      } else {
+        setSelectedEntry(entry);
+        setShowFormatSheet(true);
       }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-
-      const format = formatToBookFormat(link.format);
-
-      const newBook: Book = {
-        id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-        title: entry.title,
-        author: entry.author || 'Unknown',
-        filePath: objectUrl,
-        coverPath: entry.thumbnailUrl || entry.coverUrl,
-        format,
-        totalPages: 100,
-        currentPage: 0,
-        progress: 0,
-        lastRead: new Date(),
-        dateAdded: new Date(),
-        source: 'opds',
-        sourceUrl: link.href,
-        downloaded: true,
-        metadata: {
-          description: entry.summary || entry.content,
-        },
-      };
-
-      await addBook(newBook);
-
-      setToastMessage(`"${entry.title}" added to library`);
-      setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(`Download failed: ${err.message}`);
-      setShowToast(true);
-    } finally {
-      setDownloadingBookId(null);
-      setShowFormatSheet(false);
-      setSelectedEntry(null);
-    }
-  }, [downloadingBookId, addBook]);
-
-  const handleBookEntryClick = useCallback((entry: OpdsBook) => {
-    if (entry.downloadLinks.length === 1) {
-      handleDownloadBook(entry, entry.downloadLinks[0]);
-    } else {
-      setSelectedEntry(entry);
-      setShowFormatSheet(true);
-    }
-  }, [handleDownloadBook]);
+    },
+    [handleDownloadBook]
+  );
 
   // ============================================================================
   // CATALOG MANAGEMENT
@@ -356,7 +383,14 @@ const OpdsCatalogPage: React.FC = () => {
     setNewCatalogUsername('');
     setNewCatalogPassword('');
     setShowCatalogModal(false);
-  }, [newCatalogName, newCatalogUrl, newCatalogDescription, newCatalogUsername, newCatalogPassword, editingCatalog]);
+  }, [
+    newCatalogName,
+    newCatalogUrl,
+    newCatalogDescription,
+    newCatalogUsername,
+    newCatalogPassword,
+    editingCatalog,
+  ]);
 
   const handleDeleteCatalog = useCallback(() => {
     if (!catalogToDelete) return;
@@ -399,9 +433,7 @@ const OpdsCatalogPage: React.FC = () => {
           <IonLabel>
             <h2>{entry.title}</h2>
             {entry.author && <p className="opds-author">{entry.author}</p>}
-            {entry.summary && (
-              <p className="opds-summary">{entry.summary.slice(0, 120)}...</p>
-            )}
+            {entry.summary && <p className="opds-summary">{entry.summary.slice(0, 120)}...</p>}
             <div className="opds-formats">
               {book.downloadLinks.map((link, i) => (
                 <IonChip
@@ -445,7 +477,7 @@ const OpdsCatalogPage: React.FC = () => {
   const renderCatalogList = () => (
     <IonContent>
       <IonList>
-        {catalogs.map(catalog => (
+        {catalogs.map((catalog) => (
           <IonItem
             key={catalog.id}
             button
@@ -461,7 +493,10 @@ const OpdsCatalogPage: React.FC = () => {
               <h2>
                 {catalog.name}
                 {catalog.username && (
-                  <IonIcon icon={lockClosedOutline} style={{ fontSize: '14px', marginLeft: '6px', verticalAlign: 'middle' }} />
+                  <IonIcon
+                    icon={lockClosedOutline}
+                    style={{ fontSize: '14px', marginLeft: '6px', verticalAlign: 'middle' }}
+                  />
                 )}
               </h2>
               {catalog.description && <p>{catalog.description}</p>}
@@ -538,8 +573,8 @@ const OpdsCatalogPage: React.FC = () => {
         <div className="opds-search-container">
           <IonSearchbar
             value={searchQuery}
-            onIonInput={e => setSearchQuery(e.detail.value || '')}
-            onKeyPress={e => e.key === 'Enter' && handleSearch()}
+            onIonInput={(e) => setSearchQuery(e.detail.value || '')}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Search catalog..."
             showCancelButton="focus"
             onIonCancel={() => {
@@ -562,7 +597,9 @@ const OpdsCatalogPage: React.FC = () => {
           </IonText>
           <IonButton
             fill="clear"
-            onClick={() => loadFeed(currentFeedUrl, breadcrumbs[breadcrumbs.length - 1]?.title || '', false)}
+            onClick={() =>
+              loadFeed(currentFeedUrl, breadcrumbs[breadcrumbs.length - 1]?.title || '', false)
+            }
           >
             <IonIcon icon={refreshOutline} slot="start" />
             Retry
@@ -578,9 +615,7 @@ const OpdsCatalogPage: React.FC = () => {
             </div>
           )}
 
-          <IonList>
-            {currentFeed.entries.map(renderFeedEntry)}
-          </IonList>
+          <IonList>{currentFeed.entries.map(renderFeedEntry)}</IonList>
 
           {/* Pagination */}
           <div className="opds-pagination">
@@ -650,10 +685,15 @@ const OpdsCatalogPage: React.FC = () => {
             )}
             {viewState === 'feed-browser' && breadcrumbs.length > 0 && (
               <IonButton
-                onClick={() => handleCatalogSelect(
-                  catalogs.find(c => c.url === breadcrumbs[0].url) ||
-                  { id: '', name: breadcrumbs[0].title, url: breadcrumbs[0].url }
-                )}
+                onClick={() =>
+                  handleCatalogSelect(
+                    catalogs.find((c) => c.url === breadcrumbs[0].url) || {
+                      id: '',
+                      name: breadcrumbs[0].title,
+                      url: breadcrumbs[0].url,
+                    }
+                  )
+                }
                 aria-label="Go to catalog root"
               >
                 <IonIcon icon={homeOutline} />
@@ -685,7 +725,7 @@ const OpdsCatalogPage: React.FC = () => {
             <IonLabel position="stacked">Catalog Name *</IonLabel>
             <IonInput
               value={newCatalogName}
-              onIonInput={e => setNewCatalogName(e.detail.value || '')}
+              onIonInput={(e) => setNewCatalogName(e.detail.value || '')}
               placeholder="e.g. My Calibre Library"
               clearInput
             />
@@ -694,7 +734,7 @@ const OpdsCatalogPage: React.FC = () => {
             <IonLabel position="stacked">OPDS URL *</IonLabel>
             <IonInput
               value={newCatalogUrl}
-              onIonInput={e => setNewCatalogUrl(e.detail.value || '')}
+              onIonInput={(e) => setNewCatalogUrl(e.detail.value || '')}
               placeholder="https://example.com/opds"
               type="url"
               clearInput
@@ -704,7 +744,7 @@ const OpdsCatalogPage: React.FC = () => {
             <IonLabel position="stacked">Description</IonLabel>
             <IonInput
               value={newCatalogDescription}
-              onIonInput={e => setNewCatalogDescription(e.detail.value || '')}
+              onIonInput={(e) => setNewCatalogDescription(e.detail.value || '')}
               placeholder="Optional description"
               clearInput
             />
@@ -713,7 +753,7 @@ const OpdsCatalogPage: React.FC = () => {
             <IonLabel position="stacked">Username</IonLabel>
             <IonInput
               value={newCatalogUsername}
-              onIonInput={e => setNewCatalogUsername(e.detail.value || '')}
+              onIonInput={(e) => setNewCatalogUsername(e.detail.value || '')}
               placeholder="Optional — for authenticated feeds"
               clearInput
             />
@@ -722,7 +762,7 @@ const OpdsCatalogPage: React.FC = () => {
             <IonLabel position="stacked">Password</IonLabel>
             <IonInput
               value={newCatalogPassword}
-              onIonInput={e => setNewCatalogPassword(e.detail.value || '')}
+              onIonInput={(e) => setNewCatalogPassword(e.detail.value || '')}
               placeholder="Optional — for authenticated feeds"
               type="password"
               clearInput
@@ -768,7 +808,7 @@ const OpdsCatalogPage: React.FC = () => {
         }}
         header={selectedEntry ? `Download "${selectedEntry.title}"` : 'Choose Format'}
         buttons={[
-          ...(selectedEntry?.downloadLinks || []).map(link => ({
+          ...(selectedEntry?.downloadLinks || []).map((link) => ({
             text: `${link.format.toUpperCase()} - ${link.type.split('/')[1] || link.type}`,
             handler: () => {
               if (selectedEntry) handleDownloadBook(selectedEntry, link);

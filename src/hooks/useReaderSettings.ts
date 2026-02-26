@@ -5,7 +5,13 @@
 
 import { useCallback } from 'react';
 import { useThemeStore } from '../stores/useThemeStore';
-import type { ReadingSettings, ThemeType, FontFamily, TextAlignment, MarginSize } from '../services/themeService';
+import type {
+  ReadingSettings,
+  ThemeType,
+  FontFamily,
+  TextAlignment,
+  MarginSize,
+} from '../services/themeService';
 
 export interface UseReaderSettingsOptions {
   autoSave?: boolean;
@@ -54,7 +60,9 @@ const THEME_CYCLE: ThemeType[] = ['light', 'sepia', 'dark', 'eye-comfort', 'nigh
 /**
  * Hook for managing reader settings
  */
-export const useReaderSettings = (options: UseReaderSettingsOptions = {}): UseReaderSettingsReturn => {
+export const useReaderSettings = (
+  options: UseReaderSettingsOptions = {}
+): UseReaderSettingsReturn => {
   const { autoSave = true, bookId } = options;
 
   const themeStore = useThemeStore();
@@ -77,15 +85,21 @@ export const useReaderSettings = (options: UseReaderSettingsOptions = {}): UseRe
   }, [themeStore]);
 
   // Font size shortcuts
-  const increaseFontSize = useCallback((step = 2) => {
-    const newSize = Math.min(32, themeStore.fontSize + step);
-    themeStore.setFontSize(newSize);
-  }, [themeStore]);
+  const increaseFontSize = useCallback(
+    (step = 2) => {
+      const newSize = Math.min(32, themeStore.fontSize + step);
+      themeStore.setFontSize(newSize);
+    },
+    [themeStore]
+  );
 
-  const decreaseFontSize = useCallback((step = 2) => {
-    const newSize = Math.max(12, themeStore.fontSize - step);
-    themeStore.setFontSize(newSize);
-  }, [themeStore]);
+  const decreaseFontSize = useCallback(
+    (step = 2) => {
+      const newSize = Math.max(12, themeStore.fontSize - step);
+      themeStore.setFontSize(newSize);
+    },
+    [themeStore]
+  );
 
   // Theme shortcuts
   const cycleTheme = useCallback(() => {

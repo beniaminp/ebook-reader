@@ -40,10 +40,7 @@ export const useLibraryPrefsStore = create<LibraryPrefsState>()(
       setSortBy: (sort) => set({ sortBy: sort }),
       setFilters: (filtersOrFn) =>
         set({
-          filters:
-            typeof filtersOrFn === 'function'
-              ? filtersOrFn(get().filters)
-              : filtersOrFn,
+          filters: typeof filtersOrFn === 'function' ? filtersOrFn(get().filters) : filtersOrFn,
         }),
     }),
     {
@@ -53,6 +50,6 @@ export const useLibraryPrefsStore = create<LibraryPrefsState>()(
         sortBy: state.sortBy,
         filters: state.filters,
       }),
-    },
-  ),
+    }
+  )
 );

@@ -34,7 +34,11 @@ export interface UseCalibreWebReturn {
   // Actions
   connect: (serverUrl: string, username: string, password: string) => Promise<boolean>;
   disconnect: () => Promise<void>;
-  testConnection: (serverUrl: string, username: string, password: string) => Promise<{
+  testConnection: (
+    serverUrl: string,
+    username: string,
+    password: string
+  ) => Promise<{
     success: boolean;
     error?: string;
     bookCount?: number;
@@ -69,7 +73,9 @@ export function useCalibreWeb(): UseCalibreWebReturn {
   } = useCalibreWebStore();
 
   const [isInitialized, setIsInitialized] = useState(false);
-  const downloadBookRef = useRef<((book: CalibreWebBook, format: string) => Promise<string | null>) | undefined>(undefined);
+  const downloadBookRef = useRef<
+    ((book: CalibreWebBook, format: string) => Promise<string | null>) | undefined
+  >(undefined);
 
   // Initialize service on mount
   useEffect(() => {
@@ -88,22 +94,21 @@ export function useCalibreWeb(): UseCalibreWebReturn {
   }, [loadState, setActiveServer, setConnected]);
 
   // Connect to a Calibre-Web server
-  const connect = useCallback(async (
-    serverUrl: string,
-    username: string,
-    password: string
-  ): Promise<boolean> => {
-    const success = await calibreWebService.login(serverUrl, username, password);
-    if (success) {
-      const server = calibreWebService.getCurrentServer();
-      if (server) {
-        setActiveServer(server.id);
-        setConnected(true);
-        addServer(server);
+  const connect = useCallback(
+    async (serverUrl: string, username: string, password: string): Promise<boolean> => {
+      const success = await calibreWebService.login(serverUrl, username, password);
+      if (success) {
+        const server = calibreWebService.getCurrentServer();
+        if (server) {
+          setActiveServer(server.id);
+          setConnected(true);
+          addServer(server);
+        }
       }
-    }
-    return success;
-  }, [setActiveServer, setConnected, addServer]);
+      return success;
+    },
+    [setActiveServer, setConnected, addServer]
+  );
 
   // Disconnect from current server
   const disconnect = useCallback(async (): Promise<void> => {
@@ -113,167 +118,171 @@ export function useCalibreWeb(): UseCalibreWebReturn {
   }, [setActiveServer, setConnected]);
 
   // Test connection to a server
-  const testConnection = useCallback(async (
-    serverUrl: string,
-    username: string,
-    password: string
-  ): Promise<{ success: boolean; error?: string; bookCount?: number }> => {
-    const result = await calibreWebService.testConnection(serverUrl, username, password);
-    return {
-      success: result.success,
-      error: result.error,
-      bookCount: result.bookCount,
-    };
-  }, []);
+  const testConnection = useCallback(
+    async (
+      serverUrl: string,
+      username: string,
+      password: string
+    ): Promise<{ success: boolean; error?: string; bookCount?: number }> => {
+      const result = await calibreWebService.testConnection(serverUrl, username, password);
+      return {
+        success: result.success,
+        error: result.error,
+        bookCount: result.bookCount,
+      };
+    },
+    []
+  );
 
   // Sync library from Calibre-Web
-  const syncLibrary = useCallback(async (
-    options: Partial<CalibreWebSyncOptions> = {}
-  ): Promise<CalibreWebSyncResult> => {
-    const server = getActiveServer();
-    if (!server) {
-      return {
+  const syncLibrary = useCallback(
+    async (options: Partial<CalibreWebSyncOptions> = {}): Promise<CalibreWebSyncResult> => {
+      const server = getActiveServer();
+      if (!server) {
+        return {
+          success: false,
+          booksSynced: 0,
+          coversDownloaded: 0,
+          booksDownloaded: 0,
+          failedBooks: 0,
+          errors: ['No active server'],
+          duration: 0,
+        };
+      }
+
+      setSyncing(true);
+      const startTime = Date.now();
+
+      const syncOptions: CalibreWebSyncOptions = {
+        syncMetadata: options.syncMetadata ?? true,
+        downloadCovers: options.downloadCovers ?? true,
+        downloadBooks: options.downloadBooks ?? false,
+        maxConcurrentDownloads: options.maxConcurrentDownloads ?? 3,
+        retryFailedDownloads: options.retryFailedDownloads ?? false,
+      };
+
+      const result: CalibreWebSyncResult = {
         success: false,
         booksSynced: 0,
         coversDownloaded: 0,
         booksDownloaded: 0,
         failedBooks: 0,
-        errors: ['No active server'],
+        errors: [],
         duration: 0,
       };
-    }
 
-    setSyncing(true);
-    const startTime = Date.now();
+      try {
+        // Sync to database (which fetches books from server)
+        const syncResult = await calibreWebDbService.syncCalibreWebBooksToDb(
+          server,
+          (current, total) => {
+            // Progress callback
+          }
+        );
 
-    const syncOptions: CalibreWebSyncOptions = {
-      syncMetadata: options.syncMetadata ?? true,
-      downloadCovers: options.downloadCovers ?? true,
-      downloadBooks: options.downloadBooks ?? false,
-      maxConcurrentDownloads: options.maxConcurrentDownloads ?? 3,
-      retryFailedDownloads: options.retryFailedDownloads ?? false,
-    };
+        result.booksSynced = syncResult.synced;
+        result.failedBooks = syncResult.failed;
+        result.errors = syncResult.errors;
 
-    const result: CalibreWebSyncResult = {
-      success: false,
-      booksSynced: 0,
-      coversDownloaded: 0,
-      booksDownloaded: 0,
-      failedBooks: 0,
-      errors: [],
-      duration: 0,
-    };
-
-    try {
-      // Sync to database (which fetches books from server)
-      const syncResult = await calibreWebDbService.syncCalibreWebBooksToDb(
-        server,
-        (current, total) => {
-          // Progress callback
-        }
-      );
-
-      result.booksSynced = syncResult.synced;
-      result.failedBooks = syncResult.failed;
-      result.errors = syncResult.errors;
-
-      // Download covers if requested
-      if (syncOptions.downloadCovers) {
-        const books = await calibreWebService.fetchAllBooks();
-        for (const book of books) {
-          if (book.cover) {
-            try {
-              await calibreWebDbService.cacheBookCover(book.id, book.cover, server);
-              result.coversDownloaded++;
-            } catch {
-              // Ignore cover errors
+        // Download covers if requested
+        if (syncOptions.downloadCovers) {
+          const books = await calibreWebService.fetchAllBooks();
+          for (const book of books) {
+            if (book.cover) {
+              try {
+                await calibreWebDbService.cacheBookCover(book.id, book.cover, server);
+                result.coversDownloaded++;
+              } catch {
+                // Ignore cover errors
+              }
             }
           }
         }
-      }
 
-      // Download books if requested
-      if (syncOptions.downloadBooks) {
-        const books = await calibreWebService.fetchAllBooks();
-        let downloadedCount = 0;
+        // Download books if requested
+        if (syncOptions.downloadBooks) {
+          const books = await calibreWebService.fetchAllBooks();
+          let downloadedCount = 0;
 
-        for (const book of books) {
-          const formats = calibreWebService.getAvailableFormats(book);
-          const format = formats.find(f => f === 'EPUB') || formats[0];
-          if (format && downloadBookRef.current) {
-            const path = await downloadBookRef.current(book, format);
-            if (path) downloadedCount++;
+          for (const book of books) {
+            const formats = calibreWebService.getAvailableFormats(book);
+            const format = formats.find((f) => f === 'EPUB') || formats[0];
+            if (format && downloadBookRef.current) {
+              const path = await downloadBookRef.current(book, format);
+              if (path) downloadedCount++;
+            }
           }
+
+          result.booksDownloaded = downloadedCount;
         }
 
-        result.booksDownloaded = downloadedCount;
+        // Update server's last sync time
+        server.lastSyncAt = Date.now();
+
+        result.success = true;
+      } catch (error) {
+        result.errors.push(error instanceof Error ? error.message : 'Sync failed');
       }
 
-      // Update server's last sync time
-      server.lastSyncAt = Date.now();
+      result.duration = Date.now() - startTime;
+      setSyncing(false);
+      setLastSyncTime(Date.now());
 
-      result.success = true;
-    } catch (error) {
-      result.errors.push(error instanceof Error ? error.message : 'Sync failed');
-    }
-
-    result.duration = Date.now() - startTime;
-    setSyncing(false);
-    setLastSyncTime(Date.now());
-
-    return result;
-  }, [getActiveServer, setSyncing, setLastSyncTime]);
+      return result;
+    },
+    [getActiveServer, setSyncing, setLastSyncTime]
+  );
 
   // Download a single book
-  const downloadBook = useCallback(async (
-    book: CalibreWebBook,
-    format: string
-  ): Promise<string | null> => {
-    const server = getActiveServer();
-    if (!server) {
-      return null;
-    }
+  const downloadBook = useCallback(
+    async (book: CalibreWebBook, format: string): Promise<string | null> => {
+      const server = getActiveServer();
+      if (!server) {
+        return null;
+      }
 
-    const result = await calibreWebDbService.downloadCalibreWebBook(
-      book,
-      format,
-      server,
-      (progress, downloaded, total) => {
+      const result = await calibreWebDbService.downloadCalibreWebBook(
+        book,
+        format,
+        server,
+        (progress, downloaded, total) => {
+          setDownloadProgress(book.id, {
+            bookId: book.id,
+            bookTitle: book.title,
+            progress,
+            bytesDownloaded: downloaded,
+            totalBytes: total,
+            status: progress < 100 ? 'downloading' : 'completed',
+          });
+        }
+      );
+
+      if (result.success) {
         setDownloadProgress(book.id, {
           bookId: book.id,
           bookTitle: book.title,
-          progress,
-          bytesDownloaded: downloaded,
-          totalBytes: total,
-          status: progress < 100 ? 'downloading' : 'completed',
+          progress: 100,
+          bytesDownloaded: 1,
+          totalBytes: 1,
+          status: 'completed',
         });
+        return result.filePath || null;
       }
-    );
 
-    if (result.success) {
       setDownloadProgress(book.id, {
         bookId: book.id,
         bookTitle: book.title,
-        progress: 100,
-        bytesDownloaded: 1,
-        totalBytes: 1,
-        status: 'completed',
+        progress: 0,
+        bytesDownloaded: 0,
+        totalBytes: 0,
+        status: 'failed',
+        error: result.error,
       });
-      return result.filePath || null;
-    }
 
-    setDownloadProgress(book.id, {
-      bookId: book.id,
-      bookTitle: book.title,
-      progress: 0,
-      bytesDownloaded: 0,
-      totalBytes: 0,
-      status: 'failed',
-      error: result.error,
-    });
-
-    return null;
-  }, [getActiveServer, setDownloadProgress]);
+      return null;
+    },
+    [getActiveServer, setDownloadProgress]
+  );
 
   // Store downloadBook in ref to avoid circular dependency
   downloadBookRef.current = downloadBook;

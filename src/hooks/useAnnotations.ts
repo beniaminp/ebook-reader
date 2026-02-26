@@ -59,12 +59,9 @@ export const useBookmarks = (bookId: string, currentCfi: EpubCfi = ''): UseBookm
     [refreshBookmarks]
   );
 
-  const updateBookmarkNote = useCallback(
-    async (id: string, note: string) => {
-      return await annotationsService.updateBookmarkNote(id, note);
-    },
-    []
-  );
+  const updateBookmarkNote = useCallback(async (id: string, note: string) => {
+    return await annotationsService.updateBookmarkNote(id, note);
+  }, []);
 
   const checkBookmarked = useCallback(
     (cfi: EpubCfi) => {
@@ -100,7 +97,10 @@ export interface UseHighlightsReturn {
     note?: string
   ) => Promise<EpubHighlight>;
   removeHighlight: (id: string) => Promise<boolean>;
-  updateHighlight: (id: string, updates: { color?: HighlightColor; note?: string }) => Promise<boolean>;
+  updateHighlight: (
+    id: string,
+    updates: { color?: HighlightColor; note?: string }
+  ) => Promise<boolean>;
   getHighlightsAtCfi: (cfi: EpubCfi) => EpubHighlight[];
   refreshHighlights: () => Promise<void>;
 }
@@ -201,11 +201,7 @@ export const useAnnotations = (bookId: string): UseAnnotationsReturn => {
   }, [refreshAnnotations]);
 
   const addAnnotation = useCallback(
-    async (
-      cfi: EpubCfi,
-      content: string,
-      type: 'note' | 'definition' | 'translation' = 'note'
-    ) => {
+    async (cfi: EpubCfi, content: string, type: 'note' | 'definition' | 'translation' = 'note') => {
       const annotation = await annotationsService.addAnnotation(bookId, cfi, content, type);
       await refreshAnnotations();
       return annotation;

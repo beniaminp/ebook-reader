@@ -127,7 +127,14 @@ export const PdfHighlightPanel: React.FC<PdfHighlightPanelProps> = ({
                   }}
                 >
                   <IonLabel>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '8px',
+                      }}
+                    >
                       <IonIcon icon={documentTextOutline} style={{ fontSize: '16px' }} />
                       <IonNote style={{ fontSize: '12px' }}>Page {highlight.pageNumber}</IonNote>
                     </div>

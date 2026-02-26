@@ -3,8 +3,26 @@
  * Manages theme switching, persistence, and application
  */
 
-export type ThemeType = 'light' | 'dark' | 'sepia' | 'eye-comfort' | 'night' | 'invert' | 'ocean' | 'forest' | 'sunset' | 'paper' | 'slate';
-export type FontFamily = 'serif' | 'sans-serif' | 'mono' | 'bookerly' | 'literata' | 'open-dyslexic';
+export type ThemeType =
+  | 'light'
+  | 'dark'
+  | 'sepia'
+  | 'eye-comfort'
+  | 'night'
+  | 'invert'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'paper'
+  | 'slate';
+export type BuiltInFontFamily =
+  | 'serif'
+  | 'sans-serif'
+  | 'mono'
+  | 'bookerly'
+  | 'literata'
+  | 'open-dyslexic';
+export type FontFamily = BuiltInFontFamily | `custom-${string}`;
 export type TextAlignment = 'left' | 'center' | 'justify' | 'right';
 export type MarginSize = 'small' | 'medium' | 'large';
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';

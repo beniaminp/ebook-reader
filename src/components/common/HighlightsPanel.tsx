@@ -25,13 +25,7 @@ import {
   IonToast,
   IonBadge,
 } from '@ionic/react';
-import {
-  colorPalette,
-  trashOutline,
-  createOutline,
-  close,
-  bookmarkOutline,
-} from 'ionicons/icons';
+import { colorPalette, trashOutline, createOutline, close, bookmarkOutline } from 'ionicons/icons';
 
 import type { EpubHighlight } from '../../services/annotationsService';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';

@@ -220,7 +220,8 @@ ion-chip {
 
 /* Animation */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -230,4 +231,50 @@ ion-chip {
 
 .syncing .progress-bar {
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Backup Card */
+.backup-card {
+  margin: var(--ion-spacing-md);
+}
+
+.backup-card ion-card-header {
+  text-align: center;
+}
+
+.backup-card .backups-list {
+  margin-top: var(--ion-spacing-md);
+}
+
+.backup-item {
+  --padding-start: var(--ion-spacing-md);
+  --padding-end: var(--ion-spacing-sm);
+}
+
+.backup-item ion-label h3 {
+  font-weight: 600;
+  margin-bottom: var(--ion-spacing-xs);
+  font-size: 0.95em;
+}
+
+.backup-item ion-label p {
+  display: flex;
+  align-items: center;
+  gap: var(--ion-spacing-xs);
+  font-size: 0.85em;
+}
+
+.loading-backups {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ion-spacing-lg);
+  gap: var(--ion-spacing-sm);
+  color: var(--ion-color-medium);
+}
+
+.loading-backups ion-spinner {
+  width: 32px;
+  height: 32px;
 }

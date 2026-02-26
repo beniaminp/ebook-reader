@@ -154,7 +154,11 @@ class DropboxProvider implements CloudProvider {
     }
   }
 
-  async uploadBook(localPath: string, remotePath: string, onProgress?: (progress: number) => void): Promise<string> {
+  async uploadBook(
+    localPath: string,
+    remotePath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (!this.client || !this.isConnected) {
       throw new Error('Not connected to Dropbox');
     }
@@ -184,7 +188,11 @@ class DropboxProvider implements CloudProvider {
     }
   }
 
-  async downloadBook(remotePath: string, localPath: string, onProgress?: (progress: number) => void): Promise<string> {
+  async downloadBook(
+    remotePath: string,
+    localPath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (!this.client || !this.isConnected) {
       throw new Error('Not connected to Dropbox');
     }
@@ -422,7 +430,11 @@ class WebDAVProvider implements CloudProvider {
     }
   }
 
-  async uploadBook(localPath: string, remotePath: string, onProgress?: (progress: number) => void): Promise<string> {
+  async uploadBook(
+    localPath: string,
+    remotePath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (!this.client || !this.isConnected) {
       throw new Error('Not connected to WebDAV');
     }
@@ -450,7 +462,11 @@ class WebDAVProvider implements CloudProvider {
     }
   }
 
-  async downloadBook(remotePath: string, localPath: string, onProgress?: (progress: number) => void): Promise<string> {
+  async downloadBook(
+    remotePath: string,
+    localPath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (!this.client || !this.isConnected) {
       throw new Error('Not connected to WebDAV');
     }
@@ -527,7 +543,7 @@ class WebDAVProvider implements CloudProvider {
     }
 
     try {
-      const metadata = await this.client.stat(SYNC_DATA_PATH) as any;
+      const metadata = (await this.client.stat(SYNC_DATA_PATH)) as any;
       if (metadata.lastmod) {
         return new Date(metadata.lastmod).getTime();
       }
@@ -561,7 +577,10 @@ export class CloudSyncService {
   /**
    * Connect to a cloud provider
    */
-  async connect(providerType: CloudProviderType, credentials: CloudCredentials): Promise<ConnectResult> {
+  async connect(
+    providerType: CloudProviderType,
+    credentials: CloudCredentials
+  ): Promise<ConnectResult> {
     let provider: CloudProvider;
 
     switch (providerType) {
@@ -639,7 +658,11 @@ export class CloudSyncService {
   /**
    * Upload a book to cloud storage
    */
-  async uploadBook(localPath: string, remotePath: string, onProgress?: (progress: number) => void): Promise<string> {
+  async uploadBook(
+    localPath: string,
+    remotePath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (!this.currentProvider) {
       throw new Error('No cloud provider connected');
     }
@@ -649,7 +672,11 @@ export class CloudSyncService {
   /**
    * Download a book from cloud storage
    */
-  async downloadBook(remotePath: string, localPath: string, onProgress?: (progress: number) => void): Promise<string> {
+  async downloadBook(
+    remotePath: string,
+    localPath: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (!this.currentProvider) {
       throw new Error('No cloud provider connected');
     }
@@ -791,7 +818,7 @@ export class CloudSyncService {
     const now = Date.now();
 
     // Convert local data to sync format
-    const localBookmarksSync: BookmarkSync[] = localBookmarks.map(b => ({
+    const localBookmarksSync: BookmarkSync[] = localBookmarks.map((b) => ({
       id: b.id,
       bookId: b.bookId,
       location: {
@@ -805,7 +832,7 @@ export class CloudSyncService {
       timestamp: new Date(b.timestamp).getTime(),
     }));
 
-    const localHighlightsSync: HighlightSync[] = localHighlights.map(h => ({
+    const localHighlightsSync: HighlightSync[] = localHighlights.map((h) => ({
       id: h.id,
       bookId: h.bookId,
       location: {
@@ -820,7 +847,7 @@ export class CloudSyncService {
       timestamp: new Date(h.timestamp).getTime(),
     }));
 
-    const localProgressSync: ReadingProgressSync[] = localProgress.map(p => ({
+    const localProgressSync: ReadingProgressSync[] = localProgress.map((p) => ({
       id: p.id,
       bookId: p.bookId,
       currentPage: p.currentPage,
@@ -846,13 +873,27 @@ export class CloudSyncService {
     }
 
     // Merge bookmarks
-    const mergedBookmarks = this.mergeBookmarks(localBookmarksSync, remoteData.bookmarks, conflictResolution, result);
+    const mergedBookmarks = this.mergeBookmarks(
+      localBookmarksSync,
+      remoteData.bookmarks,
+      conflictResolution,
+      result
+    );
 
     // Merge highlights
-    const mergedHighlights = this.mergeHighlights(localHighlightsSync, remoteData.highlights, conflictResolution, result);
+    const mergedHighlights = this.mergeHighlights(
+      localHighlightsSync,
+      remoteData.highlights,
+      conflictResolution,
+      result
+    );
 
     // Merge progress (always last-write-wins for progress)
-    const mergedProgress = this.mergeProgress(localProgressSync, remoteData.readingProgress, result);
+    const mergedProgress = this.mergeProgress(
+      localProgressSync,
+      remoteData.readingProgress,
+      result
+    );
 
     return {
       version: SYNC_VERSION,
@@ -874,8 +915,8 @@ export class CloudSyncService {
     result: SyncResult
   ): BookmarkSync[] {
     const mergedMap = new Map<string, BookmarkSync>();
-    const localMap = new Map(local.map(b => [b.id, b]));
-    const remoteMap = new Map(remote.map(b => [b.id, b]));
+    const localMap = new Map(local.map((b) => [b.id, b]));
+    const remoteMap = new Map(remote.map((b) => [b.id, b]));
 
     // Add all local bookmarks
     for (const [id, bookmark] of localMap) {
@@ -933,8 +974,8 @@ export class CloudSyncService {
     result: SyncResult
   ): HighlightSync[] {
     const mergedMap = new Map<string, HighlightSync>();
-    const localMap = new Map(local.map(h => [h.id, h]));
-    const remoteMap = new Map(remote.map(h => [h.id, h]));
+    const localMap = new Map(local.map((h) => [h.id, h]));
+    const remoteMap = new Map(remote.map((h) => [h.id, h]));
 
     // Add all local highlights
     for (const [id, highlight] of localMap) {
@@ -990,8 +1031,8 @@ export class CloudSyncService {
     result: SyncResult
   ): ReadingProgressSync[] {
     const mergedMap = new Map<string, ReadingProgressSync>();
-    const localMap = new Map(local.map(p => [p.bookId, p]));
-    const remoteMap = new Map(remote.map(p => [p.bookId, p]));
+    const localMap = new Map(local.map((p) => [p.bookId, p]));
+    const remoteMap = new Map(remote.map((p) => [p.bookId, p]));
 
     // Add all local progress
     for (const [bookId, progress] of localMap) {
@@ -1065,7 +1106,10 @@ export class CloudSyncService {
   /**
    * Save configuration to preferences
    */
-  private async saveConfig(providerType: CloudProviderType, credentials: CloudCredentials): Promise<void> {
+  private async saveConfig(
+    providerType: CloudProviderType,
+    credentials: CloudCredentials
+  ): Promise<void> {
     const config = {
       providerType,
       credentials: {
@@ -1101,7 +1145,10 @@ export class CloudSyncService {
   /**
    * Load configuration from preferences
    */
-  async loadConfig(): Promise<{ providerType: CloudProviderType | null; credentials: CloudCredentials | null } | null> {
+  async loadConfig(): Promise<{
+    providerType: CloudProviderType | null;
+    credentials: CloudCredentials | null;
+  } | null> {
     try {
       const configStr = await Preferences.get({ key: PREF_KEY_CONFIG });
       if (!configStr.value) {

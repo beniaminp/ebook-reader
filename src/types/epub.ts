@@ -140,4 +140,3 @@ export interface EpubSearchResult {
   excerpt: string;
   chapterLabel: string;
 }
-

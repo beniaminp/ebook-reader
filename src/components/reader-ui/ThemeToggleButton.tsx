@@ -4,7 +4,14 @@
  */
 
 import React, { useState } from 'react';
-import { IonButton, IonIcon, IonPopover, IonSegment, IonSegmentButton, IonLabel } from '@ionic/react';
+import {
+  IonButton,
+  IonIcon,
+  IonPopover,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
+} from '@ionic/react';
 import { sunny, moon, book, eye, contrast } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType } from '../../services/themeService';

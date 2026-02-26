@@ -40,10 +40,7 @@ export const ReadingRuler: React.FC<ReadingRulerProps> = ({
   ionContentRef,
   enabled: propsEnabled,
 }) => {
-  const {
-    readingRuler: storeEnabled,
-    readingRulerSettings,
-  } = useThemeStore();
+  const { readingRuler: storeEnabled, readingRulerSettings } = useThemeStore();
 
   const enabled = propsEnabled ?? (storeEnabled && readingRulerSettings.enabled);
 
@@ -72,46 +69,55 @@ export const ReadingRuler: React.FC<ReadingRulerProps> = ({
 
   // Update container rect
   const updateContainerRect = useCallback(() => {
-    const container = containerRef?.current || ionContentRef?.current || internalContainerRef.current;
+    const container =
+      containerRef?.current || ionContentRef?.current || internalContainerRef.current;
     if (container) {
       internalContainerRef.current = container;
     }
   }, [containerRef, ionContentRef]);
 
   // Handle mouse/touch move to update ruler position
-  const handleMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!enabled) return;
+  const handleMove = useCallback(
+    (e: MouseEvent | TouchEvent) => {
+      if (!enabled) return;
 
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-    // Get the container's top position relative to viewport
-    const container = containerRef?.current || ionContentRef?.current || internalContainerRef.current;
-    if (!container) return;
+      // Get the container's top position relative to viewport
+      const container =
+        containerRef?.current || ionContentRef?.current || internalContainerRef.current;
+      if (!container) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const relativeY = clientY - containerRect.top;
+      const containerRect = container.getBoundingClientRect();
+      const relativeY = clientY - containerRect.top;
 
-    setPosition(relativeY);
-    setVisible(true);
-    scheduleHide();
-  }, [enabled, containerRef, ionContentRef, scheduleHide]);
+      setPosition(relativeY);
+      setVisible(true);
+      scheduleHide();
+    },
+    [enabled, containerRef, ionContentRef, scheduleHide]
+  );
 
   // Handle click/tap to position ruler
-  const handleClick = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!enabled) return;
+  const handleClick = useCallback(
+    (e: MouseEvent | TouchEvent) => {
+      if (!enabled) return;
 
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-    const container = containerRef?.current || ionContentRef?.current || internalContainerRef.current;
-    if (!container) return;
+      const container =
+        containerRef?.current || ionContentRef?.current || internalContainerRef.current;
+      if (!container) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const relativeY = clientY - containerRect.top;
+      const containerRect = container.getBoundingClientRect();
+      const relativeY = clientY - containerRect.top;
 
-    setPosition(relativeY);
-    setVisible(true);
-    scheduleHide();
-  }, [enabled, containerRef, ionContentRef, scheduleHide]);
+      setPosition(relativeY);
+      setVisible(true);
+      scheduleHide();
+    },
+    [enabled, containerRef, ionContentRef, scheduleHide]
+  );
 
   // Update position on scroll
   const handleScroll = useCallback(() => {
@@ -129,7 +135,8 @@ export const ReadingRuler: React.FC<ReadingRulerProps> = ({
 
     updateContainerRect();
 
-    const container = containerRef?.current || ionContentRef?.current || internalContainerRef.current;
+    const container =
+      containerRef?.current || ionContentRef?.current || internalContainerRef.current;
     if (!container) return;
 
     // Add event listeners
@@ -152,7 +159,16 @@ export const ReadingRuler: React.FC<ReadingRulerProps> = ({
       window.removeEventListener('resize', updateContainerRect);
       clearHideTimeout();
     };
-  }, [enabled, containerRef, ionContentRef, handleMove, handleClick, handleScroll, updateContainerRect, clearHideTimeout]);
+  }, [
+    enabled,
+    containerRef,
+    ionContentRef,
+    handleMove,
+    handleClick,
+    handleScroll,
+    updateContainerRect,
+    clearHideTimeout,
+  ]);
 
   // Clean up timeout on unmount
   useEffect(() => {

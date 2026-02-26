@@ -16,7 +16,9 @@ declare module 'foliate-js/view.js' {
     open(book: Blob | File | string | FoliateBook): Promise<void>;
     close(): void;
     init(opts: { lastLocation?: string | null; showTextStart?: boolean }): Promise<void>;
-    goTo(target: string | number | { fraction: number }): Promise<{ index: number; anchor?: unknown } | undefined>;
+    goTo(
+      target: string | number | { fraction: number }
+    ): Promise<{ index: number; anchor?: unknown } | undefined>;
     goToFraction(fraction: number): Promise<void>;
     next(distance?: number): Promise<void>;
     prev(distance?: number): Promise<void>;
@@ -24,18 +26,34 @@ declare module 'foliate-js/view.js' {
     goRight(): Promise<void>;
     getCFI(index: number, range?: Range): string;
     resolveCFI(cfi: string): { index: number; anchor: (doc: Document) => Range | Node };
-    resolveNavigation(target: string | number | { fraction: number }): { index: number; anchor?: unknown } | undefined;
+    resolveNavigation(
+      target: string | number | { fraction: number }
+    ): { index: number; anchor?: unknown } | undefined;
 
     search(opts: { query: string; index?: number }): AsyncGenerator<FoliateSearchYield | 'done'>;
     clearSearch(): void;
 
-    addAnnotation(annotation: { value: string }, remove?: boolean): Promise<{ index: number; label: string } | undefined>;
-    deleteAnnotation(annotation: { value: string }): Promise<{ index: number; label: string } | undefined>;
+    addAnnotation(
+      annotation: { value: string },
+      remove?: boolean
+    ): Promise<{ index: number; label: string } | undefined>;
+    deleteAnnotation(annotation: {
+      value: string;
+    }): Promise<{ index: number; label: string } | undefined>;
 
     addEventListener(type: 'relocate', listener: (e: CustomEvent<FoliateLocation>) => void): void;
-    addEventListener(type: 'load', listener: (e: CustomEvent<{ doc: Document; index: number }>) => void): void;
-    addEventListener(type: 'link', listener: (e: CustomEvent<{ a: HTMLAnchorElement; href: string }>) => void): void;
-    addEventListener(type: 'external-link', listener: (e: CustomEvent<{ a: HTMLAnchorElement; href: string }>) => void): void;
+    addEventListener(
+      type: 'load',
+      listener: (e: CustomEvent<{ doc: Document; index: number }>) => void
+    ): void;
+    addEventListener(
+      type: 'link',
+      listener: (e: CustomEvent<{ a: HTMLAnchorElement; href: string }>) => void
+    ): void;
+    addEventListener(
+      type: 'external-link',
+      listener: (e: CustomEvent<{ a: HTMLAnchorElement; href: string }>) => void
+    ): void;
     addEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
   }
@@ -81,7 +99,10 @@ declare module 'foliate-js/view.js' {
 
   export interface FoliateMetadata {
     title: string | Record<string, string>;
-    author?: string | Array<{ name: string | Record<string, string>; role?: string[] }> | { name: string | Record<string, string>; role?: string[] };
+    author?:
+      | string
+      | Array<{ name: string | Record<string, string>; role?: string[] }>
+      | { name: string | Record<string, string>; role?: string[] };
     description?: string;
     publisher?: string | { name: string };
     language?: string | string[];

@@ -13,9 +13,10 @@ import type {
   MarginSize,
   ReadingRulerSettings,
   FocusModeSettings,
-  RulerColor
+  RulerColor,
 } from '../services/themeService';
-import { DEFAULT_SETTINGS } from '../services/themeService';
+import { DEFAULT_SETTINGS, FONT_FAMILIES } from '../services/themeService';
+import { fontService, type CustomFont } from '../services/fontService';
 
 export interface ReaderTheme {
   id: string;
@@ -26,6 +27,9 @@ export interface ReaderTheme {
   fontSize: number;
   lineHeight: number;
 }
+
+// Re-export CustomFont type from fontService
+export type { CustomFont } from '../services/fontService';
 
 const PREDEFINED_THEMES: Record<string, ReaderTheme> = {
   light: {
@@ -135,6 +139,13 @@ interface ThemeState extends ReadingSettings {
   // Custom themes
   customThemes: ReaderTheme[];
 
+  // Custom fonts
+  customFonts: CustomFont[];
+
+  // Custom background colors/images
+  customBackgroundColor?: string;
+  customBackgroundImage?: string;
+
   // Page transition animation
   pageTransitionType: PageTransitionType;
 
@@ -143,6 +154,12 @@ interface ThemeState extends ReadingSettings {
 
   // Computed helpers
   getCurrentTheme: () => ReaderTheme;
+  getAllFontFamilies: () => Array<{
+    value: FontFamily | string;
+    name: string;
+    preview: string;
+    isCustom?: boolean;
+  }>;
 
   // Actions
   setTheme: (theme: ThemeType) => void;
@@ -172,6 +189,16 @@ interface ThemeState extends ReadingSettings {
   // Custom theme management
   addCustomTheme: (theme: ReaderTheme) => void;
   removeCustomTheme: (themeId: string) => void;
+
+  // Custom font management
+  addCustomFont: (font: CustomFont) => void;
+  removeCustomFont: (fontName: string) => Promise<void>;
+  loadCustomFonts: () => Promise<void>;
+
+  // Custom background actions
+  setCustomBackgroundColor: (color: string | undefined) => void;
+  setCustomBackgroundImage: (imageUri: string | undefined) => void;
+  clearCustomBackground: () => void;
 
   // UI actions
   toggleSettingsPanel: () => void;
@@ -217,6 +244,9 @@ export const useThemeStore = create<ThemeState>()(
       autoScroll: DEFAULT_SETTINGS.autoScroll,
       autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
       customThemes: [],
+      customFonts: [],
+      customBackgroundColor: undefined,
+      customBackgroundImage: undefined,
       pageTransitionType: 'none' as PageTransitionType,
       isSettingsPanelOpen: false,
 
@@ -224,8 +254,25 @@ export const useThemeStore = create<ThemeState>()(
       getCurrentTheme: () => {
         const state = get();
         const customTheme = state.customThemes.find((t) => t.id === state.theme);
-        if (customTheme) return customTheme;
-        return PREDEFINED_THEMES[state.theme] || PREDEFINED_THEMES.light;
+        const baseTheme = customTheme || PREDEFINED_THEMES[state.theme] || PREDEFINED_THEMES.light;
+
+        // Merge custom background into theme
+        return {
+          ...baseTheme,
+          backgroundColor: state.customBackgroundColor || baseTheme.backgroundColor,
+        };
+      },
+
+      getAllFontFamilies: () => {
+        const state = get();
+        const builtInFonts = FONT_FAMILIES.map((f) => ({ ...f, isCustom: false }));
+        const customFonts = state.customFonts.map((f) => ({
+          value: `custom-${f.name}`,
+          name: f.name,
+          preview: f.name,
+          isCustom: true,
+        }));
+        return [...builtInFonts, ...customFonts];
       },
 
       // Theme actions
@@ -247,25 +294,29 @@ export const useThemeStore = create<ThemeState>()(
 
       setReadingRuler: (readingRuler) => set({ readingRuler }),
 
-      setReadingRulerHeight: (height) => set((state) => ({
-        readingRulerSettings: { ...state.readingRulerSettings, height }
-      })),
+      setReadingRulerHeight: (height) =>
+        set((state) => ({
+          readingRulerSettings: { ...state.readingRulerSettings, height },
+        })),
 
-      setReadingRulerOpacity: (opacity) => set((state) => ({
-        readingRulerSettings: { ...state.readingRulerSettings, opacity }
-      })),
+      setReadingRulerOpacity: (opacity) =>
+        set((state) => ({
+          readingRulerSettings: { ...state.readingRulerSettings, opacity },
+        })),
 
-      setReadingRulerColor: (color) => set((state) => ({
-        readingRulerSettings: { ...state.readingRulerSettings, color }
-      })),
+      setReadingRulerColor: (color) =>
+        set((state) => ({
+          readingRulerSettings: { ...state.readingRulerSettings, color },
+        })),
 
       setBionicReading: (bionicReading) => set({ bionicReading }),
 
       setFocusMode: (focusMode) => set({ focusMode }),
 
-      setFocusModeOpacity: (opacity) => set((state) => ({
-        focusModeSettings: { ...state.focusModeSettings, opacity }
-      })),
+      setFocusModeOpacity: (opacity) =>
+        set((state) => ({
+          focusModeSettings: { ...state.focusModeSettings, opacity },
+        })),
 
       setAutoScroll: (autoScroll) => set({ autoScroll }),
 
@@ -276,23 +327,24 @@ export const useThemeStore = create<ThemeState>()(
       // Bulk actions
       updateSettings: (settings) => set(settings),
 
-      resetSettings: () => set({
-        theme: DEFAULT_SETTINGS.theme,
-        fontFamily: DEFAULT_SETTINGS.fontFamily,
-        fontSize: DEFAULT_SETTINGS.fontSize,
-        lineHeight: DEFAULT_SETTINGS.lineHeight,
-        textAlign: DEFAULT_SETTINGS.textAlign,
-        marginSize: DEFAULT_SETTINGS.marginSize,
-        blueLightFilter: DEFAULT_SETTINGS.blueLightFilter,
-        blueLightIntensity: DEFAULT_SETTINGS.blueLightIntensity,
-        readingRuler: DEFAULT_SETTINGS.readingRuler,
-        readingRulerSettings: DEFAULT_SETTINGS.readingRulerSettings,
-        bionicReading: DEFAULT_SETTINGS.bionicReading,
-        focusMode: DEFAULT_SETTINGS.focusMode,
-        focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
-        autoScroll: DEFAULT_SETTINGS.autoScroll,
-        autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
-      }),
+      resetSettings: () =>
+        set({
+          theme: DEFAULT_SETTINGS.theme,
+          fontFamily: DEFAULT_SETTINGS.fontFamily,
+          fontSize: DEFAULT_SETTINGS.fontSize,
+          lineHeight: DEFAULT_SETTINGS.lineHeight,
+          textAlign: DEFAULT_SETTINGS.textAlign,
+          marginSize: DEFAULT_SETTINGS.marginSize,
+          blueLightFilter: DEFAULT_SETTINGS.blueLightFilter,
+          blueLightIntensity: DEFAULT_SETTINGS.blueLightIntensity,
+          readingRuler: DEFAULT_SETTINGS.readingRuler,
+          readingRulerSettings: DEFAULT_SETTINGS.readingRulerSettings,
+          bionicReading: DEFAULT_SETTINGS.bionicReading,
+          focusMode: DEFAULT_SETTINGS.focusMode,
+          focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
+          autoScroll: DEFAULT_SETTINGS.autoScroll,
+          autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
+        }),
 
       applyPreset: (preset) => set(presets[preset]),
 
@@ -308,8 +360,37 @@ export const useThemeStore = create<ThemeState>()(
           theme: state.theme === themeId ? 'light' : state.theme,
         })),
 
+      // Custom font management
+      addCustomFont: (font) =>
+        set((state) => ({
+          customFonts: [...state.customFonts, font],
+        })),
+
+      removeCustomFont: async (fontName) => {
+        await fontService.deleteCustomFont(fontName);
+        set((state) => ({
+          customFonts: state.customFonts.filter((f) => f.name !== fontName),
+          fontFamily: state.fontFamily === `custom-${fontName}` ? 'serif' : state.fontFamily,
+        }));
+      },
+
+      loadCustomFonts: async () => {
+        await fontService.loadAllCustomFonts();
+        const fonts = await fontService.getCustomFonts();
+        set({ customFonts: fonts });
+      },
+
+      // Custom background actions
+      setCustomBackgroundColor: (color) => set({ customBackgroundColor: color }),
+
+      setCustomBackgroundImage: (imageUri) => set({ customBackgroundImage: imageUri }),
+
+      clearCustomBackground: () =>
+        set({ customBackgroundColor: undefined, customBackgroundImage: undefined }),
+
       // UI actions
-      toggleSettingsPanel: () => set((state) => ({ isSettingsPanelOpen: !state.isSettingsPanelOpen })),
+      toggleSettingsPanel: () =>
+        set((state) => ({ isSettingsPanelOpen: !state.isSettingsPanelOpen })),
 
       openSettingsPanel: () => set({ isSettingsPanelOpen: true }),
 
@@ -334,6 +415,9 @@ export const useThemeStore = create<ThemeState>()(
         autoScroll: state.autoScroll,
         autoScrollSpeed: state.autoScrollSpeed,
         customThemes: state.customThemes,
+        customFonts: state.customFonts,
+        customBackgroundColor: state.customBackgroundColor,
+        customBackgroundImage: state.customBackgroundImage,
         pageTransitionType: state.pageTransitionType,
       }),
     }
@@ -349,6 +433,6 @@ export type {
   MarginSize,
   ReadingRulerSettings,
   FocusModeSettings,
-  RulerColor
+  RulerColor,
 } from '../services/themeService';
 export { PREDEFINED_THEMES, DEFAULT_SETTINGS };

@@ -42,7 +42,11 @@ import {
   refresh,
   checkmark,
 } from 'ionicons/icons';
-import { useTranslationStore, getLanguageName, getTargetLanguages } from '../../stores/useTranslationStore';
+import {
+  useTranslationStore,
+  getLanguageName,
+  getTargetLanguages,
+} from '../../stores/useTranslationStore';
 import { translationService, type TranslationError } from '../../services/translationService';
 import type { TranslationResult, TranslationLanguageCode } from '../../types';
 import './TranslationPanel.css';
@@ -81,7 +85,8 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
 
   // Local state
   const [sourceLanguage, setSourceLanguage] = useState<TranslationLanguageCode>('auto');
-  const [currentTargetLanguage, setCurrentTargetLanguage] = useState<TranslationLanguageCode>(targetLanguage);
+  const [currentTargetLanguage, setCurrentTargetLanguage] =
+    useState<TranslationLanguageCode>(targetLanguage);
   const [swappedLanguages, setSwappedLanguages] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const [showSaveToast, setShowSaveToast] = useState(false);
@@ -350,30 +355,18 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
 
                   {/* Action Buttons */}
                   <div className="translation-actions">
-                    <IonButton
-                      size="small"
-                      fill="outline"
-                      onClick={handleCopyTranslation}
-                    >
+                    <IonButton size="small" fill="outline" onClick={handleCopyTranslation}>
                       <IonIcon icon={copyOutline} slot="start" />
                       Copy
                     </IonButton>
 
-                    <IonButton
-                      size="small"
-                      fill="outline"
-                      onClick={handleSaveToNotes}
-                    >
+                    <IonButton size="small" fill="outline" onClick={handleSaveToNotes}>
                       <IonIcon icon={bookmarkOutline} slot="start" />
                       Save
                     </IonButton>
 
                     {onReplaceText && (
-                      <IonButton
-                        size="small"
-                        fill="outline"
-                        onClick={handleReplaceText}
-                      >
+                      <IonButton size="small" fill="outline" onClick={handleReplaceText}>
                         <IonIcon icon={arrowForward} slot="start" />
                         Replace
                       </IonButton>

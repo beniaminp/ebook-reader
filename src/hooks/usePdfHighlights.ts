@@ -23,8 +23,8 @@ export function usePdfHighlights({ bookId }: UsePdfHighlightsProps) {
       try {
         const loadedHighlights = await databaseService.getHighlights(bookId);
         const pdfHighlights: PdfHighlight[] = loadedHighlights
-          .filter(h => h.pageNumber !== undefined && h.rects !== undefined)
-          .map(h => ({
+          .filter((h) => h.pageNumber !== undefined && h.rects !== undefined)
+          .map((h) => ({
             id: h.id,
             bookId: h.bookId,
             pageNumber: h.pageNumber!,
@@ -66,7 +66,7 @@ export function usePdfHighlights({ bookId }: UsePdfHighlightsProps) {
           note: newHighlight.note,
           createdAt: newHighlight.timestamp as any,
         };
-        setHighlights(prev => [...prev, pdfHighlight]);
+        setHighlights((prev) => [...prev, pdfHighlight]);
         return newHighlight;
       }
       return null;
@@ -79,7 +79,7 @@ export function usePdfHighlights({ bookId }: UsePdfHighlightsProps) {
   const deleteHighlight = useCallback(async (id: string) => {
     try {
       await databaseService.deleteHighlight(id);
-      setHighlights(prev => prev.filter(h => h.id !== id));
+      setHighlights((prev) => prev.filter((h) => h.id !== id));
       return true;
     } catch (error) {
       console.error('Failed to delete highlight:', error);
@@ -87,22 +87,26 @@ export function usePdfHighlights({ bookId }: UsePdfHighlightsProps) {
     }
   }, []);
 
-  const updateHighlight = useCallback(async (id: string, updates: { color?: string; note?: string }) => {
-    try {
-      await databaseService.updateHighlight(id, updates);
-      setHighlights(prev => prev.map(h =>
-        h.id === id ? { ...h, ...updates } : h
-      ));
-      return true;
-    } catch (error) {
-      console.error('Failed to update highlight:', error);
-      return false;
-    }
-  }, []);
+  const updateHighlight = useCallback(
+    async (id: string, updates: { color?: string; note?: string }) => {
+      try {
+        await databaseService.updateHighlight(id, updates);
+        setHighlights((prev) => prev.map((h) => (h.id === id ? { ...h, ...updates } : h)));
+        return true;
+      } catch (error) {
+        console.error('Failed to update highlight:', error);
+        return false;
+      }
+    },
+    []
+  );
 
-  const getHighlightsForPage = useCallback((pageNumber: number) => {
-    return highlights.filter(h => h.pageNumber === pageNumber);
-  }, [highlights]);
+  const getHighlightsForPage = useCallback(
+    (pageNumber: number) => {
+      return highlights.filter((h) => h.pageNumber === pageNumber);
+    },
+    [highlights]
+  );
 
   return {
     highlights,

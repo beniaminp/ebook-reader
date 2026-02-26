@@ -5,11 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  IonButton,
-  IonButtons,
-  IonIcon,
-} from '@ionic/react';
+import { IonButton, IonButtons, IonIcon } from '@ionic/react';
 import { language, bookmark, glasses, copy, create } from 'ionicons/icons';
 import { useTranslationStore } from '../../stores/useTranslationStore';
 import './TextSelectionMenu.css';

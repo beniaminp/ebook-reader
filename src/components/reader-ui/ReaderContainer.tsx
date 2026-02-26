@@ -9,6 +9,7 @@ import { useTapZones } from '../../hooks/useTapZones';
 import { useBionicReading } from '../../hooks/useBionicReading';
 import type { TapZoneConfig } from '../../hooks/useTapZones';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
+import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
 import { ReadingRuler } from './ReadingRuler';
 import { FocusMode } from './FocusMode';
 import './ReaderContainer.css';
@@ -29,6 +30,8 @@ export interface ReaderContainerProps {
   tapZonesEnabled?: boolean;
   /** Disable swipe gestures entirely */
   swipeEnabled?: boolean;
+  /** Disable brightness gesture */
+  brightnessGestureEnabled?: boolean;
   /** IonContent ref for scroll tracking */
   ionContentRef?: React.RefObject<HTMLIonContentElement>;
 }
@@ -41,7 +44,10 @@ export interface ReaderContainerProps {
 /**
  * Blue Light Filter Component
  */
-const BlueLightFilter: React.FC<{ visible: boolean; intensity: number }> = ({ visible, intensity }) => {
+const BlueLightFilter: React.FC<{ visible: boolean; intensity: number }> = ({
+  visible,
+  intensity,
+}) => {
   if (!visible) return null;
 
   return (
@@ -67,6 +73,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
   tapZoneConfig,
   tapZonesEnabled = true,
   swipeEnabled = true,
+  brightnessGestureEnabled = true,
   ionContentRef,
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -84,6 +91,8 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     bionicReading,
     focusMode,
     focusModeSettings,
+    customBackgroundColor,
+    customBackgroundImage,
   } = useThemeStore();
 
   // Bionic reading hook
@@ -95,6 +104,12 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     wordClassName: 'word',
   });
 
+  // Brightness gesture hook
+  const brightnessGesture = useBrightnessGesture({
+    enabled: brightnessGestureEnabled,
+    contentRef: contentRef,
+  });
+
   // Swipe gesture handlers
   const swipeHandlers = useSwipeGesture({
     onSwipeLeft: onNextPage,
@@ -102,29 +117,36 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     enabled: swipeEnabled && (!!onNextPage || !!onPrevPage),
   });
 
-  // Tap zone handlers
+  // Tap zone handlers (coordinated with brightness gesture)
   const tapHandlers = useTapZones({
     onPrev: onPrevPage,
     onNext: onNextPage,
     onToggleToolbar,
     config: tapZoneConfig,
     enabled: tapZonesEnabled && (!!onPrevPage || !!onNextPage || !!onToggleToolbar),
+    wasBrightnessDrag: brightnessGesture.wasBrightnessDrag
+      ? () => brightnessGesture.wasBrightnessDrag
+      : undefined,
+    resetBrightnessDragFlag: brightnessGesture.resetBrightnessDragFlag,
   });
 
   // Merge touch handlers: swipe gesture takes precedence for move/end detection,
-  // tap zones fire only for short stationary taps.
+  // tap zones fire only for short stationary taps, brightness gesture for left edge.
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     swipeHandlers.onTouchStart(e);
     tapHandlers.onTouchStart(e);
+    brightnessGesture.onTouchStart(e);
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     swipeHandlers.onTouchMove(e);
+    brightnessGesture.onTouchMove(e);
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     swipeHandlers.onTouchEnd(e);
     tapHandlers.onTouchEnd(e);
+    brightnessGesture.onTouchEnd(e);
   };
 
   // Apply theme to document
@@ -170,14 +192,35 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     .join(' ');
 
   // Check if any reading features are enabled
-  const hasReadingFeatures = readingRuler || readingRulerSettings.enabled || focusMode || focusModeSettings.enabled;
+  const hasReadingFeatures =
+    readingRuler || readingRulerSettings.enabled || focusMode || focusModeSettings.enabled;
 
   // Sync content ref with bionic reading hook
   useEffect(() => {
     if (contentRef.current && bionicHook.containerRef) {
-      (bionicHook.containerRef as React.MutableRefObject<HTMLDivElement | null>).current = contentRef.current;
+      (bionicHook.containerRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        contentRef.current;
     }
   }, [bionicHook.containerRef]);
+
+  // Build container style with custom background support
+  const containerStyle: React.CSSProperties = {
+    fontSize: `${fontSize}px`,
+    lineHeight: lineHeight.toString(),
+    textAlign,
+  };
+
+  // Apply custom background if set
+  if (customBackgroundImage) {
+    containerStyle.backgroundImage = `url(${customBackgroundImage})`;
+    containerStyle.backgroundSize = 'cover';
+    containerStyle.backgroundPosition = 'center';
+    containerStyle.backgroundRepeat = 'no-repeat';
+    // Add semi-transparent overlay for readability
+    containerStyle.boxShadow = 'inset 0 0 0 2000px rgba(0, 0, 0, 0.5)';
+  } else if (customBackgroundColor) {
+    containerStyle.backgroundColor = customBackgroundColor;
+  }
 
   return (
     <div
@@ -187,27 +230,14 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       <BlueLightFilter visible={blueLightFilter} intensity={blueLightIntensity} />
+      {brightnessGesture.brightnessOverlay}
       {hasReadingFeatures && (
         <>
-          <ReadingRuler
-            containerRef={contentRef}
-            ionContentRef={ionContentRef}
-          />
-          <FocusMode
-            containerRef={contentRef}
-            ionContentRef={ionContentRef}
-          />
+          <ReadingRuler containerRef={contentRef} ionContentRef={ionContentRef} />
+          <FocusMode containerRef={contentRef} ionContentRef={ionContentRef} />
         </>
       )}
-      <div
-        ref={contentRef}
-        className={containerClasses}
-        style={{
-          fontSize: `${fontSize}px`,
-          lineHeight: lineHeight.toString(),
-          textAlign,
-        }}
-      >
+      <div ref={contentRef} className={containerClasses} style={containerStyle}>
         {children}
       </div>
     </div>

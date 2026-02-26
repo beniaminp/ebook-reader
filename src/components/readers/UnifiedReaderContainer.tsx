@@ -3,7 +3,7 @@
  *
  * Provides shared UI (toolbars, search modal, settings panel, tap zones,
  * keyboard navigation) and delegates rendering to the appropriate engine:
- *   - FoliateEngine for EPUB / MOBI / FB2 / CBZ
+ *   - FoliateEngine for EPUB / MOBI / FB2 / CBZ / CBR
  *   - PdfEngine for PDF
  *   - ScrollEngine for TXT / HTML / MD
  */
@@ -50,10 +50,17 @@ import { TextSelectionMenu } from '../reader-ui/TextSelectionMenu';
 import { DictionaryPanel } from '../dictionary';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { EPUB_THEMES } from '../../types/epub';
-import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter, ReaderFormat } from '../../types/reader';
+import type {
+  ReaderEngineRef,
+  SearchResult,
+  ReaderProgress,
+  Chapter,
+  ReaderFormat,
+} from '../../types/reader';
 import type { Book, Highlight } from '../../types/index';
 import { databaseService } from '../../services/database';
 import { useAppStore } from '../../stores/useAppStore';
+import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
 
 import './UnifiedReaderContainer.css';
 import './EpubReader.css';
@@ -63,7 +70,7 @@ import './EpubReader.css';
 export interface UnifiedReaderContainerProps {
   book: Book;
   format: ReaderFormat;
-  /** ArrayBuffer for binary formats (EPUB, PDF, MOBI, FB2, CBZ). */
+  /** ArrayBuffer for binary formats (EPUB, PDF, MOBI, FB2, CBZ, CBR). */
   fileData?: ArrayBuffer;
   /** Text content for text-based formats (TXT, HTML, MD). */
   textContent?: string;
@@ -78,7 +85,7 @@ export interface UnifiedReaderContainerProps {
 // ───────────────────────────── Helpers ─────────────────────────────
 
 /** Formats that use foliate-js. */
-const FOLIATE_FORMATS = new Set<string>(['epub', 'mobi', 'fb2', 'cbz']);
+const FOLIATE_FORMATS = new Set<string>(['epub', 'mobi', 'azw3', 'fb2', 'cbz', 'cbr']);
 
 /** Formats that use the scroll engine. */
 const SCROLL_FORMATS = new Set<string>(['txt', 'html', 'htm', 'md', 'markdown', 'docx', 'odt']);
@@ -137,6 +144,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const themeStore = useThemeStore();
   const currentTheme = EPUB_THEMES[themeStore.theme] || EPUB_THEMES.light;
 
+  // Brightness gesture hook
+  const brightnessGesture = useBrightnessGesture({
+    enabled: true,
+  });
+
   // Track the active bookmark ID so we can remove it
   const currentBookmarkIdRef = useRef<string | null>(null);
 
@@ -163,29 +175,35 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     }
   }, [isPdf, book.id]);
 
-  const handleAddPdfHighlight = useCallback(async (highlight: Omit<Highlight, 'id' | 'timestamp'>) => {
-    const result = await databaseService.addHighlight({
-      ...highlight,
-      location: highlight.location.pageNumber
-        ? String(highlight.location.pageNumber)
-        : highlight.location.cfi || String(highlight.location.position),
-      rects: highlight.rects ? JSON.stringify(highlight.rects) : undefined,
-    });
-    if (result) {
-      setPdfHighlights(prev => [...prev, result]);
-      setToastMessage('Highlight added');
-    }
-  }, []);
+  const handleAddPdfHighlight = useCallback(
+    async (highlight: Omit<Highlight, 'id' | 'timestamp'>) => {
+      const result = await databaseService.addHighlight({
+        ...highlight,
+        location: highlight.location.pageNumber
+          ? String(highlight.location.pageNumber)
+          : highlight.location.cfi || String(highlight.location.position),
+        rects: highlight.rects ? JSON.stringify(highlight.rects) : undefined,
+      });
+      if (result) {
+        setPdfHighlights((prev) => [...prev, result]);
+        setToastMessage('Highlight added');
+      }
+    },
+    []
+  );
 
   const handleDeletePdfHighlight = useCallback(async (id: string) => {
     await databaseService.deleteHighlight(id);
-    setPdfHighlights(prev => prev.filter(h => h.id !== id));
+    setPdfHighlights((prev) => prev.filter((h) => h.id !== id));
   }, []);
 
-  const handleUpdatePdfHighlight = useCallback(async (id: string, updates: { color?: string; note?: string }) => {
-    await databaseService.updateHighlight(id, updates);
-    setPdfHighlights(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
-  }, []);
+  const handleUpdatePdfHighlight = useCallback(
+    async (id: string, updates: { color?: string; note?: string }) => {
+      await databaseService.updateHighlight(id, updates);
+      setPdfHighlights((prev) => prev.map((h) => (h.id === id ? { ...h, ...updates } : h)));
+    },
+    []
+  );
 
   const handlePdfHighlightsChange = useCallback((updatedHighlights: Highlight[]) => {
     setPdfHighlights(updatedHighlights);
@@ -194,8 +212,12 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // ─── Stable callback refs for renderEngine (prevent remounting on handler change) ─────────────────────────
 
   const handleRelocateRef = useRef<(p: ReaderProgress) => void>(() => {});
-  const handleFoliateLoadCompleteRef = useRef<(meta: { title: string; author: string }) => void>(() => {});
-  const handlePdfLoadCompleteRef = useRef<(meta: { title: string; author: string; totalPages: number }) => void>(() => {});
+  const handleFoliateLoadCompleteRef = useRef<(meta: { title: string; author: string }) => void>(
+    () => {}
+  );
+  const handlePdfLoadCompleteRef = useRef<
+    (meta: { title: string; author: string; totalPages: number }) => void
+  >(() => {});
   const handleScrollLoadCompleteRef = useRef<() => void>(() => {});
   const handleErrorRef = useRef<(error: string) => void>(() => {});
   const handlePdfHighlightsChangeRef = useRef<(highlights: Highlight[]) => void>(() => {});
@@ -205,16 +227,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   const handleNext = useCallback(() => engineRef.current?.next(), []);
   const handlePrev = useCallback(() => engineRef.current?.prev(), []);
-  const handleToggleToolbar = useCallback(() => setToolbarVisible(v => !v), []);
+  const handleToggleToolbar = useCallback(() => setToolbarVisible((v) => !v), []);
 
   // ─── Progress from engine ─────────────────────────
 
-  const handleRelocate = useCallback((p: ReaderProgress) => {
-    setProgress(p);
-    if (p.locationString) {
-      onProgressChange?.(p.locationString, p.fraction * 100);
-    }
-  }, [onProgressChange]);
+  const handleRelocate = useCallback(
+    (p: ReaderProgress) => {
+      setProgress(p);
+      if (p.locationString) {
+        onProgressChange?.(p.locationString, p.fraction * 100);
+      }
+    },
+    [onProgressChange]
+  );
 
   // ─── Load complete from engine ─────────────────────────
 
@@ -228,10 +253,13 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     }, 100);
   }, []);
 
-  const handlePdfLoadComplete = useCallback((meta: { title: string; author: string; totalPages: number }) => {
-    if (meta.title) setTitle(meta.title);
-    setLoading(false);
-  }, []);
+  const handlePdfLoadComplete = useCallback(
+    (meta: { title: string; author: string; totalPages: number }) => {
+      if (meta.title) setTitle(meta.title);
+      setLoading(false);
+    },
+    []
+  );
 
   const handleScrollLoadComplete = useCallback(() => {
     setLoading(false);
@@ -255,7 +283,10 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   useEffect(() => {
     if (!isFoliate) return;
-    engineRef.current?.setTheme?.({ backgroundColor: currentTheme.backgroundColor, textColor: currentTheme.textColor });
+    engineRef.current?.setTheme?.({
+      backgroundColor: currentTheme.backgroundColor,
+      textColor: currentTheme.textColor,
+    });
   }, [currentTheme, isFoliate]);
 
   useEffect(() => {
@@ -275,103 +306,150 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // ─── Overlay tap zones (for foliate iframe) ─────────────────────────
 
-  const handleOverlayTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    overlayTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-    longPressTimerRef.current = setTimeout(() => {
-      setOverlayPassthrough(true);
-    }, 500);
-  }, []);
+  const handleOverlayTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      // First handle brightness gesture
+      brightnessGesture.onTouchStart(e);
 
-  const handleOverlayTouchMove = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
+      const touch = e.touches[0];
+      overlayTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+      longPressTimerRef.current = setTimeout(() => {
+        setOverlayPassthrough(true);
+      }, 500);
+    },
+    [brightnessGesture]
+  );
 
-  const handleOverlayTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
+  const handleOverlayTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      // Handle brightness gesture movement
+      brightnessGesture.onTouchMove(e);
 
-    if (overlayPassthrough) {
-      setTimeout(() => setOverlayPassthrough(false), 3000);
-      return;
-    }
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    },
+    [brightnessGesture]
+  );
 
-    if (!overlayTouchRef.current) return;
-    const touch = e.changedTouches[0];
-    const dx = Math.abs(touch.clientX - overlayTouchRef.current.x);
-    const dy = Math.abs(touch.clientY - overlayTouchRef.current.y);
-    const elapsed = Date.now() - overlayTouchRef.current.time;
-    overlayTouchRef.current = null;
+  const handleOverlayTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      // Handle brightness gesture end
+      brightnessGesture.onTouchEnd(e);
 
-    if (dx > 10 || dy > 10 || elapsed > 500) return;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
 
-    // Mark that touch handled this tap so onClick doesn't double-fire
-    touchHandledRef.current = true;
+      if (overlayPassthrough) {
+        setTimeout(() => setOverlayPassthrough(false), 3000);
+        return;
+      }
 
-    const relX = touch.clientX / window.innerWidth;
-    if (relX < 0.25) handlePrev();
-    else if (relX > 0.75) handleNext();
-    else handleToggleToolbar();
-  }, [overlayPassthrough, handlePrev, handleNext, handleToggleToolbar]);
+      // Skip tap handling if brightness gesture was active
+      if (brightnessGesture.wasBrightnessDrag) {
+        brightnessGesture.resetBrightnessDragFlag();
+        return;
+      }
 
-  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
-    // On mobile, touch events already handled the tap — skip the synthetic click
-    if (touchHandledRef.current) {
-      touchHandledRef.current = false;
-      return;
-    }
-    const relX = e.clientX / window.innerWidth;
-    if (relX < 0.25) handlePrev();
-    else if (relX > 0.75) handleNext();
-    else handleToggleToolbar();
-  }, [handlePrev, handleNext, handleToggleToolbar]);
+      if (!overlayTouchRef.current) return;
+      const touch = e.changedTouches[0];
+      const dx = Math.abs(touch.clientX - overlayTouchRef.current.x);
+      const dy = Math.abs(touch.clientY - overlayTouchRef.current.y);
+      const elapsed = Date.now() - overlayTouchRef.current.time;
+      overlayTouchRef.current = null;
+
+      if (dx > 10 || dy > 10 || elapsed > 500) return;
+
+      // Mark that touch handled this tap so onClick doesn't double-fire
+      touchHandledRef.current = true;
+
+      const relX = touch.clientX / window.innerWidth;
+      if (relX < 0.25) handlePrev();
+      else if (relX > 0.75) handleNext();
+      else handleToggleToolbar();
+    },
+    [overlayPassthrough, handlePrev, handleNext, handleToggleToolbar, brightnessGesture]
+  );
+
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      // On mobile, touch events already handled the tap — skip the synthetic click
+      if (touchHandledRef.current) {
+        touchHandledRef.current = false;
+        return;
+      }
+      const relX = e.clientX / window.innerWidth;
+      if (relX < 0.25) handlePrev();
+      else if (relX > 0.75) handleNext();
+      else handleToggleToolbar();
+    },
+    [handlePrev, handleNext, handleToggleToolbar]
+  );
 
   // ─── Content tap zones (for non-foliate formats: PDF, scroll) ─────────────────────────
 
   const contentTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const contentTouchHandledRef = useRef(false);
 
-  const handleContentTouchStart = useCallback((e: React.TouchEvent) => {
-    if (isFoliate) return;
-    const touch = e.touches[0];
-    contentTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-  }, [isFoliate]);
+  const handleContentTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (isFoliate) return;
+      // Handle brightness gesture
+      brightnessGesture.onTouchStart(e);
+      const touch = e.touches[0];
+      contentTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    },
+    [isFoliate, brightnessGesture]
+  );
 
-  const handleContentTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (isFoliate || !contentTouchRef.current) return;
-    const touch = e.changedTouches[0];
-    const dx = Math.abs(touch.clientX - contentTouchRef.current.x);
-    const dy = Math.abs(touch.clientY - contentTouchRef.current.y);
-    const elapsed = Date.now() - contentTouchRef.current.time;
-    contentTouchRef.current = null;
+  const handleContentTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      // Handle brightness gesture end
+      brightnessGesture.onTouchEnd(e);
 
-    if (dx > 10 || dy > 10 || elapsed > 500) return;
+      if (isFoliate || !contentTouchRef.current) return;
+      const touch = e.changedTouches[0];
+      const dx = Math.abs(touch.clientX - contentTouchRef.current.x);
+      const dy = Math.abs(touch.clientY - contentTouchRef.current.y);
+      const elapsed = Date.now() - contentTouchRef.current.time;
+      contentTouchRef.current = null;
 
-    const relX = touch.clientX / window.innerWidth;
-    // Only handle center tap to toggle toolbar for non-foliate formats
-    // (left/right navigation is handled by scrolling or PDF engine)
-    if (relX >= 0.25 && relX <= 0.75) {
-      contentTouchHandledRef.current = true;
-      handleToggleToolbar();
-    }
-  }, [isFoliate, handleToggleToolbar]);
+      if (dx > 10 || dy > 10 || elapsed > 500) return;
 
-  const handleContentClick = useCallback((e: React.MouseEvent) => {
-    if (isFoliate) return;
-    if (contentTouchHandledRef.current) {
-      contentTouchHandledRef.current = false;
-      return;
-    }
-    const relX = e.clientX / window.innerWidth;
-    if (relX >= 0.25 && relX <= 0.75) {
-      handleToggleToolbar();
-    }
-  }, [isFoliate, handleToggleToolbar]);
+      // Skip tap handling if brightness gesture was active
+      if (brightnessGesture.wasBrightnessDrag) {
+        brightnessGesture.resetBrightnessDragFlag();
+        return;
+      }
+
+      const relX = touch.clientX / window.innerWidth;
+      // Only handle center tap to toggle toolbar for non-foliate formats
+      // (left/right navigation is handled by scrolling or PDF engine)
+      if (relX >= 0.25 && relX <= 0.75) {
+        contentTouchHandledRef.current = true;
+        handleToggleToolbar();
+      }
+    },
+    [isFoliate, handleToggleToolbar, brightnessGesture]
+  );
+
+  const handleContentClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (isFoliate) return;
+      if (contentTouchHandledRef.current) {
+        contentTouchHandledRef.current = false;
+        return;
+      }
+      const relX = e.clientX / window.innerWidth;
+      if (relX >= 0.25 && relX <= 0.75) {
+        handleToggleToolbar();
+      }
+    },
+    [isFoliate, handleToggleToolbar]
+  );
 
   // ─── Keyboard navigation ─────────────────────────
 
@@ -427,7 +505,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       } else {
         // Fallback: fetch bookmarks and remove any that match the current location
         const bookmarks = await databaseService.getBookmarks(book.id);
-        const match = bookmarks.find(b => b.location?.cfi === loc);
+        const match = bookmarks.find((b) => b.location?.cfi === loc);
         if (match) {
           await databaseService.deleteBookmark(match.id);
         }
@@ -441,7 +519,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       await useAppStore.getState().addBookmark(book.id, loc, undefined, undefined, undefined);
       // Fetch back the saved bookmark to capture its real ID
       const saved = await databaseService.getBookmarks(book.id);
-      const match = saved.find(b => b.location?.cfi === loc);
+      const match = saved.find((b) => b.location?.cfi === loc);
       if (match) currentBookmarkIdRef.current = match.id;
       onBookmark?.(book.id, loc);
       setIsBookmarked(true);
@@ -468,11 +546,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     }
   }, [searchQuery]);
 
-  const goToSearchResult = useCallback((idx: number) => {
-    if (searchResults.length === 0 || !engineRef.current) return;
-    setCurrentSearchIndex(idx);
-    engineRef.current.goToLocation(searchResults[idx].location);
-  }, [searchResults]);
+  const goToSearchResult = useCallback(
+    (idx: number) => {
+      if (searchResults.length === 0 || !engineRef.current) return;
+      setCurrentSearchIndex(idx);
+      engineRef.current.goToLocation(searchResults[idx].location);
+    },
+    [searchResults]
+  );
 
   const goToNextSearchResult = useCallback(() => {
     goToSearchResult((currentSearchIndex + 1) % searchResults.length);
@@ -599,11 +680,21 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // engine remounts when handler identity changes.
 
   const stableOnRelocate = useCallback((p: ReaderProgress) => handleRelocateRef.current(p), []);
-  const stableOnFoliateLoadComplete = useCallback((meta: { title: string; author: string }) => handleFoliateLoadCompleteRef.current(meta), []);
-  const stableOnPdfLoadComplete = useCallback((meta: { title: string; author: string; totalPages: number }) => handlePdfLoadCompleteRef.current(meta), []);
+  const stableOnFoliateLoadComplete = useCallback(
+    (meta: { title: string; author: string }) => handleFoliateLoadCompleteRef.current(meta),
+    []
+  );
+  const stableOnPdfLoadComplete = useCallback(
+    (meta: { title: string; author: string; totalPages: number }) =>
+      handlePdfLoadCompleteRef.current(meta),
+    []
+  );
   const stableOnScrollLoadComplete = useCallback(() => handleScrollLoadCompleteRef.current(), []);
   const stableOnError = useCallback((error: string) => handleErrorRef.current(error), []);
-  const stableOnPdfHighlightsChange = useCallback((highlights: Highlight[]) => handlePdfHighlightsChangeRef.current(highlights), []);
+  const stableOnPdfHighlightsChange = useCallback(
+    (highlights: Highlight[]) => handlePdfHighlightsChangeRef.current(highlights),
+    []
+  );
 
   const renderEngine = useMemo(() => {
     if (isFoliate && fileData) {
@@ -652,20 +743,30 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
     return null;
   }, [
-    isFoliate, isPdf, isScroll, fileData, textContent,
-    book.id, format, initialLocation,
-    stableOnRelocate, stableOnFoliateLoadComplete, stableOnPdfLoadComplete,
-    stableOnScrollLoadComplete, stableOnError, stableOnPdfHighlightsChange,
+    isFoliate,
+    isPdf,
+    isScroll,
+    fileData,
+    textContent,
+    book.id,
+    format,
+    initialLocation,
+    stableOnRelocate,
+    stableOnFoliateLoadComplete,
+    stableOnPdfLoadComplete,
+    stableOnScrollLoadComplete,
+    stableOnError,
+    stableOnPdfHighlightsChange,
   ]);
 
   // ─── Toolbar theme styling ─────────────────────────
 
   const toolbarStyle = isFoliate
-    ? {
+    ? ({
         '--background': currentTheme.backgroundColor,
         '--color': currentTheme.textColor,
         '--border-color': currentTheme.id === 'light' ? '#e0e0e0' : 'rgba(255,255,255,0.12)',
-      } as React.CSSProperties
+      } as React.CSSProperties)
     : undefined;
 
   const iconColor = isFoliate ? { color: currentTheme.textColor } : undefined;
@@ -675,7 +776,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   return (
     <IonPage
       className={`unified-reader-page${toolbarVisible ? '' : ' fullscreen'}`}
-      style={isFoliate ? { '--reader-bg': currentTheme.backgroundColor } as React.CSSProperties : undefined}
+      style={
+        isFoliate
+          ? ({ '--reader-bg': currentTheme.backgroundColor } as React.CSSProperties)
+          : undefined
+      }
     >
       {/* ─── Top toolbar ─── */}
       {toolbarVisible && (
@@ -700,9 +805,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             </IonButtons>
           </IonToolbar>
           {/* Progress bar for scroll/pdf formats */}
-          {!isFoliate && progress && (
-            <IonProgressBar value={progress.fraction} />
-          )}
+          {!isFoliate && progress && <IonProgressBar value={progress.fraction} />}
         </IonHeader>
       )}
 
@@ -711,13 +814,26 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         ref={ionContentRef}
         scrollY={isScroll}
         scrollEvents={isScroll}
-        style={isFoliate ? { '--background': currentTheme.backgroundColor } as React.CSSProperties : undefined}
+        style={
+          isFoliate
+            ? ({ '--background': currentTheme.backgroundColor } as React.CSSProperties)
+            : undefined
+        }
         onTouchStart={handleContentTouchStart}
         onTouchEnd={handleContentTouchEnd}
         onClick={handleContentClick}
       >
         {loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: '16px',
+            }}
+          >
             <IonSpinner name="crescent" />
             <p>Loading...</p>
           </div>
@@ -749,7 +865,12 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
               </IonButton>
 
               {chapters.length > 0 && (
-                <IonButton fill="clear" size="small" onClick={() => setTocOpen(true)} style={iconColor}>
+                <IonButton
+                  fill="clear"
+                  size="small"
+                  onClick={() => setTocOpen(true)}
+                  style={iconColor}
+                >
                   <IonIcon icon={list} />
                 </IonButton>
               )}
@@ -780,8 +901,10 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           <div style={{ padding: '16px' }}>
             <IonSearchbar
               value={searchQuery}
-              onIonInput={e => setSearchQuery(e.detail.value || '')}
-              onKeyPress={e => { if (e.key === 'Enter') handleSearch(); }}
+              onIonInput={(e) => setSearchQuery(e.detail.value || '')}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') handleSearch();
+              }}
               placeholder="Search in book..."
               showCancelButton="focus"
             />
@@ -798,12 +921,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
             {!searching && searchResults.length > 0 && (
               <>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '8px 0', marginTop: '16px',
-                  borderBottom: '1px solid var(--ion-color-light-shade)',
-                }}>
-                  <span>{currentSearchIndex + 1} of {searchResults.length} results</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 0',
+                    marginTop: '16px',
+                    borderBottom: '1px solid var(--ion-color-light-shade)',
+                  }}
+                >
+                  <span>
+                    {currentSearchIndex + 1} of {searchResults.length} results
+                  </span>
                   <div>
                     <IonButton size="small" fill="clear" onClick={goToPrevSearchResult}>
                       <IonIcon icon={chevronBack} />
@@ -823,11 +953,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                         setSearchOpen(false);
                       }}
                       style={{
-                        background: idx === currentSearchIndex ? 'var(--ion-color-light-tint)' : undefined,
+                        background:
+                          idx === currentSearchIndex ? 'var(--ion-color-light-tint)' : undefined,
                       }}
                     >
                       <IonLabel>
-                        {result.label && <h3 style={{ fontSize: '13px', fontWeight: 600 }}>{result.label}</h3>}
+                        {result.label && (
+                          <h3 style={{ fontSize: '13px', fontWeight: 600 }}>{result.label}</h3>
+                        )}
                         <p style={{ fontSize: '12px' }}>{result.excerpt}</p>
                       </IonLabel>
                     </IonItem>
@@ -837,7 +970,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             )}
 
             {!searching && searchQuery && searchResults.length === 0 && (
-              <p style={{ textAlign: 'center', color: 'var(--ion-color-medium)', marginTop: '20px' }}>
+              <p
+                style={{ textAlign: 'center', color: 'var(--ion-color-medium)', marginTop: '20px' }}
+              >
                 No results found for &ldquo;{searchQuery}&rdquo;
               </p>
             )}
@@ -850,7 +985,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         <div style={{ width: '300px', maxWidth: '80vw', maxHeight: '60vh', overflowY: 'auto' }}>
           <IonList>
             <IonItem lines="none">
-              <IonLabel><h2>Table of Contents</h2></IonLabel>
+              <IonLabel>
+                <h2>Table of Contents</h2>
+              </IonLabel>
             </IonItem>
             {chapters.map((ch, idx) => (
               <IonItem key={ch.id} button onClick={() => handleGoToChapter(idx)}>
@@ -889,10 +1026,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       />
 
       {/* ─── Translation Panel ─── */}
-      <TranslationPanel
-        bookId={book.id}
-        location={progress?.locationString}
-      />
+      <TranslationPanel bookId={book.id} location={progress?.locationString} />
 
       {/* ─── Text Selection Menu ─── */}
       <TextSelectionMenu
@@ -909,6 +1043,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           setDictionaryOpen(true);
         }}
       />
+
+      {/* ─── Brightness Gesture Overlay ─── */}
+      {brightnessGesture.brightnessOverlay}
     </IonPage>
   );
 };

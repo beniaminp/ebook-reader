@@ -89,7 +89,7 @@ class DictionaryService {
       const { value } = await Preferences.get({ key: CACHE_INDEX_KEY });
       if (value) {
         const index: CacheIndexEntry[] = JSON.parse(value);
-        this.cacheIndex = new Set(index.map(entry => entry.word.toLowerCase()));
+        this.cacheIndex = new Set(index.map((entry) => entry.word.toLowerCase()));
       }
     } catch (error) {
       console.error('Failed to load cache index:', error);
@@ -284,10 +284,10 @@ class DictionaryService {
 
       const index: CacheIndexEntry[] = JSON.parse(value);
       const matches = index
-        .filter(entry => entry.word.startsWith(cleaned))
+        .filter((entry) => entry.word.startsWith(cleaned))
         .sort((a, b) => b.cachedAt - a.cachedAt)
         .slice(0, limit)
-        .map(entry => entry.word);
+        .map((entry) => entry.word);
 
       return matches;
     } catch (error) {
@@ -305,7 +305,7 @@ class DictionaryService {
       if (!value) return [];
 
       const index: CacheIndexEntry[] = JSON.parse(value);
-      return index.map(entry => entry.word);
+      return index.map((entry) => entry.word);
     } catch (error) {
       console.error('Failed to get all cached words:', error);
       return [];
@@ -389,7 +389,7 @@ class DictionaryService {
   async getAllVocabulary(): Promise<VocabularyWord[]> {
     try {
       const { keys } = await Preferences.keys();
-      const vocabKeys = keys.filter(key => key.startsWith(VOCAB_PREFIX));
+      const vocabKeys = keys.filter((key) => key.startsWith(VOCAB_PREFIX));
 
       const words: VocabularyWord[] = [];
       for (const key of vocabKeys) {
@@ -432,7 +432,7 @@ class DictionaryService {
   async clearAllVocabulary(): Promise<void> {
     try {
       const { keys } = await Preferences.keys();
-      const vocabKeys = keys.filter(key => key.startsWith(VOCAB_PREFIX));
+      const vocabKeys = keys.filter((key) => key.startsWith(VOCAB_PREFIX));
 
       for (const key of vocabKeys) {
         await Preferences.remove({ key });

@@ -1,14 +1,24 @@
 /**
- * FoliateEngine — headless foliate-js wrapper for EPUB, MOBI, FB2, CBZ.
+ * FoliateEngine — headless foliate-js wrapper for EPUB, MOBI, FB2, CBZ, CBR.
  *
  * Implements ReaderEngineRef so UnifiedReaderContainer can drive it.
  * No UI chrome — just the <foliate-view> element.
+ *
+ * For CBR files, converts to CBZ format first using comicService.
  */
 
-import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  useCallback,
+} from 'react';
 import type { View as FoliateView, FoliateLocation, FoliateTocItem } from 'foliate-js/view.js';
 import type { EpubTheme } from '../../types/epub';
 import type { ReaderEngineRef, Chapter, SearchResult, ReaderProgress } from '../../types/reader';
+import { comicService } from '../../services/comicService';
 
 import './EpubReader.css';
 
@@ -32,11 +42,18 @@ export interface FoliateEngineProps {
 /** Map format string to MIME type for foliate-js. */
 function formatToMime(format: string): string {
   switch (format) {
-    case 'epub': return 'application/epub+zip';
-    case 'mobi': return 'application/x-mobipocket-ebook';
-    case 'fb2': return 'application/x-fictionbook+xml';
-    case 'cbz': return 'application/vnd.comicbook+zip';
-    default: return 'application/epub+zip';
+    case 'epub':
+      return 'application/epub+zip';
+    case 'mobi':
+    case 'azw3':
+      return 'application/x-mobipocket-ebook';
+    case 'fb2':
+      return 'application/x-fictionbook+xml';
+    case 'cbz':
+    case 'cbr':
+      return 'application/vnd.comicbook+zip';
+    default:
+      return 'application/epub+zip';
   }
 }
 
@@ -56,7 +73,10 @@ function metaAuthor(val: unknown): string {
   if (!val) return '';
   if (typeof val === 'string') return val;
   if (Array.isArray(val)) {
-    return val.map(item => metaString(item?.name ?? item)).filter(Boolean).join(', ');
+    return val
+      .map((item) => metaString(item?.name ?? item))
+      .filter(Boolean)
+      .join(', ');
   }
   if (typeof val === 'object' && val !== null && 'name' in val) {
     return metaString((val as { name: unknown }).name);
@@ -76,7 +96,8 @@ function tocToChapters(toc: FoliateTocItem[] | undefined | null): Chapter[] {
 }
 
 export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((props, ref) => {
-  const { arrayBuffer, bookId, format, initialLocation, onRelocate, onLoadComplete, onError } = props;
+  const { arrayBuffer, bookId, format, initialLocation, onRelocate, onLoadComplete, onError } =
+    props;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<FoliateView | null>(null);
@@ -120,9 +141,13 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     const rules: string[] = [];
     const theme = themeRef.current;
     if (theme) {
-      rules.push(`body { background: ${theme.backgroundColor} !important; color: ${theme.textColor} !important; }`);
+      rules.push(
+        `body { background: ${theme.backgroundColor} !important; color: ${theme.textColor} !important; }`
+      );
     }
-    rules.push(`body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`);
+    rules.push(
+      `body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`
+    );
     rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
 
     style.textContent = rules.join('\n');
@@ -131,7 +156,11 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
   const reapplyStyles = useCallback(() => {
     for (const doc of loadedDocsRef.current) {
-      try { injectStyles(doc); } catch { /* detached doc */ }
+      try {
+        injectStyles(doc);
+      } catch {
+        /* detached doc */
+      }
     }
   }, [injectStyles]);
 
@@ -141,7 +170,11 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
     // Cleanup previous view
     if (viewRef.current) {
-      try { viewRef.current.close(); } catch { /* ignore */ }
+      try {
+        viewRef.current.close();
+      } catch {
+        /* ignore */
+      }
       viewRef.current.remove();
       viewRef.current = null;
     }
@@ -151,6 +184,22 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
     const loadBook = async () => {
       try {
+        // Convert CBR to CBZ if needed
+        let bufferToLoad = arrayBuffer;
+        let formatToUse = format;
+
+        if (format === 'cbr') {
+          try {
+            bufferToLoad = await comicService.convertCbrToCbz(arrayBuffer);
+            formatToUse = 'cbz';
+          } catch (err) {
+            if (destroyed) return;
+            console.error('Failed to convert CBR to CBZ:', err);
+            onErrorRef.current?.(err instanceof Error ? err.message : 'Failed to convert CBR file');
+            return;
+          }
+        }
+
         const { View } = await import('foliate-js/view.js');
         if (destroyed) return;
 
@@ -186,12 +235,15 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             current: Math.max(1, current),
             total,
             fraction,
-            label: total > 0 ? `${Math.max(1, current)} / ${total}` : `${Math.round(fraction * 100)}%`,
+            label:
+              total > 0 ? `${Math.max(1, current)} / ${total}` : `${Math.round(fraction * 100)}%`,
             locationString: cfi,
           });
         }) as EventListener);
 
-        const file = new File([arrayBuffer], `book.${format}`, { type: formatToMime(format) });
+        const file = new File([bufferToLoad], `book.${formatToUse}`, {
+          type: formatToMime(formatToUse),
+        });
         if (destroyed) return;
 
         await view.open(file);
@@ -227,81 +279,96 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     return () => {
       destroyed = true;
       if (viewRef.current) {
-        try { viewRef.current.close(); } catch { /* ignore */ }
+        try {
+          viewRef.current.close();
+        } catch {
+          /* ignore */
+        }
         viewRef.current.remove();
         viewRef.current = null;
         loadedBookIdRef.current = null;
       }
       loadedDocsRef.current.clear();
     };
-  }, [bookId, arrayBuffer]);
+  }, [bookId, arrayBuffer, format]);
 
-  useImperativeHandle(ref, () => ({
-    next: () => { viewRef.current?.next(); },
-    prev: () => { viewRef.current?.prev(); },
-    goToLocation: (location: string) => { viewRef.current?.goTo(location); },
-    goToChapter: (index: number) => {
-      if (chapters[index]) {
-        viewRef.current?.goTo(chapters[index].href);
-      }
-    },
-    getChapters: () => chapters,
-    getProgress: () => ({
-      current: currentPageRef.current,
-      total: totalPagesRef.current,
-      fraction: currentFractionRef.current,
-      label: totalPagesRef.current > 0
-        ? `${currentPageRef.current} / ${totalPagesRef.current}`
-        : `${Math.round(currentFractionRef.current * 100)}%`,
-      locationString: currentCfiRef.current,
-    }),
-    search: async (query: string): Promise<SearchResult[]> => {
-      if (!viewRef.current || !query.trim()) return [];
-      const results: SearchResult[] = [];
-      try {
-        const iter = viewRef.current.search({ query });
-        for await (const result of iter) {
-          if (result === 'done') break;
-          if (typeof result === 'string') continue;
-          if (result.subitems) {
-            const chapterLabel = result.label || '';
-            for (const sub of result.subitems) {
+  useImperativeHandle(
+    ref,
+    () => ({
+      next: () => {
+        viewRef.current?.next();
+      },
+      prev: () => {
+        viewRef.current?.prev();
+      },
+      goToLocation: (location: string) => {
+        viewRef.current?.goTo(location);
+      },
+      goToChapter: (index: number) => {
+        if (chapters[index]) {
+          viewRef.current?.goTo(chapters[index].href);
+        }
+      },
+      getChapters: () => chapters,
+      getProgress: () => ({
+        current: currentPageRef.current,
+        total: totalPagesRef.current,
+        fraction: currentFractionRef.current,
+        label:
+          totalPagesRef.current > 0
+            ? `${currentPageRef.current} / ${totalPagesRef.current}`
+            : `${Math.round(currentFractionRef.current * 100)}%`,
+        locationString: currentCfiRef.current,
+      }),
+      search: async (query: string): Promise<SearchResult[]> => {
+        if (!viewRef.current || !query.trim()) return [];
+        const results: SearchResult[] = [];
+        try {
+          const iter = viewRef.current.search({ query });
+          for await (const result of iter) {
+            if (result === 'done') break;
+            if (typeof result === 'string') continue;
+            if (result.subitems) {
+              const chapterLabel = result.label || '';
+              for (const sub of result.subitems) {
+                results.push({
+                  location: sub.cfi,
+                  excerpt: sub.excerpt || '',
+                  label: chapterLabel,
+                });
+              }
+            } else if (result.cfi) {
               results.push({
-                location: sub.cfi,
-                excerpt: sub.excerpt || '',
-                label: chapterLabel,
+                location: result.cfi,
+                excerpt: result.excerpt || '',
+                label: '',
               });
             }
-          } else if (result.cfi) {
-            results.push({
-              location: result.cfi,
-              excerpt: result.excerpt || '',
-              label: '',
-            });
           }
+        } catch (err) {
+          console.error('Search failed:', err);
         }
-      } catch (err) {
-        console.error('Search failed:', err);
-      }
-      return results;
-    },
-    setTheme: (theme: { backgroundColor: string; textColor: string }) => {
-      themeRef.current = theme;
-      reapplyStyles();
-    },
-    setFontSize: (size: number) => {
-      fontSizeRef.current = size;
-      reapplyStyles();
-    },
-    setFontFamily: (family: string) => {
-      fontFamilyRef.current = family;
-      reapplyStyles();
-    },
-    setLineHeight: (height: number) => {
-      lineHeightRef.current = height;
-      reapplyStyles();
-    },
-  }), [chapters, reapplyStyles]);
+        return results;
+      },
+      setTheme: (theme: { backgroundColor: string; textColor: string }) => {
+        themeRef.current = theme;
+        reapplyStyles();
+      },
+      setFontSize: (size: number) => {
+        fontSizeRef.current = size;
+        reapplyStyles();
+      },
+      setFontFamily: (family: string) => {
+        fontFamilyRef.current = family;
+        reapplyStyles();
+      },
+      setLineHeight: (height: number) => {
+        lineHeightRef.current = height;
+        reapplyStyles();
+      },
+    }),
+    [chapters, reapplyStyles]
+  );
 
   return <div ref={containerRef} className="epub-viewer" />;
 });

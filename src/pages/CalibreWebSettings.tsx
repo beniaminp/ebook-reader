@@ -96,7 +96,7 @@ const CalibreWebSettings: React.FC = () => {
   // Load sync preferences from the active server config
   useEffect(() => {
     if (activeServerId) {
-      const server = servers.find(s => s.id === activeServerId);
+      const server = servers.find((s) => s.id === activeServerId);
       if (server) {
         setSyncMetadata(server.syncMetadata ?? true);
         setSyncCovers(server.syncCovers ?? true);
@@ -166,7 +166,7 @@ const CalibreWebSettings: React.FC = () => {
   };
 
   const handleSetActiveServer = async (serverId: string) => {
-    const server = servers.find(s => s.id === serverId);
+    const server = servers.find((s) => s.id === serverId);
     if (server) {
       const success = await calibreWebService.login(
         server.serverUrl,
@@ -182,7 +182,7 @@ const CalibreWebSettings: React.FC = () => {
   const saveSyncPreferences = async (metadata: boolean, covers: boolean, books: boolean) => {
     if (!activeServerId) return;
     const loadedServers = await calibreWebService.loadServers();
-    const idx = loadedServers.findIndex(s => s.id === activeServerId);
+    const idx = loadedServers.findIndex((s) => s.id === activeServerId);
     if (idx !== -1) {
       loadedServers[idx].syncMetadata = metadata;
       loadedServers[idx].syncCovers = covers;
@@ -249,15 +249,11 @@ const CalibreWebSettings: React.FC = () => {
             <IonCardHeader>
               <IonCardTitle>Connected</IonCardTitle>
               <IonCardSubtitle>
-                {servers.find(s => s.id === activeServerId)?.name || 'Calibre-Web Server'}
+                {servers.find((s) => s.id === activeServerId)?.name || 'Calibre-Web Server'}
               </IonCardSubtitle>
             </IonCardHeader>
             <IonCardContent>
-              <IonButton
-                expand="block"
-                fill="outline"
-                onClick={() => setShowSyncModal(true)}
-              >
+              <IonButton expand="block" fill="outline" onClick={() => setShowSyncModal(true)}>
                 <IonIcon icon={refreshOutline} slot="start" />
                 Sync Library
               </IonButton>
@@ -268,10 +264,7 @@ const CalibreWebSettings: React.FC = () => {
         {/* Add Server Button */}
         <IonCard className="add-server-card">
           <IonCardContent>
-            <IonButton
-              expand="block"
-              onClick={() => setShowAddServer(true)}
-            >
+            <IonButton expand="block" onClick={() => setShowAddServer(true)}>
               <IonIcon icon={addOutline} slot="start" />
               Add Calibre-Web Server
             </IonButton>
@@ -288,14 +281,13 @@ const CalibreWebSettings: React.FC = () => {
               <IonItem key={server.id} className="server-item">
                 <IonLabel>
                   <h2>{server.name}</h2>
-                  <p>{server.username}@{server.serverUrl}</p>
+                  <p>
+                    {server.username}@{server.serverUrl}
+                  </p>
                 </IonLabel>
                 <div className="server-actions">
                   {server.id !== activeServerId && (
-                    <IonButton
-                      fill="clear"
-                      onClick={() => handleSetActiveServer(server.id)}
-                    >
+                    <IonButton fill="clear" onClick={() => handleSetActiveServer(server.id)}>
                       Connect
                     </IonButton>
                   )}
@@ -322,13 +314,16 @@ const CalibreWebSettings: React.FC = () => {
           </IonCardHeader>
           <IonCardContent>
             <p>
-              Calibre-Web is a web app for browsing, reading and downloading eBooks stored in a Calibre database.
+              Calibre-Web is a web app for browsing, reading and downloading eBooks stored in a
+              Calibre database.
             </p>
             <p>
-              Connect to your Calibre-Web server to sync your eBook library and download books for offline reading.
+              Connect to your Calibre-Web server to sync your eBook library and download books for
+              offline reading.
             </p>
             <IonNote>
-              Books are downloaded on-demand when you open them, unless you enable "Download all books" in sync options.
+              Books are downloaded on-demand when you open them, unless you enable "Download all
+              books" in sync options.
             </IonNote>
           </IonCardContent>
         </IonCard>
@@ -404,11 +399,7 @@ const CalibreWebSettings: React.FC = () => {
             >
               {testingConnection ? <IonSpinner name="crescent" /> : 'Test Connection'}
             </IonButton>
-            <IonButton
-              expand="block"
-              onClick={handleAddServer}
-              disabled={!syncResult?.success}
-            >
+            <IonButton expand="block" onClick={handleAddServer} disabled={!syncResult?.success}>
               Add Server
             </IonButton>
           </div>
@@ -471,24 +462,18 @@ const CalibreWebSettings: React.FC = () => {
                 <h3>{syncProgress.bookTitle}</h3>
                 <p>{syncProgress.status}</p>
                 <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${syncProgress.progress}%` }}
-                  />
+                  <div className="progress-fill" style={{ width: `${syncProgress.progress}%` }} />
                 </div>
                 <p className="progress-text">
-                  {Math.round(syncProgress.bytesDownloaded / 1024)} KB / {Math.round(syncProgress.totalBytes / 1024)} KB
+                  {Math.round(syncProgress.bytesDownloaded / 1024)} KB /{' '}
+                  {Math.round(syncProgress.totalBytes / 1024)} KB
                 </p>
               </IonCardContent>
             </IonCard>
           )}
 
           <div className="modal-actions">
-            <IonButton
-              expand="block"
-              onClick={handleSync}
-              disabled={isSyncing}
-            >
+            <IonButton expand="block" onClick={handleSync} disabled={isSyncing}>
               {isSyncing ? (
                 <>
                   <IonSpinner name="crescent" slot="start" />

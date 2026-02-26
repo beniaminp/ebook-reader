@@ -5,7 +5,14 @@
  * provides toolbar, search modal, settings, etc.
  */
 
-import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import '../../utils/pdfWorkerSetup';
 import { useThemeStore } from '../../stores/useThemeStore';
@@ -155,66 +162,84 @@ export const PdfEngine = forwardRef<ReaderEngineRef, PdfEngineProps>((props, ref
     currentPageRef.current = clamped;
   }, []);
 
-  useImperativeHandle(ref, () => ({
-    next: () => goToPage(currentPageRef.current + 1),
-    prev: () => goToPage(currentPageRef.current - 1),
-    goToLocation: (location: string) => {
-      const page = parseInt(location, 10);
-      if (!isNaN(page)) goToPage(page);
-    },
-    goToChapter: () => { /* PDF has no chapters */ },
-    getChapters: (): Chapter[] => [],
-    getProgress: (): ReaderProgress => ({
-      current: currentPageRef.current,
-      total: totalPagesRef.current,
-      fraction: totalPagesRef.current > 0 ? (currentPageRef.current - 1) / totalPagesRef.current : 0,
-      label: `${currentPageRef.current} / ${totalPagesRef.current}`,
-      locationString: String(currentPageRef.current),
-    }),
-    search: async (query: string): Promise<SearchResult[]> => {
-      if (!pdfDocRef.current || !query.trim()) return [];
-      const results: SearchResult[] = [];
-      const total = totalPagesRef.current;
+  useImperativeHandle(
+    ref,
+    () => ({
+      next: () => goToPage(currentPageRef.current + 1),
+      prev: () => goToPage(currentPageRef.current - 1),
+      goToLocation: (location: string) => {
+        const page = parseInt(location, 10);
+        if (!isNaN(page)) goToPage(page);
+      },
+      goToChapter: () => {
+        /* PDF has no chapters */
+      },
+      getChapters: (): Chapter[] => [],
+      getProgress: (): ReaderProgress => ({
+        current: currentPageRef.current,
+        total: totalPagesRef.current,
+        fraction:
+          totalPagesRef.current > 0 ? (currentPageRef.current - 1) / totalPagesRef.current : 0,
+        label: `${currentPageRef.current} / ${totalPagesRef.current}`,
+        locationString: String(currentPageRef.current),
+      }),
+      search: async (query: string): Promise<SearchResult[]> => {
+        if (!pdfDocRef.current || !query.trim()) return [];
+        const results: SearchResult[] = [];
+        const total = totalPagesRef.current;
 
-      try {
-        for (let i = 1; i <= total; i++) {
-          const page = await pdfDocRef.current.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ');
-          const lowerText = pageText.toLowerCase();
-          const lowerQuery = query.toLowerCase();
+        try {
+          for (let i = 1; i <= total; i++) {
+            const page = await pdfDocRef.current.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+            const lowerText = pageText.toLowerCase();
+            const lowerQuery = query.toLowerCase();
 
-          let idx = 0;
-          const matchCount: number[] = [];
-          while ((idx = lowerText.indexOf(lowerQuery, idx)) !== -1) {
-            matchCount.push(idx);
-            idx += lowerQuery.length;
+            let idx = 0;
+            const matchCount: number[] = [];
+            while ((idx = lowerText.indexOf(lowerQuery, idx)) !== -1) {
+              matchCount.push(idx);
+              idx += lowerQuery.length;
+            }
+
+            if (matchCount.length > 0) {
+              // Get excerpt around first match
+              const firstIdx = matchCount[0];
+              const start = Math.max(0, firstIdx - 40);
+              const end = Math.min(pageText.length, firstIdx + query.length + 40);
+              const excerpt =
+                (start > 0 ? '...' : '') +
+                pageText.slice(start, end) +
+                (end < pageText.length ? '...' : '');
+
+              results.push({
+                location: String(i),
+                excerpt,
+                label: `Page ${i} (${matchCount.length} match${matchCount.length !== 1 ? 'es' : ''})`,
+              });
+            }
           }
-
-          if (matchCount.length > 0) {
-            // Get excerpt around first match
-            const firstIdx = matchCount[0];
-            const start = Math.max(0, firstIdx - 40);
-            const end = Math.min(pageText.length, firstIdx + query.length + 40);
-            const excerpt = (start > 0 ? '...' : '') + pageText.slice(start, end) + (end < pageText.length ? '...' : '');
-
-            results.push({
-              location: String(i),
-              excerpt,
-              label: `Page ${i} (${matchCount.length} match${matchCount.length !== 1 ? 'es' : ''})`,
-            });
-          }
+        } catch (err) {
+          console.error('PDF search failed:', err);
         }
-      } catch (err) {
-        console.error('PDF search failed:', err);
-      }
 
-      return results;
-    },
-  }), [goToPage]);
+        return results;
+      },
+    }),
+    [goToPage]
+  );
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100%', padding: '16px' }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        minHeight: '100%',
+        padding: '16px',
+      }}
+    >
       <PageTransition
         pageKey={currentPage}
         animationType={pageTransitionType}

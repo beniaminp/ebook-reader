@@ -187,10 +187,7 @@ const Settings: React.FC = () => {
 
           <IonItem>
             <IonLabel>Auto Scroll</IonLabel>
-            <IonToggle
-              checked={autoScroll}
-              onIonChange={(e) => setAutoScroll(e.detail.checked)}
-            />
+            <IonToggle checked={autoScroll} onIonChange={(e) => setAutoScroll(e.detail.checked)} />
           </IonItem>
 
           {autoScroll && (
@@ -244,12 +241,7 @@ const Settings: React.FC = () => {
         </IonList>
 
         <div style={{ padding: '16px' }}>
-          <IonButton
-            expand="block"
-            fill="outline"
-            color="medium"
-            onClick={resetSettings}
-          >
+          <IonButton expand="block" fill="outline" color="medium" onClick={resetSettings}>
             Reset to Defaults
           </IonButton>
         </div>

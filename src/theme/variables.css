@@ -21,7 +21,7 @@
   --reader-shadow: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="dark"] {
+[data-theme='dark'] {
   --reader-bg-color: #1a1a1a;
   --reader-text-color: #e0e0e0;
   --reader-secondary-color: #a0a0a0;
@@ -38,7 +38,7 @@
   --reader-shadow: rgba(0, 0, 0, 0.3);
 }
 
-[data-theme="sepia"] {
+[data-theme='sepia'] {
   --reader-bg-color: #f4ecd8;
   --reader-text-color: #5c4b37;
   --reader-secondary-color: #7d6b54;
@@ -55,7 +55,7 @@
   --reader-shadow: rgba(92, 75, 55, 0.1);
 }
 
-[data-theme="eye-comfort"] {
+[data-theme='eye-comfort'] {
   --reader-bg-color: #214e34;
   --reader-text-color: #d4e4d4;
   --reader-secondary-color: #a8c8a8;
@@ -72,7 +72,7 @@
   --reader-shadow: rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="night"] {
+[data-theme='night'] {
   --reader-bg-color: #0d0d0d;
   --reader-text-color: #c0c0c0;
   --reader-secondary-color: #808080;
@@ -89,7 +89,7 @@
   --reader-shadow: rgba(255, 255, 255, 0.05);
 }
 
-[data-theme="invert"] {
+[data-theme='invert'] {
   --reader-bg-color: #000000;
   --reader-text-color: #ffffff;
   --reader-secondary-color: #cccccc;
@@ -110,7 +110,9 @@
 .reader-container {
   background-color: var(--reader-bg-color);
   color: var(--reader-text-color);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .reader-content {
@@ -230,7 +232,8 @@
 }
 
 .font-sans-serif {
-  --reader-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --reader-font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 .font-mono {

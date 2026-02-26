@@ -4,7 +4,16 @@
  */
 
 import React from 'react';
-import { IonToolbar, IonButtons, IonButton, IonIcon, IonPopover, IonSegment, IonSegmentButton, IonLabel } from '@ionic/react';
+import {
+  IonToolbar,
+  IonButtons,
+  IonButton,
+  IonIcon,
+  IonPopover,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
+} from '@ionic/react';
 import {
   textOutline,
   text,
@@ -75,10 +84,7 @@ export const ReadingToolbar: React.FC<ReadingToolbarProps> = ({
       </IonButtons>
 
       <IonButtons slot="end">
-        <IonButton
-          onClick={() => setShowThemePopover(!showThemePopover)}
-          aria-label="Change theme"
-        >
+        <IonButton onClick={() => setShowThemePopover(!showThemePopover)} aria-label="Change theme">
           <IonIcon icon={currentTheme?.icon || contrast} />
           <span className="theme-name">{currentTheme?.name}</span>
         </IonButton>

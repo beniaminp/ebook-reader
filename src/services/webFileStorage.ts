@@ -30,8 +30,14 @@ export async function storeFile(bookId: string, data: ArrayBuffer): Promise<void
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).put(data, bookId);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
   });
 }
 
@@ -52,8 +58,14 @@ export async function getFile(bookId: string): Promise<ArrayBuffer | null> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const request = tx.objectStore(STORE_NAME).get(bookId);
-    request.onsuccess = () => { db.close(); resolve(request.result ?? null); };
-    request.onerror = () => { db.close(); reject(request.error); };
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result ?? null);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
   });
 }
 
@@ -65,8 +77,14 @@ export async function deleteFile(bookId: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).delete(bookId);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
   });
 }
 

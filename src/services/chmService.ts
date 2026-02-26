@@ -109,7 +109,8 @@ class ChmService {
       {
         name: 'Calibre',
         url: 'https://calibre-ebook.com/',
-        description: 'Free and open source ebook library management application that can convert CHM to EPUB/PDF',
+        description:
+          'Free and open source ebook library management application that can convert CHM to EPUB/PDF',
       },
       {
         name: 'Online-Convert',

@@ -31,6 +31,10 @@ export interface UseTapZonesOptions {
   maxTapMovement?: number;
   /** Enabled flag – set to false to disable tap zones */
   enabled?: boolean;
+  /** Optional callback to check if brightness gesture was active (to skip left-zone tap) */
+  wasBrightnessDrag?: () => boolean;
+  /** Optional callback to reset brightness drag flag after checking */
+  resetBrightnessDragFlag?: () => void;
 }
 
 export interface UseTapZonesReturn {
@@ -54,6 +58,8 @@ export const useTapZones = (options: UseTapZonesOptions = {}): UseTapZonesReturn
     config = {},
     maxTapMovement = 10,
     enabled = true,
+    wasBrightnessDrag,
+    resetBrightnessDragFlag,
   } = options;
 
   const mergedConfig: Required<TapZoneConfig> = { ...DEFAULT_CONFIG, ...config };
@@ -61,50 +67,72 @@ export const useTapZones = (options: UseTapZonesOptions = {}): UseTapZonesReturn
   // Track touch start position to distinguish taps from swipes
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!enabled) return;
-    const touch = e.changedTouches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-  }, [enabled]);
+  const onTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (!enabled) return;
+      const touch = e.changedTouches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    },
+    [enabled]
+  );
 
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!enabled || !touchStartRef.current) return;
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!enabled || !touchStartRef.current) return;
 
-    const touch = e.changedTouches[0];
-    const dx = Math.abs(touch.clientX - touchStartRef.current.x);
-    const dy = Math.abs(touch.clientY - touchStartRef.current.y);
+      const touch = e.changedTouches[0];
+      const dx = Math.abs(touch.clientX - touchStartRef.current.x);
+      const dy = Math.abs(touch.clientY - touchStartRef.current.y);
 
-    touchStartRef.current = null;
+      touchStartRef.current = null;
 
-    // If the finger moved too much it's a swipe, not a tap
-    if (dx > maxTapMovement || dy > maxTapMovement) return;
+      // If the finger moved too much it's a swipe, not a tap
+      if (dx > maxTapMovement || dy > maxTapMovement) return;
 
-    const containerWidth = (e.currentTarget as HTMLElement).offsetWidth;
-    const relativeX = touch.clientX / containerWidth;
+      const containerWidth = (e.currentTarget as HTMLElement).offsetWidth;
+      const relativeX = touch.clientX / containerWidth;
 
-    let action: TapZoneAction;
-    if (relativeX < mergedConfig.leftBoundary) {
-      action = mergedConfig.leftAction;
-    } else if (relativeX > mergedConfig.rightBoundary) {
-      action = mergedConfig.rightAction;
-    } else {
-      action = mergedConfig.centerAction;
-    }
+      // Check if brightness gesture was active (particularly for left edge)
+      const isBrightnessDragActive = wasBrightnessDrag?.();
+      if (isBrightnessDragActive) {
+        resetBrightnessDragFlag?.();
+        return;
+      }
 
-    switch (action) {
-      case 'prev':
-        onPrev?.();
-        break;
-      case 'next':
-        onNext?.();
-        break;
-      case 'toggle-toolbar':
-        onToggleToolbar?.();
-        break;
-      default:
-        break;
-    }
-  }, [enabled, maxTapMovement, mergedConfig, onPrev, onNext, onToggleToolbar]);
+      let action: TapZoneAction;
+      if (relativeX < mergedConfig.leftBoundary) {
+        action = mergedConfig.leftAction;
+      } else if (relativeX > mergedConfig.rightBoundary) {
+        action = mergedConfig.rightAction;
+      } else {
+        action = mergedConfig.centerAction;
+      }
+
+      switch (action) {
+        case 'prev':
+          onPrev?.();
+          break;
+        case 'next':
+          onNext?.();
+          break;
+        case 'toggle-toolbar':
+          onToggleToolbar?.();
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      enabled,
+      maxTapMovement,
+      mergedConfig,
+      onPrev,
+      onNext,
+      onToggleToolbar,
+      wasBrightnessDrag,
+      resetBrightnessDragFlag,
+    ]
+  );
 
   return { onTouchStart, onTouchEnd };
 };

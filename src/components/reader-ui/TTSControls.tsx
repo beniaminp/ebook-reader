@@ -74,9 +74,8 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ tts, onClose }) => {
     onClose();
   };
 
-  const progressPercent = totalSentences > 0
-    ? Math.round(((currentSentenceIndex + 1) / totalSentences) * 100)
-    : 0;
+  const progressPercent =
+    totalSentences > 0 ? Math.round(((currentSentenceIndex + 1) / totalSentences) * 100) : 0;
 
   return (
     <>
@@ -96,21 +95,13 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ tts, onClose }) => {
           >
             <IonIcon icon={settingsOutline} />
           </IonButton>
-          <IonButton
-            fill="clear"
-            size="small"
-            onClick={handleStop}
-            aria-label="Close TTS"
-          >
+          <IonButton fill="clear" size="small" onClick={handleStop} aria-label="Close TTS">
             <IonIcon icon={closeOutline} />
           </IonButton>
         </div>
 
         <div className="tts-progress-bar-container">
-          <div
-            className="tts-progress-bar"
-            style={{ width: `${progressPercent}%` }}
-          />
+          <div className="tts-progress-bar" style={{ width: `${progressPercent}%` }} />
         </div>
 
         <div className="tts-controls">
@@ -172,7 +163,6 @@ export const TTSControls: React.FC<TTSControlsProps> = ({ tts, onClose }) => {
         </IonHeader>
         <IonContent>
           <div className="tts-settings-content">
-
             <IonItem>
               <IonLabel>
                 <h3>Speed</h3>

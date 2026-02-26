@@ -41,53 +41,62 @@ export const useSwipeGesture = (options: UseSwipeGestureOptions = {}): UseSwipeG
   // Track whether the current touch has been identified as a vertical scroll
   const isScrollingRef = useRef(false);
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!enabled) return;
-    const touch = e.changedTouches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    isScrollingRef.current = false;
-  }, [enabled]);
+  const onTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (!enabled) return;
+      const touch = e.changedTouches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      isScrollingRef.current = false;
+    },
+    [enabled]
+  );
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!enabled || !touchStartRef.current) return;
+  const onTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!enabled || !touchStartRef.current) return;
 
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStartRef.current.x;
-    const dy = touch.clientY - touchStartRef.current.y;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
 
-    // If vertical movement is dominant early on, treat as scroll
-    if (!isScrollingRef.current && Math.abs(dy) > Math.abs(dx) * 1.5) {
-      isScrollingRef.current = true;
-    }
-  }, [enabled]);
+      // If vertical movement is dominant early on, treat as scroll
+      if (!isScrollingRef.current && Math.abs(dy) > Math.abs(dx) * 1.5) {
+        isScrollingRef.current = true;
+      }
+    },
+    [enabled]
+  );
 
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!enabled || !touchStartRef.current || isScrollingRef.current) {
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!enabled || !touchStartRef.current || isScrollingRef.current) {
+        touchStartRef.current = null;
+        return;
+      }
+
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
+
       touchStartRef.current = null;
-      return;
-    }
 
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStartRef.current.x;
-    const dy = touch.clientY - touchStartRef.current.y;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
 
-    touchStartRef.current = null;
+      // Must meet horizontal threshold and not be too vertical
+      if (absDx < threshold) return;
+      if (absDy / absDx > maxVerticalRatio) return;
 
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    // Must meet horizontal threshold and not be too vertical
-    if (absDx < threshold) return;
-    if (absDy / absDx > maxVerticalRatio) return;
-
-    if (dx < 0) {
-      // Swipe left → next page
-      onSwipeLeft?.();
-    } else {
-      // Swipe right → previous page
-      onSwipeRight?.();
-    }
-  }, [enabled, threshold, maxVerticalRatio, onSwipeLeft, onSwipeRight]);
+      if (dx < 0) {
+        // Swipe left → next page
+        onSwipeLeft?.();
+      } else {
+        // Swipe right → previous page
+        onSwipeRight?.();
+      }
+    },
+    [enabled, threshold, maxVerticalRatio, onSwipeLeft, onSwipeRight]
+  );
 
   return { onTouchStart, onTouchMove, onTouchEnd };
 };

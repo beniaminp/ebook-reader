@@ -70,11 +70,7 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
     '--page-transition-duration': `${duration}ms`,
   } as React.CSSProperties;
 
-  const classes = [
-    'page-transition',
-    animating ? animClass : '',
-    className,
-  ]
+  const classes = ['page-transition', animating ? animClass : '', className]
     .filter(Boolean)
     .join(' ');
 
@@ -88,9 +84,7 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
 function buildAnimClass(type: PageTransitionType, direction: PageDirection): string {
   if (type === 'fade') return 'page-transition--fade';
   if (type === 'slide') {
-    return direction === 'forward'
-      ? 'page-transition--slide-left'
-      : 'page-transition--slide-right';
+    return direction === 'forward' ? 'page-transition--slide-left' : 'page-transition--slide-right';
   }
   return '';
 }

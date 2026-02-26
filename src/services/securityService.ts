@@ -153,7 +153,7 @@ class SecurityService {
 
   async setCredential(
     credential: string,
-    lockType: 'pin' | 'password' | 'biometric',
+    lockType: 'pin' | 'password' | 'biometric'
   ): Promise<void> {
     this.config.lockType = lockType;
     if (lockType === 'biometric') {

@@ -55,7 +55,7 @@ export const HIGHLIGHT_COLORS = [
   { name: 'Orange', value: '#ffa500' },
 ] as const;
 
-export type HighlightColor = typeof HIGHLIGHT_COLORS[number]['value'];
+export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number]['value'];
 
 /**
  * Generate a unique ID for annotations
@@ -175,9 +175,7 @@ class AnnotationsService {
    * Check if a location is bookmarked
    */
   isBookmarked(bookId: string, cfi: EpubCfi): boolean {
-    return Array.from(this.bookmarks.values()).some(
-      (b) => b.bookId === bookId && b.cfi === cfi
-    );
+    return Array.from(this.bookmarks.values()).some((b) => b.bookId === bookId && b.cfi === cfi);
   }
 
   /**

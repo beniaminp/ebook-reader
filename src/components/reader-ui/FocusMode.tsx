@@ -27,8 +27,17 @@ export interface FocusModeProps {
 function getTextBlocks(container: HTMLElement): HTMLElement[] {
   const blocks: HTMLElement[] = [];
   const blockSelectors = [
-    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'li', 'blockquote', 'pre', 'div.content',
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'li',
+    'blockquote',
+    'pre',
+    'div.content',
   ];
 
   blockSelectors.forEach((selector) => {
@@ -99,10 +108,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
   ionContentRef,
   enabled: propsEnabled,
 }) => {
-  const {
-    focusMode: storeEnabled,
-    focusModeSettings,
-  } = useThemeStore();
+  const { focusMode: storeEnabled, focusModeSettings } = useThemeStore();
 
   const enabled = propsEnabled ?? (storeEnabled && focusModeSettings.enabled);
 
@@ -194,9 +200,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
 
   if (!enabled) return null;
 
-  return (
-    <div ref={overlayRef} className="focus-mode-overlay" aria-hidden="true" />
-  );
+  return <div ref={overlayRef} className="focus-mode-overlay" aria-hidden="true" />;
 };
 
 export default FocusMode;
