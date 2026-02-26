@@ -41,7 +41,6 @@ import {
 } from 'ionicons/icons';
 
 import { FoliateEngine } from './FoliateEngine';
-import { PdfEngine } from './PdfEngine';
 import { PdfEngineWithHighlights } from './PdfEngineWithHighlights';
 import { ScrollEngine } from './ScrollEngine';
 import { ReadingSettingsPanel } from '../reader-ui/ReadingSettingsPanel';
@@ -167,6 +166,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const isPdf = format === 'pdf';
   const isScroll = SCROLL_FORMATS.has(format);
 
+  // Clean up timers on unmount to prevent setState on dead components
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
+    };
+  }, []);
+
   // ─── Load PDF highlights ─────────────────────────
 
   useEffect(() => {
@@ -174,36 +181,6 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       databaseService.getHighlights(book.id).then(setPdfHighlights);
     }
   }, [isPdf, book.id]);
-
-  const handleAddPdfHighlight = useCallback(
-    async (highlight: Omit<Highlight, 'id' | 'timestamp'>) => {
-      const result = await databaseService.addHighlight({
-        ...highlight,
-        location: highlight.location.pageNumber
-          ? String(highlight.location.pageNumber)
-          : highlight.location.cfi || String(highlight.location.position),
-        rects: highlight.rects ? JSON.stringify(highlight.rects) : undefined,
-      });
-      if (result) {
-        setPdfHighlights((prev) => [...prev, result]);
-        setToastMessage('Highlight added');
-      }
-    },
-    []
-  );
-
-  const handleDeletePdfHighlight = useCallback(async (id: string) => {
-    await databaseService.deleteHighlight(id);
-    setPdfHighlights((prev) => prev.filter((h) => h.id !== id));
-  }, []);
-
-  const handleUpdatePdfHighlight = useCallback(
-    async (id: string, updates: { color?: string; note?: string }) => {
-      await databaseService.updateHighlight(id, updates);
-      setPdfHighlights((prev) => prev.map((h) => (h.id === id ? { ...h, ...updates } : h)));
-    },
-    []
-  );
 
   const handlePdfHighlightsChange = useCallback((updatedHighlights: Highlight[]) => {
     setPdfHighlights(updatedHighlights);
@@ -902,7 +879,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             <IonSearchbar
               value={searchQuery}
               onIonInput={(e) => setSearchQuery(e.detail.value || '')}
-              onKeyPress={(e) => {
+              onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSearch();
               }}
               placeholder="Search in book..."
@@ -946,7 +923,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                 <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                   {searchResults.map((result, idx) => (
                     <IonItem
-                      key={idx}
+                      key={`${result.location}-${idx}`}
                       button
                       onClick={() => {
                         goToSearchResult(idx);

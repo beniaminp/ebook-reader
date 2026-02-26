@@ -59,6 +59,8 @@ import {
   type OpdsDownloadLink,
 } from '../../services/opdsService';
 import type { Book } from '../../types/index';
+import { webFileStorage } from '../../services/webFileStorage';
+import { Capacitor } from '@capacitor/core';
 import './OpdsCatalog.css';
 
 // ============================================================================
@@ -283,18 +285,29 @@ const OpdsCatalogPage: React.FC = () => {
         }
 
         const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-
+        const buffer = await blob.arrayBuffer();
         const format = formatToBookFormat(link.format);
+        const bookId =
+          crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+
+        // Store file data persistently: IndexedDB on web, Filesystem on native
+        let filePath: string;
+        if (!Capacitor.isNativePlatform()) {
+          await webFileStorage.storeFile(bookId, buffer);
+          filePath = `indexeddb://${bookId}`;
+        } else {
+          // On native, use an Object URL as a temporary path (file would be saved via Filesystem)
+          filePath = URL.createObjectURL(blob);
+        }
 
         const newBook: Book = {
-          id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          id: bookId,
           title: entry.title,
           author: entry.author || 'Unknown',
-          filePath: objectUrl,
+          filePath,
           coverPath: entry.thumbnailUrl || entry.coverUrl,
           format,
-          totalPages: 100,
+          totalPages: 0,
           currentPage: 0,
           progress: 0,
           lastRead: new Date(),
@@ -433,7 +446,7 @@ const OpdsCatalogPage: React.FC = () => {
           <IonLabel>
             <h2>{entry.title}</h2>
             {entry.author && <p className="opds-author">{entry.author}</p>}
-            {entry.summary && <p className="opds-summary">{entry.summary.slice(0, 120)}...</p>}
+            {entry.summary && <p className="opds-summary">{entry.summary.length > 120 ? `${entry.summary.slice(0, 120)}...` : entry.summary}</p>}
             <div className="opds-formats">
               {book.downloadLinks.map((link, i) => (
                 <IonChip
@@ -467,7 +480,7 @@ const OpdsCatalogPage: React.FC = () => {
         {renderCoverImage(entry)}
         <IonLabel>
           <h2>{entry.title}</h2>
-          {entry.summary && <p>{entry.summary.slice(0, 100)}</p>}
+          {entry.summary && <p>{entry.summary.length > 100 ? `${entry.summary.slice(0, 100)}...` : entry.summary}</p>}
         </IonLabel>
         <IonIcon icon={chevronForwardOutline} slot="end" />
       </IonItem>

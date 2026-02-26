@@ -21,11 +21,19 @@ export interface CustomFont {
 async function loadCustomFont(fontName: string, fontFileUri: string): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      // Create a unique font-family name
-      const fontFamily = `Custom-${fontName.replace(/\s+/g, '-')}`;
+      // Sanitize font family name to prevent CSS injection
+      const fontFamily = `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+
+      // Check if this font is already loaded — prevent duplicate style tags
+      const existingStyle = document.head.querySelector(`style[data-font="${fontFamily}"]`);
+      if (existingStyle) {
+        resolve();
+        return;
+      }
 
       // Create @font-face rule
       const style = document.createElement('style');
+      style.dataset.font = fontFamily;
       style.textContent = `
         @font-face {
           font-family: '${fontFamily}';
@@ -67,6 +75,9 @@ async function loadCustomFont(fontName: string, fontFileUri: string): Promise<vo
         }, 100);
       }
     } catch (error) {
+      // Clean up injected style on failure
+      const fontFamily = `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+      document.head.querySelector(`style[data-font="${fontFamily}"]`)?.remove();
       reject(error);
     }
   });
@@ -190,16 +201,9 @@ async function deleteCustomFont(fontName: string): Promise<void> {
     const updatedFonts = fonts.filter((f) => f.name !== fontName);
     await saveCustomFontsList(updatedFonts);
 
-    // Remove @font-face rule from DOM
-    const fontFamily = `Custom-${fontName.replace(/\s+/g, '-')}`;
-    const styleElements = document.querySelectorAll('style');
-    for (let i = 0; i < styleElements.length; i++) {
-      const style = styleElements[i];
-      if (style.textContent?.includes(`font-family: '${fontFamily}'`)) {
-        style.remove();
-        break;
-      }
-    }
+    // Remove @font-face rule from DOM using data attribute for reliable matching
+    const fontFamily = `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+    document.head.querySelector(`style[data-font="${fontFamily}"]`)?.remove();
   } catch (error) {
     console.error('Failed to delete custom font:', error);
     throw error;
@@ -213,13 +217,13 @@ async function loadAllCustomFonts(): Promise<void> {
   try {
     const fonts = await getCustomFonts();
 
-    for (const font of fonts) {
-      try {
-        await loadCustomFont(font.name, font.path);
-      } catch (error) {
-        console.warn(`Failed to load font '${font.name}':`, error);
-      }
-    }
+    await Promise.allSettled(
+      fonts.map((font) =>
+        loadCustomFont(font.name, font.path).catch((error) =>
+          console.warn(`Failed to load font '${font.name}':`, error)
+        )
+      )
+    );
   } catch (error) {
     console.error('Failed to load custom fonts:', error);
   }
@@ -241,7 +245,7 @@ function fileToBase64(file: File): Promise<string> {
  * Get the CSS font-family name for a custom font
  */
 function getFontFamilyName(fontName: string): string {
-  return `Custom-${fontName.replace(/\s+/g, '-')}`;
+  return `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
 }
 
 // Export singleton instance

@@ -565,12 +565,18 @@ export class CloudSyncService {
    * Initialize the service with stored configuration
    */
   async initialize(): Promise<void> {
-    const configStr = await Preferences.get({ key: PREF_KEY_CONFIG });
-    if (configStr.value) {
-      const config = JSON.parse(configStr.value);
-      if (config.credentials && config.providerType) {
-        await this.connect(config.providerType, config.credentials);
+    try {
+      const configStr = await Preferences.get({ key: PREF_KEY_CONFIG });
+      if (configStr.value) {
+        const config = JSON.parse(configStr.value);
+        if (config.credentials && config.providerType) {
+          await this.connect(config.providerType, config.credentials);
+        }
       }
+    } catch (error) {
+      console.warn('Failed to initialize cloud sync from stored config:', error);
+      // Clear corrupted config to prevent repeated failures
+      await Preferences.remove({ key: PREF_KEY_CONFIG }).catch(() => {});
     }
   }
 
@@ -953,9 +959,9 @@ export class CloudSyncService {
       }
     }
 
-    // Handle deleted bookmarks
+    // Handle deleted bookmarks — only count if actually removed from merged set
     for (const [id, remoteBookmark] of remoteMap) {
-      if (remoteBookmark.deleted && !localMap.has(id)) {
+      if (remoteBookmark.deleted && mergedMap.has(id)) {
         mergedMap.delete(id);
         result.bookmarksRemoved++;
       }
@@ -999,7 +1005,8 @@ export class CloudSyncService {
           localHighlight,
           remoteHighlight,
           resolution,
-          result
+          result,
+          'highlight'
         );
 
         if (resolutionResult === 'remote') {
@@ -1011,9 +1018,9 @@ export class CloudSyncService {
       }
     }
 
-    // Handle deleted highlights
+    // Handle deleted highlights — only count if actually removed from merged set
     for (const [id, remoteHighlight] of remoteMap) {
-      if (remoteHighlight.deleted && !localMap.has(id)) {
+      if (remoteHighlight.deleted && mergedMap.has(id)) {
         mergedMap.delete(id);
         result.highlightsRemoved++;
       }
@@ -1075,7 +1082,8 @@ export class CloudSyncService {
     local: any,
     remote: any,
     resolution: ConflictResolution,
-    result: SyncResult
+    result: SyncResult,
+    conflictType: 'bookmark' | 'highlight' | 'progress' = 'bookmark'
   ): 'local' | 'remote' {
     const localTime = local.timestamp || 0;
     const remoteTime = remote.timestamp || 0;
@@ -1090,7 +1098,7 @@ export class CloudSyncService {
       case 'manual':
         // For now, use last-write-wins
         result.conflicts.push({
-          type: 'bookmark',
+          type: conflictType,
           id: local.id,
           bookId: local.bookId,
           localData: local,

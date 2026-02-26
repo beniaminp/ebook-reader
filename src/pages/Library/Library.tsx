@@ -229,24 +229,25 @@ const Library: React.FC = () => {
       const tagMap: Record<string, string[]> = {};
       const colMap: Record<string, string[]> = {};
 
-      // Load collections to build reverse map (collectionId -> bookIds)
+      // Load collections in parallel to build reverse map (collectionId -> bookIds)
       const cols = await databaseService.getAllCollections();
-      for (const col of cols) {
-        const booksInCol = await databaseService.getBooksInCollection(col.id);
-        colMap[col.id] = booksInCol.map((b) => b.id);
-      }
+      const colResults = await Promise.all(
+        cols.map((col) => databaseService.getBooksInCollection(col.id))
+      );
+      cols.forEach((col, i) => {
+        colMap[col.id] = colResults[i].map((b) => b.id);
+      });
 
-      // Load tags for each book (limit to web platform gracefully)
-      for (const book of loadedBooks) {
-        try {
-          const tags = await databaseService.getBookTags(book.id);
-          if (tags.length > 0) {
-            tagMap[book.id] = tags.map((t: any) => t.id);
-          }
-        } catch {
-          // Non-critical
+      // Load tags for each book in parallel
+      const tagResults = await Promise.allSettled(
+        loadedBooks.map((book) => databaseService.getBookTags(book.id))
+      );
+      loadedBooks.forEach((book, i) => {
+        const result = tagResults[i];
+        if (result.status === 'fulfilled' && result.value.length > 0) {
+          tagMap[book.id] = result.value.map((t: any) => t.id);
         }
-      }
+      });
 
       setBookTagMap(tagMap);
       setBookCollectionMap(colMap);
@@ -295,34 +296,42 @@ const Library: React.FC = () => {
 
   const handleSaveShelf = useCallback(async () => {
     if (!shelfName.trim()) return;
-    if (editingShelf) {
-      await databaseService.updateCollection(editingShelf.id, {
-        name: shelfName.trim(),
-        description: shelfDescription.trim() || undefined,
-      });
-    } else {
-      await databaseService.createCollection({
-        name: shelfName.trim(),
-        description: shelfDescription.trim() || undefined,
-        sortOrder: collections.length,
-      });
+    try {
+      if (editingShelf) {
+        await databaseService.updateCollection(editingShelf.id, {
+          name: shelfName.trim(),
+          description: shelfDescription.trim() || undefined,
+        });
+      } else {
+        await databaseService.createCollection({
+          name: shelfName.trim(),
+          description: shelfDescription.trim() || undefined,
+          sortOrder: collections.length,
+        });
+      }
+      setShowShelfModal(false);
+      setEditingShelf(null);
+      setShelfName('');
+      setShelfDescription('');
+      await loadFilterData();
+    } catch (err) {
+      console.error('Failed to save shelf:', err);
     }
-    setShowShelfModal(false);
-    setEditingShelf(null);
-    setShelfName('');
-    setShelfDescription('');
-    await loadFilterData();
   }, [shelfName, shelfDescription, editingShelf, collections.length]);
 
   const handleDeleteShelf = useCallback(async () => {
     if (!shelfToDelete) return;
-    await databaseService.deleteCollection(shelfToDelete.id);
-    if (filters.collectionId === shelfToDelete.id) {
-      setFilters((prev) => ({ ...prev, collectionId: 'all' }));
+    try {
+      await databaseService.deleteCollection(shelfToDelete.id);
+      if (filters.collectionId === shelfToDelete.id) {
+        setFilters((prev) => ({ ...prev, collectionId: 'all' }));
+      }
+      setShelfToDelete(null);
+      await loadFilterData();
+      await loadBookMappings(books);
+    } catch (err) {
+      console.error('Failed to delete shelf:', err);
     }
-    setShelfToDelete(null);
-    await loadFilterData();
-    await loadBookMappings(books);
   }, [shelfToDelete, filters.collectionId, setFilters, books]);
 
   const handleShelfLongPress = useCallback(
@@ -815,7 +824,7 @@ const Library: React.FC = () => {
       filePath,
       coverPath,
       format,
-      totalPages: 100,
+      totalPages: 0,
       currentPage: 0,
       progress: 0,
       lastRead: new Date(),
@@ -1667,7 +1676,6 @@ const Library: React.FC = () => {
                 <IonCheckbox
                   slot="start"
                   checked={bookShelfIds.includes(shelf.id)}
-                  onIonChange={() => toggleBookShelf(shelf.id)}
                 />
                 <IonLabel>{shelf.name}</IonLabel>
               </IonItem>

@@ -103,18 +103,6 @@ export interface Annotation {
   timestamp: Date;
 }
 
-// Settings types
-export interface ReadingSettings {
-  fontSize: number;
-  fontFamily: string;
-  lineHeight: number;
-  theme: 'light' | 'dark' | 'sepia';
-  margin: number;
-  textAlign: 'left' | 'justify';
-  autoScroll: boolean;
-  autoScrollSpeed: number;
-}
-
 export interface ReaderSettings {
   tapToTurn: boolean;
   swipeToTurn: boolean;
@@ -158,15 +146,6 @@ export interface ReadingProgress {
   lastReadAt: number;
   createdAt: number;
   updatedAt: number;
-}
-
-// Database types
-export interface DatabaseSchema {
-  books: Book;
-  bookmarks: Bookmark;
-  highlights: Highlight;
-  annotations: Annotation;
-  settings: ReadingSettings & ReaderSettings;
 }
 
 // Translation types

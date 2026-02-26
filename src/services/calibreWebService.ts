@@ -21,7 +21,6 @@ import {
 // Constants
 const PREF_KEY_SERVERS = 'calibreweb_servers';
 const PREF_KEY_ACTIVE_SERVER = 'calibreweb_active_server';
-const CACHE_DIR = 'calibreweb_cache';
 const BOOKS_DIR = 'calibreweb_books';
 const COVER_DIR = 'calibreweb_covers';
 
@@ -85,7 +84,9 @@ export class CalibreWebService {
     this.httpClient.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
+        // Prevent infinite retry loops: only retry once per request
+        if (error.response?.status === 401 && error.config && !(error.config as any)._isRetry) {
+          (error.config as any)._isRetry = true;
           // Token expired, try to refresh
           if (this.currentConfig) {
             const loginSuccess = await this.login(
@@ -93,7 +94,7 @@ export class CalibreWebService {
               this.currentConfig.username,
               this.currentConfig.password || ''
             );
-            if (loginSuccess && error.config) {
+            if (loginSuccess) {
               // Retry original request
               return this.httpClient!.request(error.config);
             }
@@ -693,9 +694,12 @@ export class CalibreWebService {
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
+    // Process in chunks to avoid O(n²) string concatenation and call stack limits
+    const CHUNK_SIZE = 0x8000;
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    for (let i = 0; i < bytes.byteLength; i += CHUNK_SIZE) {
+      const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
     }
     return btoa(binary);
   }

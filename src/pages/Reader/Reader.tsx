@@ -34,6 +34,8 @@ function detectFormat(filePath: string, bookFormat?: string): string {
     return bookFormat || 'txt';
   }
   const ext = filePath.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'epub') return 'epub';
+  if (ext === 'pdf') return 'pdf';
   if (ext === 'txt') return 'txt';
   if (ext === 'html' || ext === 'htm') return 'html';
   if (ext === 'md' || ext === 'markdown') return 'md';
@@ -91,9 +93,13 @@ const Reader: React.FC = () => {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Reading session tracking
+  // Reading session tracking — reset on bookId change
   const sessionStartRef = React.useRef<number>(Date.now());
   const sessionPagesRef = React.useRef<number>(0);
+  useEffect(() => {
+    sessionStartRef.current = Date.now();
+    sessionPagesRef.current = 0;
+  }, [bookId]);
 
   const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
   const [textContent, setTextContent] = useState<string>('');
@@ -128,8 +134,8 @@ const Reader: React.FC = () => {
       if (!foundBook) {
         try {
           foundBook = await databaseService.getBookById(bookId);
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('Failed to load book from database:', err);
         }
       }
 

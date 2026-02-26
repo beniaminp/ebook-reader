@@ -210,8 +210,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         if (!containerRef.current) return;
         containerRef.current.appendChild(view);
 
-        let chaptersLocal: Chapter[] = [];
-
         view.addEventListener('load', ((e: CustomEvent<{ doc: Document; index: number }>) => {
           if (destroyed) return;
           loadedDocsRef.current.add(e.detail.doc);
@@ -265,7 +263,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
         // Extract TOC
         const tocChapters = tocToChapters(view.book?.toc);
-        chaptersLocal = tocChapters;
         setChapters(tocChapters);
       } catch (error) {
         if (destroyed) return;

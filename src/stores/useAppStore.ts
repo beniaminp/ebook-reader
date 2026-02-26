@@ -99,7 +99,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (success) {
         // Reload books to get the newly added book from the database
         const books = await databaseService.getAllBooks();
-        const newBook = books.find((b) => b.id === bookData.id) || books[0] || null;
+        const newBook = books.find((b) => b.id === bookData.id) || null;
         set({ books, isLoading: false });
         return newBook;
       }
@@ -211,15 +211,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadBookmarks: async (bookId) => {
     try {
       const bookmarks = await databaseService.getBookmarks(bookId);
-      const bookmarkMap = new Map<string, number[]>();
+      const pageNumbers: number[] = [];
       bookmarks.forEach((b: Bookmark) => {
-        const existing = bookmarkMap.get(b.bookId) || [];
         const pageNum = b.location?.pageNumber;
         if (pageNum !== undefined) {
-          bookmarkMap.set(b.bookId, [...existing, pageNum]);
+          pageNumbers.push(pageNum);
         }
       });
-      set({ bookmarks: bookmarkMap });
+      // Merge into existing map instead of replacing, so other books' bookmarks are preserved
+      const existing = new Map(get().bookmarks);
+      existing.set(bookId, pageNumbers);
+      set({ bookmarks: existing });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to load bookmarks' });
     }
@@ -244,9 +246,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   removeBookmark: async (bookmarkId) => {
     try {
       await databaseService.deleteBookmark(bookmarkId);
-      // Reload bookmarks for current book
-      if (get().currentBook) {
-        await get().loadBookmarks(get().currentBook!.id);
+      const currentBook = get().currentBook;
+      if (currentBook) {
+        await get().loadBookmarks(currentBook.id);
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to remove bookmark' });
@@ -262,21 +264,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadHighlights: async (bookId) => {
     try {
       const highlights = await databaseService.getHighlights(bookId);
-      const highlightMap = new Map();
-      highlights.forEach((h: Highlight) => {
-        const existing = highlightMap.get(h.bookId) || [];
-        highlightMap.set(h.bookId, [
-          ...existing,
-          {
-            location: h.location?.pageNumber || h.location?.position || 0,
-            text: h.text,
-            color: h.color,
-            note: h.note,
-            id: h.id,
-          },
-        ]);
-      });
-      set({ highlights: highlightMap });
+      const entries = highlights.map((h: Highlight) => ({
+        location: h.location?.pageNumber || h.location?.position || 0,
+        text: h.text,
+        color: h.color,
+        note: h.note,
+        id: h.id,
+      }));
+      // Merge into existing map instead of replacing, so other books' highlights are preserved
+      const existing = new Map(get().highlights);
+      existing.set(bookId, entries);
+      set({ highlights: existing });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to load highlights' });
     }
@@ -301,9 +299,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   removeHighlight: async (highlightId) => {
     try {
       await databaseService.deleteHighlight(highlightId);
-      // Reload highlights for current book
-      if (get().currentBook) {
-        await get().loadHighlights(get().currentBook!.id);
+      const currentBook = get().currentBook;
+      if (currentBook) {
+        await get().loadHighlights(currentBook.id);
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to remove highlight' });

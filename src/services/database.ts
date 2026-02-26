@@ -195,7 +195,7 @@ export async function getAllBooks(): Promise<Book[]> {
   try {
     const database = await getDb();
     const result = await database.query(`SELECT * FROM ${TABLES.BOOKS} ORDER BY added_at DESC;`);
-    const books = result.values?.map(mapRowToBook) || [];
+    const books = (result.values?.map(mapRowToBook) || []).filter((b): b is Book => b !== null);
 
     // Load reading progress for all books
     const progressResult = await database.query(`SELECT * FROM ${TABLES.READING_PROGRESS};`);
@@ -451,7 +451,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
        ORDER BY added_at DESC;`,
       [`%${query}%`, `%${query}%`]
     );
-    return result.values?.map(mapRowToBook) || [];
+    return (result.values?.map(mapRowToBook) || []).filter((b): b is Book => b !== null);
   } catch (error) {
     console.error('Error searching books:', error);
     return [];
@@ -471,7 +471,7 @@ export async function getBooksByFormat(formats: string[]): Promise<Book[]> {
       `SELECT * FROM ${TABLES.BOOKS} WHERE format IN (${placeholders}) ORDER BY added_at DESC;`,
       formats
     );
-    return result.values?.map(mapRowToBook) || [];
+    return (result.values?.map(mapRowToBook) || []).filter((b): b is Book => b !== null);
   } catch (error) {
     console.error('Error getting books by format:', error);
     return [];
@@ -502,11 +502,12 @@ export async function getAllCollections(): Promise<Collection[]> {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function mapRowToBook(row: any): Book {
-  // Validate required fields to prevent crashes
+function mapRowToBook(row: any): Book | null {
+  // Validate required fields — return null for invalid rows instead of throwing,
+  // so a single corrupted record doesn't wipe the entire library.
   if (!row.file_path) {
-    console.error(`Book ${row.id} has missing file_path`, row);
-    throw new Error(`Book ${row.id} has invalid data: file_path is required`);
+    console.error(`Book ${row.id} has missing file_path — skipping`, row);
+    return null;
   }
   return {
     id: row.id,
@@ -1365,7 +1366,7 @@ export async function getBooksInCollection(collectionId: string): Promise<Book[]
        ORDER BY bc.sort_order, b.added_at DESC;`,
       [collectionId]
     );
-    return (result.values || []).map(mapRowToBook);
+    return (result.values || []).map(mapRowToBook).filter((b): b is Book => b !== null);
   } catch (error) {
     console.error('Error getting books in collection:', error);
     return [];
