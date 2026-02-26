@@ -262,9 +262,14 @@ const Library: React.FC = () => {
   };
 
   const handleBookClick = (book: Book) => {
+    if (!book.id) {
+      console.error('Attempted to open book with missing id:', book);
+      return;
+    }
     setCurrentBook(book);
     history.push(`/reader/${book.id}`);
   };
+
 
   const handleBookLongPress = (book: Book, event: React.MouseEvent) => {
     event.preventDefault();

@@ -109,8 +109,8 @@ const Reader: React.FC = () => {
 
   // Load book from store or database
   useEffect(() => {
-    if (!bookId || typeof bookId !== 'string' || bookId === 'undefined') {
-      setErrorMessage('Book not found (id: undefined)');
+    if (!bookId || typeof bookId !== 'string' || bookId === 'undefined' || bookId.length < 2) {
+      setErrorMessage(`Book not found (id: ${bookId})`);
       setLoadState('error');
       return;
     }
