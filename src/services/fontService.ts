@@ -248,6 +248,42 @@ function getFontFamilyName(fontName: string): string {
   return `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
 }
 
+/**
+ * Load a web font from Google Fonts or other URL
+ * Injects @font-face rule if not already present
+ */
+async function loadWebFont(fontName: string, url: string, weight: string = 'normal', style: string = 'normal'): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const fontFamily = fontName.replace(/[^a-zA-Z0-9-]/g, '-');
+      const existingStyle = document.head.querySelector(`style[data-webfont="${fontFamily}"]`);
+      if (existingStyle) {
+        resolve();
+        return;
+      }
+      const styleEl = document.createElement('style');
+      styleEl.dataset.webfont = fontFamily;
+      styleEl.textContent = `
+        @font-face {
+          font-family: '${fontFamily}';
+          src: url('${url}');
+          font-weight: ${weight};
+          font-style: ${style};
+          font-display: swap;
+        }
+      `;
+      document.head.appendChild(styleEl);
+      if ('fonts' in document) {
+        document.fonts.load(`16px '${fontFamily}'`).then(resolve, reject);
+      } else {
+        setTimeout(resolve, 100);
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 // Export singleton instance
 export const fontService = {
   loadCustomFont,
@@ -256,4 +292,5 @@ export const fontService = {
   deleteCustomFont,
   loadAllCustomFonts,
   getFontFamilyName,
+  loadWebFont,
 };
