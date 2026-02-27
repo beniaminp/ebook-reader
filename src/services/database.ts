@@ -543,7 +543,7 @@ function webBookToBook(webBook: WebBook): Book {
     format: webBook.format,
     totalPages: webBook.totalPages,
     currentPage: webBook.currentPage,
-    progress: webBook.progress,
+    progress: webBook.progress > 1 ? webBook.progress / 100 : webBook.progress,
     lastRead: new Date(webBook.lastRead),
     dateAdded: new Date(webBook.dateAdded),
     source: webBook.source,

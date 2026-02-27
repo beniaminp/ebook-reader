@@ -51,7 +51,20 @@ export async function getMySharedBooks(userId: string): Promise<SharedBookDoc[]>
 export async function getAllSharedBooks(): Promise<SharedBookDoc[]> {
   const q = query(collection(db, COLLECTION));
   const snapshot = await getDocs(q);
-  const books = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as SharedBookDoc));
+  const books = snapshot.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      magnetURI: data.magnetURI || '',
+      title: data.title || '',
+      author: data.author || '',
+      format: data.format || '',
+      fileSize: data.fileSize || 0,
+      userId: data.userId || '',
+      sharedAt: data.sharedAt,
+      localBookId: data.localBookId || '',
+    } as SharedBookDoc;
+  });
   return books.sort((a, b) => (b.sharedAt?.seconds ?? 0) - (a.sharedAt?.seconds ?? 0));
 }
 

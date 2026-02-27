@@ -80,8 +80,8 @@ const CommunityBooks: React.FC = () => {
 
   const filteredBooks = communityBooks.filter(
     (b) =>
-      b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.author.toLowerCase().includes(searchQuery.toLowerCase())
+      (b.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (b.author || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDownload = async (doc: SharedBookDoc) => {
@@ -143,11 +143,11 @@ const CommunityBooks: React.FC = () => {
             {filteredBooks.map((book) => (
               <IonItem key={book.id} className="community-book-item">
                 <IonLabel>
-                  <h2>{book.title}</h2>
-                  <p>{book.author}</p>
+                  <h2>{book.title || 'Untitled'}</h2>
+                  <p>{book.author || 'Unknown Author'}</p>
                   <div className="community-book-meta">
                     <IonChip outline>
-                      {book.format.toUpperCase()}
+                      {(book.format || 'unknown').toUpperCase()}
                     </IonChip>
                     <span className="community-book-size">
                       {formatFileSize(book.fileSize)}
