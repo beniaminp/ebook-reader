@@ -274,7 +274,7 @@ async function loadWebFont(fontName: string, url: string, weight: string = 'norm
       `;
       document.head.appendChild(styleEl);
       if ('fonts' in document) {
-        document.fonts.load(`16px '${fontFamily}'`).then(resolve, reject);
+        document.fonts.load(`16px '${fontFamily}'`).then(() => resolve(), reject);
       } else {
         setTimeout(resolve, 100);
       }
