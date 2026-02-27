@@ -1023,7 +1023,7 @@ const Library: React.FC = () => {
                   />
                 </div>
                 <IonText color="medium" className="book-progress-text">
-                  {Math.round(book.progress * 100)}%
+                  {Math.min(100, Math.round(book.progress * 100))}%
                 </IonText>
               </div>
             )}
@@ -1075,7 +1075,7 @@ const Library: React.FC = () => {
                     </div>
                   )}
                   <div className="continue-reading-progress">
-                    {Math.round(book.progress * 100)}%
+                    {Math.min(100, Math.round(book.progress * 100))}%
                   </div>
                 </div>
                 <IonText className="continue-reading-title">
@@ -1528,7 +1528,7 @@ const Library: React.FC = () => {
                 <IonItem>
                   <IonLabel>
                     <h3>Progress</h3>
-                    <p>{Math.round(selectedBook.progress * 100)}%</p>
+                    <p>{Math.min(100, Math.round(selectedBook.progress * 100))}%</p>
                   </IonLabel>
                 </IonItem>
                 <IonItem>

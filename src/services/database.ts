@@ -583,7 +583,7 @@ export async function upsertReadingProgress(
     const book = webBooks.find((b) => b.id === bookId);
     if (book) {
       book.currentPage = progress.currentPage;
-      book.progress = progress.percentage;
+      book.progress = progress.percentage / 100;
       book.updatedAt = Date.now();
       saveWebData();
     }

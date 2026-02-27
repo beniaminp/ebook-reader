@@ -80,4 +80,10 @@ export interface ReaderEngineRef {
   setFontFamily?(family: string): void;
   /** Set line-height multiplier. */
   setLineHeight?(height: number): void;
+  /** Set text alignment for content. */
+  setTextAlign?(align: string): void;
+  /** Set margin/padding size. */
+  setMarginSize?(size: string): void;
+  /** Enable/disable bionic reading mode. */
+  setBionicReading?(enabled: boolean): void;
 }

@@ -121,6 +121,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const fontSizeRef = useRef<number>(16);
   const fontFamilyRef = useRef<string>('serif');
   const lineHeightRef = useRef<number>(1.6);
+  const textAlignRef = useRef<string>('left');
+  const marginSizeRef = useRef<string>('medium');
+  const bionicReadingRef = useRef<boolean>(false);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Stable callback refs
@@ -149,6 +152,15 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       `body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`
     );
     rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
+    rules.push(`body, p, div { text-align: ${textAlignRef.current} !important; }`);
+    const marginPadding = marginSizeRef.current === 'small' ? '8px 12px' : marginSizeRef.current === 'large' ? '24px 32px' : '16px 24px';
+    rules.push(`body { padding: ${marginPadding} !important; }`);
+    if (bionicReadingRef.current) {
+      rules.push(`
+        body { word-spacing: 0.1em !important; letter-spacing: 0.02em !important; }
+        b, strong { font-weight: 900 !important; }
+      `);
+    }
 
     style.textContent = rules.join('\n');
     doc.head.appendChild(style);
@@ -361,6 +373,18 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setLineHeight: (height: number) => {
         lineHeightRef.current = height;
+        reapplyStyles();
+      },
+      setTextAlign: (align: string) => {
+        textAlignRef.current = align;
+        reapplyStyles();
+      },
+      setMarginSize: (size: string) => {
+        marginSizeRef.current = size;
+        reapplyStyles();
+      },
+      setBionicReading: (enabled: boolean) => {
+        bionicReadingRef.current = enabled;
         reapplyStyles();
       },
     }),

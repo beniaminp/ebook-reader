@@ -281,6 +281,21 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     engineRef.current?.setLineHeight?.(themeStore.lineHeight);
   }, [themeStore.lineHeight, isFoliate]);
 
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setTextAlign?.(themeStore.textAlign);
+  }, [themeStore.textAlign, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setMarginSize?.(themeStore.marginSize);
+  }, [themeStore.marginSize, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setBionicReading?.(themeStore.bionicReading);
+  }, [themeStore.bionicReading, isFoliate]);
+
   // ─── Overlay tap zones (for foliate iframe) ─────────────────────────
 
   const handleOverlayTouchStart = useCallback(
@@ -819,6 +834,21 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         {isFoliate ? (
           <div className="unified-reader-wrapper">
             {renderEngine}
+            {themeStore.blueLightFilter && (
+              <div
+                className="blue-light-filter-overlay"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: `rgba(255, 120, 0, ${themeStore.blueLightIntensity / 100})`,
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                }}
+              />
+            )}
             <div
               className={`unified-tap-overlay${overlayPassthrough ? ' passthrough' : ''}`}
               onTouchStart={handleOverlayTouchStart}
