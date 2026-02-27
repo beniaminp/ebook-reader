@@ -21,7 +21,12 @@ export type BuiltInFontFamily =
   | 'mono'
   | 'bookerly'
   | 'literata'
-  | 'open-dyslexic';
+  | 'open-dyslexic'
+  | 'roboto'
+  | 'lora'
+  | 'merriweather'
+  | 'inconsolata'
+  | 'nunito';
 export type FontFamily = BuiltInFontFamily | `custom-${string}`;
 export type TextAlignment = 'left' | 'center' | 'justify' | 'right';
 export type MarginSize = 'small' | 'medium' | 'large';
@@ -170,6 +175,11 @@ export const FONT_FAMILIES: { value: FontFamily; name: string; preview: string }
   { value: 'bookerly', name: 'Bookerly', preview: 'Bookerly' },
   { value: 'literata', name: 'Literata', preview: 'Literata' },
   { value: 'open-dyslexic', name: 'Open Dyslexic', preview: 'Accessible' },
+  { value: 'roboto', name: 'Roboto', preview: 'Roboto' },
+  { value: 'lora', name: 'Lora', preview: 'Lora' },
+  { value: 'merriweather', name: 'Merriweather', preview: 'Merriweather' },
+  { value: 'inconsolata', name: 'Inconsolata', preview: 'Inconsolata' },
+  { value: 'nunito', name: 'Nunito', preview: 'Nunito' },
 ];
 
 // Default settings

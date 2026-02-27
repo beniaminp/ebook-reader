@@ -94,6 +94,26 @@
   letter-spacing: 0.05em;
 }
 
+.font-roboto {
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+.font-lora {
+  font-family: 'Lora', Georgia, serif;
+}
+
+.font-merriweather {
+  font-family: 'Merriweather', Georgia, serif;
+}
+
+.font-inconsolata {
+  font-family: 'Inconsolata', monospace;
+}
+
+.font-nunito {
+  font-family: 'Nunito', Arial, sans-serif;
+}
+
 /* Text alignment */
 .align-left {
   text-align: left;
