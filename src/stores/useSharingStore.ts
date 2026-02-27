@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { torrentService } from '../services/torrentService';
+import { torrentService, type TorrentStats } from '../services/torrentService';
 import { sharingService, type SharedBookDoc } from '../services/sharingService';
 import { getUserId } from '../services/userIdentityService';
 import { webFileStorage } from '../services/webFileStorage';
@@ -11,6 +11,7 @@ interface SharingState {
   isSharingBook: boolean;
   isDownloading: boolean;
   downloadProgress: number;
+  downloadStats: TorrentStats | null;
   error: string | null;
 
   shareBook: (book: {
@@ -34,6 +35,7 @@ export const useSharingStore = create<SharingState>((set, get) => ({
   isSharingBook: false,
   isDownloading: false,
   downloadProgress: 0,
+  downloadStats: null,
   error: null,
 
   shareBook: async (book) => {
@@ -89,7 +91,7 @@ export const useSharingStore = create<SharingState>((set, get) => ({
     try {
       const { data, fileName } = await torrentService.download(
         doc.magnetURI,
-        (progress) => set({ downloadProgress: progress })
+        (stats) => set({ downloadProgress: stats.progress, downloadStats: stats })
       );
       const bookId = `p2p_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       await webFileStorage.storeFile(bookId, data);
@@ -107,10 +109,11 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         source: 'local',
         downloaded: true,
       });
-      set({ isDownloading: false, downloadProgress: 1 });
+      set({ isDownloading: false, downloadProgress: 1, downloadStats: null });
     } catch (error) {
       set({
         isDownloading: false,
+        downloadStats: null,
         error: error instanceof Error ? error.message : 'Failed to download book',
       });
     }

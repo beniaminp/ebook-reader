@@ -45,11 +45,18 @@ function formatTimeAgo(ts: { seconds: number }): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
+  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB/s`;
+}
+
 const CommunityBooks: React.FC = () => {
   const {
     communityBooks,
     isDownloading,
     downloadProgress,
+    downloadStats,
     error,
     loadCommunityBooks,
     downloadSharedBook,
@@ -137,11 +144,26 @@ const CommunityBooks: React.FC = () => {
                     )}
                   </div>
                   {isDownloading && downloadingId === book.id && (
-                    <div className="download-progress-bar">
-                      <div
-                        className="download-progress-fill"
-                        style={{ width: `${downloadProgress * 100}%` }}
-                      />
+                    <div className="download-stats">
+                      <div className="download-progress-bar">
+                        <div
+                          className="download-progress-fill"
+                          style={{ width: `${downloadProgress * 100}%` }}
+                        />
+                      </div>
+                      {downloadStats && (
+                        <div className="download-stats-row">
+                          <span className="download-stat">
+                            {formatSpeed(downloadStats.downloadSpeed)}
+                          </span>
+                          <span className="download-stat">
+                            {downloadStats.numPeers} peer{downloadStats.numPeers !== 1 ? 's' : ''}
+                          </span>
+                          <span className="download-stat">
+                            {formatFileSize(downloadStats.downloaded)} / {formatFileSize(downloadStats.totalSize)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </IonLabel>

@@ -54,3 +54,21 @@
   background: var(--ion-color-primary);
   transition: width 0.3s ease;
 }
+
+.download-stats {
+  margin-top: 8px;
+}
+
+.download-stats-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 0.75em;
+  color: var(--ion-color-medium);
+}
+
+.download-stat {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}

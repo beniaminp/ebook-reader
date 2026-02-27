@@ -22,7 +22,7 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import { useSharingStore } from '../../stores/useSharingStore';
-import { torrentService } from '../../services/torrentService';
+import { torrentService, TorrentStats } from '../../services/torrentService';
 import type { SharedBookDoc } from '../../services/sharingService';
 import './MySharedBooks.css';
 
@@ -32,25 +32,38 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
+  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB/s`;
+}
+
 const MySharedBooks: React.FC = () => {
   const { mySharedBooks, loadMySharedBooks, unshareBook } = useSharingStore();
   const [toastMessage, setToastMessage] = useState('');
   const [bookToUnshare, setBookToUnshare] = useState<SharedBookDoc | null>(null);
   const [seedingStatus, setSeedingStatus] = useState<Record<string, boolean>>({});
+  const [seedingStats, setSeedingStats] = useState<Record<string, TorrentStats | null>>({});
 
   useEffect(() => {
     loadMySharedBooks();
   }, [loadMySharedBooks]);
 
   useEffect(() => {
-    const checkSeeding = async () => {
+    const poll = () => {
+      const stats: Record<string, TorrentStats | null> = {};
       const status: Record<string, boolean> = {};
       for (const book of mySharedBooks) {
-        status[book.magnetURI] = await torrentService.isSeeding(book.magnetURI);
+        const s = torrentService.getSeedingStats(book.magnetURI);
+        stats[book.magnetURI] = s;
+        status[book.magnetURI] = !!s;
       }
+      setSeedingStats(stats);
       setSeedingStatus(status);
     };
-    checkSeeding();
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
   }, [mySharedBooks]);
 
   const seedingCount = Object.values(seedingStatus).filter(Boolean).length;
@@ -107,6 +120,16 @@ const MySharedBooks: React.FC = () => {
                         {formatFileSize(book.fileSize)}
                       </span>
                     </div>
+                    {seeding && seedingStats[book.magnetURI] && (
+                      <div className="seeding-stats-row">
+                        <span className="seeding-stat">
+                          &#x2191; {formatSpeed(seedingStats[book.magnetURI]!.uploadSpeed)}
+                        </span>
+                        <span className="seeding-stat">
+                          {seedingStats[book.magnetURI]!.numPeers} peer{seedingStats[book.magnetURI]!.numPeers !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
                   </IonLabel>
                   <IonButton
                     slot="end"

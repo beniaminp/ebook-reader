@@ -6,7 +6,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
@@ -42,17 +41,18 @@ export async function unshareBook(docId: string): Promise<void> {
 export async function getMySharedBooks(userId: string): Promise<SharedBookDoc[]> {
   const q = query(
     collection(db, COLLECTION),
-    where('userId', '==', userId),
-    orderBy('sharedAt', 'desc')
+    where('userId', '==', userId)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as SharedBookDoc));
+  const books = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as SharedBookDoc));
+  return books.sort((a, b) => (b.sharedAt?.seconds ?? 0) - (a.sharedAt?.seconds ?? 0));
 }
 
 export async function getAllSharedBooks(): Promise<SharedBookDoc[]> {
-  const q = query(collection(db, COLLECTION), orderBy('sharedAt', 'desc'));
+  const q = query(collection(db, COLLECTION));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as SharedBookDoc));
+  const books = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as SharedBookDoc));
+  return books.sort((a, b) => (b.sharedAt?.seconds ?? 0) - (a.sharedAt?.seconds ?? 0));
 }
 
 export const sharingService = {
