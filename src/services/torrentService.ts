@@ -10,20 +10,28 @@ class TorrentService {
 
   private getClient(): WebTorrent.Instance {
     if (!this.client) {
-      this.client = new WebTorrent();
+      this.client = new WebTorrent({ dht: false, lsd: false } as unknown as WebTorrent.Options);
     }
     return this.client;
   }
 
   seed(fileData: ArrayBuffer, fileName: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      let settled = false;
       const client = this.getClient();
       const file = new File([fileData], fileName);
       client.seed(file as unknown as Buffer, { announce: WSS_TRACKERS }, (torrent) => {
-        resolve(torrent.magnetURI);
+        if (!settled) {
+          settled = true;
+          resolve(torrent.magnetURI);
+        }
       });
-      // Timeout after 30s
-      setTimeout(() => reject(new Error('Seeding timed out')), 30000);
+      setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('Seeding timed out'));
+        }
+      }, 30000);
     });
   }
 
@@ -32,6 +40,7 @@ class TorrentService {
     onProgress?: (progress: number) => void
   ): Promise<{ data: ArrayBuffer; fileName: string }> {
     return new Promise((resolve, reject) => {
+      let settled = false;
       const client = this.getClient();
       client.add(magnetURI, { announce: WSS_TRACKERS }, (torrent) => {
         if (onProgress) {
@@ -42,18 +51,25 @@ class TorrentService {
         torrent.on('done', () => {
           const file = torrent.files[0];
           if (!file) {
-            reject(new Error('No files in torrent'));
+            if (!settled) { settled = true; reject(new Error('No files in torrent')); }
             return;
           }
           (file as unknown as { arrayBuffer: () => Promise<ArrayBuffer> })
             .arrayBuffer()
             .then((data: ArrayBuffer) => {
-              resolve({ data, fileName: file.name });
+              if (!settled) { settled = true; resolve({ data, fileName: file.name }); }
             })
-            .catch(reject);
+            .catch((err: Error) => {
+              if (!settled) { settled = true; reject(err); }
+            });
         });
       });
-      setTimeout(() => reject(new Error('Download timed out')), 300000);
+      setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('Download timed out'));
+        }
+      }, 300000);
     });
   }
 
