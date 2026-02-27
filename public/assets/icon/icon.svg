@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90D9"/>
+      <stop offset="100%" style="stop-color:#2C5F8A"/>
+    </linearGradient>
+    <linearGradient id="bookLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F5F0E8"/>
+      <stop offset="100%" style="stop-color:#EDE6D6"/>
+    </linearGradient>
+    <linearGradient id="bookRight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#EDE6D6"/>
+      <stop offset="100%" style="stop-color:#F5F0E8"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#7EC8E3;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#4A90D9;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1a3a5c" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Subtle radial glow behind book -->
+  <ellipse cx="256" cy="260" rx="160" ry="120" fill="url(#glow)"/>
+
+  <!-- Open book group -->
+  <g filter="url(#shadow)">
+    <!-- Left page -->
+    <path d="M252 148 C252 148, 240 140, 120 150 C100 152, 88 156, 88 168 L88 340 C88 352, 100 354, 120 352 C240 344, 252 352, 252 352 Z" fill="url(#bookLeft)"/>
+
+    <!-- Right page -->
+    <path d="M260 148 C260 148, 272 140, 392 150 C412 152, 424 156, 424 168 L424 340 C424 352, 412 354, 392 352 C272 344, 260 352, 260 352 Z" fill="url(#bookRight)"/>
+
+    <!-- Book spine -->
+    <path d="M252 148 L252 352 C252 352, 256 356, 260 352 L260 148 C260 148, 256 144, 252 148 Z" fill="#D4C9B8"/>
+  </g>
+
+  <!-- Text lines on left page -->
+  <g opacity="0.3">
+    <rect x="112" y="180" width="116" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="196" width="100" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="212" width="110" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="228" width="90" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="244" width="116" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="260" width="80" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="276" width="105" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="292" width="95" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="112" y="308" width="116" height="3" rx="1.5" fill="#6B5D4F"/>
+  </g>
+
+  <!-- Text lines on right page -->
+  <g opacity="0.3">
+    <rect x="284" y="180" width="116" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="196" width="95" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="212" width="110" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="228" width="100" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="244" width="116" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="260" width="85" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="276" width="110" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="292" width="90" height="3" rx="1.5" fill="#6B5D4F"/>
+    <rect x="284" y="308" width="116" height="3" rx="1.5" fill="#6B5D4F"/>
+  </g>
+
+  <!-- Small bookmark ribbon -->
+  <path d="M370 150 L370 195 L380 185 L390 195 L390 150" fill="#E05555" opacity="0.9"/>
+</svg>

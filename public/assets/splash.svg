@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1242 2688">
+  <defs>
+    <linearGradient id="splashBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3A7BD5"/>
+      <stop offset="50%" style="stop-color:#2C5F8A"/>
+      <stop offset="100%" style="stop-color:#1E3F5C"/>
+    </linearGradient>
+    <linearGradient id="sBookLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F5F0E8"/>
+      <stop offset="100%" style="stop-color:#EDE6D6"/>
+    </linearGradient>
+    <linearGradient id="sBookRight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#EDE6D6"/>
+      <stop offset="100%" style="stop-color:#F5F0E8"/>
+    </linearGradient>
+    <linearGradient id="sGlow" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#7EC8E3;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#3A7BD5;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="sShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0a1e33" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1242" height="2688" fill="url(#splashBg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="200" cy="400" r="300" fill="rgba(255,255,255,0.03)"/>
+  <circle cx="1000" cy="2200" r="400" fill="rgba(255,255,255,0.03)"/>
+
+  <!-- Centered content group -->
+  <g transform="translate(621, 1200)">
+    <!-- Glow behind book -->
+    <ellipse cx="0" cy="20" rx="280" ry="200" fill="url(#sGlow)"/>
+
+    <!-- Open book (larger) -->
+    <g filter="url(#sShadow)" transform="scale(1.4)">
+      <!-- Left page -->
+      <path d="M-8 -130 C-8 -130, -20 -140, -180 -128 C-208 -126, -224 -120, -224 -104 L-224 120 C-224 136, -208 138, -180 136 C-20 126, -8 136, -8 136 Z" fill="url(#sBookLeft)"/>
+
+      <!-- Right page -->
+      <path d="M8 -130 C8 -130, 20 -140, 180 -128 C208 -126, 224 -120, 224 -104 L224 120 C224 136, 208 138, 180 136 C20 126, 8 136, 8 136 Z" fill="url(#sBookRight)"/>
+
+      <!-- Spine -->
+      <path d="M-8 -130 L-8 136 C-8 136, 0 142, 8 136 L8 -130 C8 -130, 0 -136, -8 -130 Z" fill="#D4C9B8"/>
+
+      <!-- Text lines left -->
+      <g opacity="0.25">
+        <rect x="-196" y="-90" width="160" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="-70" width="130" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="-50" width="150" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="-30" width="110" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="-10" width="160" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="10" width="120" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="30" width="145" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="50" width="100" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="70" width="160" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="-196" y="90" width="130" height="4" rx="2" fill="#6B5D4F"/>
+      </g>
+
+      <!-- Text lines right -->
+      <g opacity="0.25">
+        <rect x="36" y="-90" width="160" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="-70" width="120" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="-50" width="150" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="-30" width="140" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="-10" width="160" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="10" width="100" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="30" width="145" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="50" width="130" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="70" width="160" height="4" rx="2" fill="#6B5D4F"/>
+        <rect x="36" y="90" width="110" height="4" rx="2" fill="#6B5D4F"/>
+      </g>
+
+      <!-- Bookmark ribbon -->
+      <path d="M150 -128 L150 -70 L164 -82 L178 -70 L178 -128" fill="#E05555" opacity="0.9"/>
+    </g>
+  </g>
+</svg>
