@@ -17,7 +17,7 @@ import {
   IonNote,
   IonIcon,
 } from '@ionic/react';
-import { cloudOutline } from 'ionicons/icons';
+import { cloudOutline, peopleOutline } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
 
@@ -236,6 +236,28 @@ const Settings: React.FC = () => {
             <IonLabel>
               <h3>Cloud Sync</h3>
               <IonNote>Sync your reading progress, bookmarks, and highlights</IonNote>
+            </IonLabel>
+          </IonItem>
+        </IonList>
+
+        <IonList>
+          <IonListHeader>
+            <IonLabel>P2P Sharing</IonLabel>
+          </IonListHeader>
+
+          <IonItem button routerLink="/community-books" detail>
+            <IonIcon icon={peopleOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Community Books</h3>
+              <IonNote>Browse and download books shared by others</IonNote>
+            </IonLabel>
+          </IonItem>
+
+          <IonItem button routerLink="/my-shared-books" detail>
+            <IonIcon icon={peopleOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>My Shared Books</h3>
+              <IonNote>Manage books you are sharing</IonNote>
             </IonLabel>
           </IonItem>
         </IonList>

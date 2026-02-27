@@ -1,8 +1,10 @@
 /// <reference types="vitest" />
 
+import path from 'path'
 import legacy from '@vitejs/plugin-legacy'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 /**
  * Vite plugin that proxies requests to /api/cors-proxy?url=<encoded-url>
@@ -74,8 +76,20 @@ export default defineConfig({
       targets: ['defaults', 'not IE 11'],
       modernTargets: ['chrome>=87', 'firefox>=78', 'safari>=14', 'edge>=88'],
     }),
+    nodePolyfills({
+      include: ['events', 'buffer', 'process', 'util', 'stream', 'path', 'crypto'],
+      globals: { Buffer: true, global: true, process: true },
+    }),
     corsProxyPlugin(),
   ],
+  resolve: {
+    alias: {
+      'bittorrent-dht': path.resolve(__dirname, 'src/stubs/empty-module.js'),
+    },
+  },
+  optimizeDeps: {
+    include: ['webtorrent'],
+  },
   test: {
     globals: true,
     environment: 'jsdom',

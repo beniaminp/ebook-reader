@@ -44,6 +44,7 @@ import {
   chevronForwardOutline,
   homeOutline,
   refreshOutline,
+  peopleOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -542,6 +543,23 @@ const OpdsCatalogPage: React.FC = () => {
             </IonButton>
           </IonItem>
         ))}
+      </IonList>
+
+      <IonList>
+        <IonItem button routerLink="/community-books" detail>
+          <IonIcon icon={peopleOutline} slot="start" color="tertiary" />
+          <IonLabel>
+            <h2>Community Books</h2>
+            <p>Browse books shared via P2P</p>
+          </IonLabel>
+        </IonItem>
+        <IonItem button routerLink="/my-shared-books" detail>
+          <IonIcon icon={peopleOutline} slot="start" color="tertiary" />
+          <IonLabel>
+            <h2>My Shared Books</h2>
+            <p>Manage your P2P shared books</p>
+          </IonLabel>
+        </IonItem>
       </IonList>
 
       {catalogs.length === 0 && (

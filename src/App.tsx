@@ -19,7 +19,10 @@ import CalibreWebSettings from './pages/CalibreWebSettings';
 import Statistics from './pages/Statistics/Statistics';
 import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
 import CloudSyncSettings from './pages/CloudSyncSettings/CloudSyncSettings';
+import CommunityBooks from './pages/CommunityBooks/CommunityBooks';
+import MySharedBooks from './pages/MySharedBooks/MySharedBooks';
 import { useThemeStore } from './stores/useThemeStore';
+import { useSharingStore } from './stores/useSharingStore';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -63,6 +66,11 @@ const AppTabs: React.FC = () => {
     loadCustomFonts();
   }, [loadCustomFonts]);
 
+  useEffect(() => {
+    // Resume seeding shared books on app startup
+    useSharingStore.getState().resumeSeeding();
+  }, []);
+
   return (
     <IonTabs>
       <IonRouterOutlet>
@@ -86,6 +94,12 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/cloud-sync-settings">
           <CloudSyncSettings />
+        </Route>
+        <Route exact path="/community-books">
+          <CommunityBooks />
+        </Route>
+        <Route exact path="/my-shared-books">
+          <MySharedBooks />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

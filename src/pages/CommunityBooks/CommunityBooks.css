@@ -1,0 +1,56 @@
+.community-books-list {
+  padding-bottom: 16px;
+}
+
+.community-book-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.community-book-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.community-book-size {
+  font-size: 0.8em;
+  color: var(--ion-color-medium);
+}
+
+.community-book-time {
+  font-size: 0.8em;
+  color: var(--ion-color-medium);
+}
+
+.community-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  text-align: center;
+  color: var(--ion-color-medium);
+}
+
+.community-empty ion-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.download-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--ion-color-light);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: var(--ion-color-primary);
+  transition: width 0.3s ease;
+}

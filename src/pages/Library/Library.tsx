@@ -53,6 +53,7 @@ import {
   cloudDownloadOutline,
   checkmarkCircleOutline,
   libraryOutline,
+  shareSocialOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -63,6 +64,7 @@ import { chmService } from '../../services/chmService';
 import { comicService } from '../../services/comicService';
 import { docxService } from '../../services/docxService';
 import { odtService } from '../../services/odtService';
+import { useSharingStore } from '../../stores/useSharingStore';
 import type { Book, Collection } from '../../types/index';
 import {
   useLibraryPrefsStore,
@@ -86,6 +88,7 @@ const Library: React.FC = () => {
   const [fileInputKey, setFileInputKey] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState<string>('danger');
+  const { shareBook: shareBookP2P, isSharingBook } = useSharingStore();
 
   // Advanced filter state
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -1420,6 +1423,26 @@ const Library: React.FC = () => {
             icon: libraryOutline,
             handler: () => {
               if (selectedBook) openShelfAssign(selectedBook);
+            },
+          },
+          {
+            text: 'Share to Community',
+            icon: shareSocialOutline,
+            handler: () => {
+              if (selectedBook && !isSharingBook) {
+                shareBookP2P({
+                  id: selectedBook.id,
+                  title: selectedBook.title,
+                  author: selectedBook.author,
+                  format: selectedBook.format,
+                }).then(() => {
+                  setToastColor('success');
+                  setToastMessage(`"${selectedBook.title}" shared to community`);
+                }).catch(() => {
+                  setToastColor('danger');
+                  setToastMessage('Failed to share book');
+                });
+              }
             },
           },
           {
