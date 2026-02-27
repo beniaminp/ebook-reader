@@ -51,6 +51,7 @@ interface DbHighlight {
 interface WebBook extends Book {
   createdAt: number;
   updatedAt: number;
+  readingLocation?: string;
 }
 
 interface WebCollection extends Collection {
@@ -584,6 +585,7 @@ export async function upsertReadingProgress(
     if (book) {
       book.currentPage = progress.currentPage;
       book.progress = progress.percentage / 100;
+      book.readingLocation = progress.location;
       book.updatedAt = Date.now();
       saveWebData();
     }
@@ -638,6 +640,7 @@ export async function getReadingProgress(bookId: string): Promise<ReadingProgres
         currentPage: book.currentPage,
         totalPages: book.totalPages,
         percentage: book.progress,
+        location: book.readingLocation,
         lastReadAt: Math.floor(new Date(book.lastRead).getTime() / 1000),
         createdAt: Math.floor(new Date(book.dateAdded).getTime() / 1000),
         updatedAt: Math.floor(Date.now() / 1000),

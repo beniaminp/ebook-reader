@@ -87,6 +87,11 @@ export default defineConfig({
       'bittorrent-dht': path.resolve(__dirname, 'src/stubs/empty-module.js'),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['@capacitor-community/native-biometric'],
+    },
+  },
   optimizeDeps: {
     include: ['webtorrent'],
   },

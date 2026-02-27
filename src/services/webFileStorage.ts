@@ -88,4 +88,23 @@ export async function deleteFile(bookId: string): Promise<void> {
   });
 }
 
-export const webFileStorage = { storeFile, storeTextFile, getFile, deleteFile };
+/**
+ * Get all bookId keys stored in IndexedDB.
+ */
+export async function getAllKeys(): Promise<string[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const request = tx.objectStore(STORE_NAME).getAllKeys();
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result as string[]);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
+}
+
+export const webFileStorage = { storeFile, storeTextFile, getFile, deleteFile, getAllKeys };

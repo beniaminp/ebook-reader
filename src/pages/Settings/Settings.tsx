@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -16,10 +16,13 @@ import {
   IonButton,
   IonNote,
   IonIcon,
+  IonSpinner,
+  IonToast,
 } from '@ionic/react';
-import { cloudOutline, peopleOutline } from 'ionicons/icons';
+import { cloudOutline, peopleOutline, downloadOutline, pushOutline } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
+import { downloadExport, importAllData } from '../../services/localExportService';
 
 const Settings: React.FC = () => {
   const {
@@ -45,6 +48,44 @@ const Settings: React.FC = () => {
     setAutoScrollSpeed,
     resetSettings,
   } = useThemeStore();
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await downloadExport();
+      setToastMessage('Backup exported successfully!');
+    } catch (err) {
+      setToastMessage(`Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const result = await importAllData(file);
+      if (result.success) {
+        setToastMessage(
+          `Imported: ${result.booksAdded} books added, ${result.booksUpdated} updated, ${result.filesRestored} files restored`
+        );
+      } else {
+        setToastMessage(`Import completed with errors: ${result.errors.join(', ')}`);
+      }
+    } catch (err) {
+      setToastMessage(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <IonPage>
@@ -242,6 +283,51 @@ const Settings: React.FC = () => {
 
         <IonList>
           <IonListHeader>
+            <IonLabel>Data & Backup</IonLabel>
+          </IonListHeader>
+
+          <IonItem>
+            <IonIcon icon={downloadOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Export All Data</h3>
+              <IonNote>Download books, progress, and settings as a ZIP file</IonNote>
+            </IonLabel>
+            <IonButton
+              slot="end"
+              fill="outline"
+              onClick={handleExport}
+              disabled={isExporting || isImporting}
+            >
+              {isExporting ? <IonSpinner name="crescent" /> : 'Export'}
+            </IonButton>
+          </IonItem>
+
+          <IonItem>
+            <IonIcon icon={pushOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Import Data</h3>
+              <IonNote>Restore from a previously exported backup ZIP</IonNote>
+            </IonLabel>
+            <IonButton
+              slot="end"
+              fill="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isExporting || isImporting}
+            >
+              {isImporting ? <IonSpinner name="crescent" /> : 'Import'}
+            </IonButton>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip"
+              style={{ display: 'none' }}
+              onChange={handleImport}
+            />
+          </IonItem>
+        </IonList>
+
+        <IonList>
+          <IonListHeader>
             <IonLabel>P2P Sharing</IonLabel>
           </IonListHeader>
 
@@ -267,6 +353,13 @@ const Settings: React.FC = () => {
             Reset to Defaults
           </IonButton>
         </div>
+
+        <IonToast
+          isOpen={!!toastMessage}
+          message={toastMessage}
+          duration={4000}
+          onDidDismiss={() => setToastMessage('')}
+        />
       </IonContent>
     </IonPage>
   );
