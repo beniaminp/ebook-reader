@@ -67,8 +67,10 @@ const AppTabs: React.FC = () => {
   }, [loadCustomFonts]);
 
   useEffect(() => {
-    // Resume seeding shared books on app startup
-    useSharingStore.getState().resumeSeeding();
+    // Resume seeding shared books on app startup (fire-and-forget, don't block UI)
+    useSharingStore.getState().resumeSeeding().catch((err) => {
+      console.error('Failed to resume seeding:', err);
+    });
   }, []);
 
   return (

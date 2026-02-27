@@ -65,9 +65,17 @@ const CommunityBooks: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadCommunityBooks();
+    let cancelled = false;
+    setIsLoading(true);
+    loadCommunityBooks()
+      .catch((err) => console.error('Failed to load community books:', err))
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [loadCommunityBooks]);
 
   const filteredBooks = communityBooks.filter(
@@ -115,7 +123,14 @@ const CommunityBooks: React.FC = () => {
           <IonRefresherContent />
         </IonRefresher>
 
-        {filteredBooks.length === 0 ? (
+        {isLoading ? (
+          <div className="community-empty">
+            <IonSpinner name="crescent" />
+            <IonText>
+              <p>Loading community books...</p>
+            </IonText>
+          </div>
+        ) : filteredBooks.length === 0 ? (
           <div className="community-empty">
             <IonIcon icon={peopleOutline} />
             <IonText>
@@ -195,6 +210,7 @@ const CommunityBooks: React.FC = () => {
           message={error ?? ''}
           duration={3000}
           color="danger"
+          onDidDismiss={() => useSharingStore.setState({ error: null })}
         />
       </IonContent>
     </IonPage>
