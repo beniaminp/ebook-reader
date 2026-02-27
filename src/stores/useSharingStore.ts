@@ -100,7 +100,7 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         id: bookId,
         title: doc.title,
         author: doc.author,
-        filePath: fileName,
+        filePath: `indexeddb://${bookId}/${fileName}`,
         format: doc.format as 'epub' | 'pdf' | 'txt' | 'html' | 'htm' | 'md' | 'markdown' | 'mobi' | 'azw3' | 'fb2' | 'cbz' | 'cbr' | 'chm' | 'docx' | 'odt',
         totalPages: 0,
         currentPage: 0,
