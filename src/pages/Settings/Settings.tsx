@@ -5,8 +5,6 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
-  IonList,
-  IonListHeader,
   IonItem,
   IonLabel,
   IonToggle,
@@ -19,10 +17,42 @@ import {
   IonSpinner,
   IonToast,
 } from '@ionic/react';
-import { cloudOutline, peopleOutline, downloadOutline, pushOutline } from 'ionicons/icons';
+import {
+  cloudOutline,
+  peopleOutline,
+  downloadOutline,
+  pushOutline,
+  colorPaletteOutline,
+  textOutline,
+  eyeOutline,
+  libraryOutline,
+  syncOutline,
+  shieldCheckmarkOutline,
+  shareSocialOutline,
+  statsChartOutline,
+  serverOutline,
+  refreshOutline,
+  chevronForwardOutline,
+  speedometerOutline,
+} from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
 import { downloadExport, importAllData } from '../../services/localExportService';
+import './Settings.css';
+
+const THEME_OPTIONS: { value: ThemeType; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'sepia', label: 'Sepia' },
+  { value: 'eye-comfort', label: 'Comfort' },
+  { value: 'night', label: 'Night' },
+  { value: 'invert', label: 'Invert' },
+  { value: 'ocean', label: 'Ocean' },
+  { value: 'forest', label: 'Forest' },
+  { value: 'sunset', label: 'Sunset' },
+  { value: 'paper', label: 'Paper' },
+  { value: 'slate', label: 'Slate' },
+];
 
 const Settings: React.FC = () => {
   const {
@@ -87,8 +117,10 @@ const Settings: React.FC = () => {
     }
   };
 
+  const fontPreviewClass = `font-preview font-preview--${fontFamily}`;
+
   return (
-    <IonPage>
+    <IonPage className="settings-page">
       <IonHeader>
         <IonToolbar>
           <IonTitle>Settings</IonTitle>
@@ -101,37 +133,41 @@ const Settings: React.FC = () => {
           </IonToolbar>
         </IonHeader>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>Appearance</IonLabel>
-          </IonListHeader>
+        {/* ─── Appearance ──────────────────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--blue">
+              <IonIcon icon={colorPaletteOutline} />
+            </div>
+            <span className="settings-section-title">Appearance</span>
+          </div>
 
-          <IonItem>
-            <IonLabel>Theme</IonLabel>
-            <IonSelect
-              value={theme}
-              onIonChange={(e) => setTheme(e.detail.value as ThemeType)}
-              slot="end"
-            >
-              <IonSelectOption value="light">Light</IonSelectOption>
-              <IonSelectOption value="dark">Dark</IonSelectOption>
-              <IonSelectOption value="sepia">Sepia</IonSelectOption>
-              <IonSelectOption value="eye-comfort">Eye Comfort</IonSelectOption>
-              <IonSelectOption value="night">Night</IonSelectOption>
-              <IonSelectOption value="invert">Inverted</IonSelectOption>
-              <IonSelectOption value="ocean">Ocean</IonSelectOption>
-              <IonSelectOption value="forest">Forest</IonSelectOption>
-              <IonSelectOption value="sunset">Sunset</IonSelectOption>
-              <IonSelectOption value="paper">Paper</IonSelectOption>
-              <IonSelectOption value="slate">Slate</IonSelectOption>
-            </IonSelect>
-          </IonItem>
-        </IonList>
+          <div className="theme-dots">
+            {THEME_OPTIONS.map((t) => (
+              <div key={t.value} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div
+                  className={`theme-dot theme-dot--${t.value}${theme === t.value ? ' theme-dot--active' : ''}`}
+                  onClick={() => setTheme(t.value)}
+                  title={t.label}
+                />
+                <span className="theme-dot-label">{t.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>Typography</IonLabel>
-          </IonListHeader>
+        {/* ─── Typography ──────────────────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--purple">
+              <IonIcon icon={textOutline} />
+            </div>
+            <span className="settings-section-title">Typography</span>
+          </div>
+
+          <div className={fontPreviewClass} style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}`, textAlign: textAlign }}>
+            The quick brown fox jumps over the lazy dog.
+          </div>
 
           <IonItem>
             <IonLabel>Font</IonLabel>
@@ -148,33 +184,35 @@ const Settings: React.FC = () => {
           </IonItem>
 
           <IonItem>
-            <IonLabel>Font Size: {fontSize}px</IonLabel>
-            <IonRange
-              min={12}
-              max={32}
-              step={1}
-              value={fontSize}
-              onIonChange={(e) => setFontSize(e.detail.value as number)}
-              slot="end"
-              style={{ width: '60%' }}
-            />
+            <IonLabel>Font Size</IonLabel>
+            <div className="settings-range-row" slot="end" style={{ width: '55%' }}>
+              <IonRange
+                min={12}
+                max={32}
+                step={1}
+                value={fontSize}
+                onIonChange={(e) => setFontSize(e.detail.value as number)}
+              />
+              <span className="settings-range-value">{fontSize}px</span>
+            </div>
           </IonItem>
 
           <IonItem>
-            <IonLabel>Line Height: {lineHeight.toFixed(1)}</IonLabel>
-            <IonRange
-              min={1}
-              max={2.5}
-              step={0.1}
-              value={lineHeight}
-              onIonChange={(e) => setLineHeight(e.detail.value as number)}
-              slot="end"
-              style={{ width: '60%' }}
-            />
+            <IonLabel>Line Height</IonLabel>
+            <div className="settings-range-row" slot="end" style={{ width: '55%' }}>
+              <IonRange
+                min={1}
+                max={2.5}
+                step={0.1}
+                value={lineHeight}
+                onIonChange={(e) => setLineHeight(e.detail.value as number)}
+              />
+              <span className="settings-range-value">{lineHeight.toFixed(1)}</span>
+            </div>
           </IonItem>
 
           <IonItem>
-            <IonLabel>Text Alignment</IonLabel>
+            <IonLabel>Alignment</IonLabel>
             <IonSelect
               value={textAlign}
               onIonChange={(e) => setTextAlign(e.detail.value as TextAlignment)}
@@ -186,12 +224,16 @@ const Settings: React.FC = () => {
               <IonSelectOption value="right">Right</IonSelectOption>
             </IonSelect>
           </IonItem>
-        </IonList>
+        </div>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>Reading Features</IonLabel>
-          </IonListHeader>
+        {/* ─── Reading Features ────────────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--orange">
+              <IonIcon icon={eyeOutline} />
+            </div>
+            <span className="settings-section-title">Reading Features</span>
+          </div>
 
           <IonItem>
             <IonLabel>
@@ -227,76 +269,113 @@ const Settings: React.FC = () => {
           </IonItem>
 
           <IonItem>
-            <IonLabel>Auto Scroll</IonLabel>
+            <IonLabel>
+              <h3>Auto Scroll</h3>
+              <IonNote>Automatically scroll while reading</IonNote>
+            </IonLabel>
             <IonToggle checked={autoScroll} onIonChange={(e) => setAutoScroll(e.detail.checked)} />
           </IonItem>
 
           {autoScroll && (
             <IonItem>
-              <IonLabel>Scroll Speed: {autoScrollSpeed}</IonLabel>
-              <IonRange
-                min={1}
-                max={10}
-                step={1}
-                value={autoScrollSpeed}
-                onIonChange={(e) => setAutoScrollSpeed(e.detail.value as number)}
-                slot="end"
-                style={{ width: '60%' }}
-              />
+              <IonIcon icon={speedometerOutline} className="settings-item-icon" />
+              <IonLabel>Scroll Speed</IonLabel>
+              <div className="settings-range-row" slot="end" style={{ width: '55%' }}>
+                <IonRange
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={autoScrollSpeed}
+                  onIonChange={(e) => setAutoScrollSpeed(e.detail.value as number)}
+                />
+                <span className="settings-range-value">{autoScrollSpeed}</span>
+              </div>
             </IonItem>
           )}
-        </IonList>
+        </div>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>Library</IonLabel>
-          </IonListHeader>
+        {/* ─── Library & Sync ──────────────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--green">
+              <IonIcon icon={libraryOutline} />
+            </div>
+            <span className="settings-section-title">Library & Sync</span>
+          </div>
 
-          <IonItem button routerLink="/calibre-web-settings" detail>
+          <IonItem button routerLink="/calibre-web-settings" detail className="settings-nav-item">
+            <IonIcon icon={serverOutline} slot="start" color="primary" />
             <IonLabel>
               <h3>Calibre-Web</h3>
               <IonNote>Connect to your Calibre-Web server</IonNote>
             </IonLabel>
           </IonItem>
 
-          <IonItem button routerLink="/statistics" detail>
+          <IonItem button routerLink="/cloud-sync-settings" detail className="settings-nav-item">
+            <IonIcon icon={cloudOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Cloud Sync</h3>
+              <IonNote>Sync progress, bookmarks, and highlights</IonNote>
+            </IonLabel>
+          </IonItem>
+
+          <IonItem button routerLink="/statistics" detail className="settings-nav-item">
+            <IonIcon icon={statsChartOutline} slot="start" color="primary" />
             <IonLabel>
               <h3>Reading Statistics</h3>
               <IonNote>View your reading history and progress</IonNote>
             </IonLabel>
           </IonItem>
-        </IonList>
+        </div>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>Cloud Sync</IonLabel>
-          </IonListHeader>
+        {/* ─── P2P Sharing ─────────────────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--teal">
+              <IonIcon icon={peopleOutline} />
+            </div>
+            <span className="settings-section-title">P2P Sharing</span>
+          </div>
 
-          <IonItem button routerLink="/cloud-sync-settings" detail>
-            <IonIcon icon={cloudOutline} slot="start" color="primary" />
+          <IonItem button routerLink="/community-books" detail className="settings-nav-item">
+            <IonIcon icon={peopleOutline} slot="start" color="tertiary" />
             <IonLabel>
-              <h3>Cloud Sync</h3>
-              <IonNote>Sync your reading progress, bookmarks, and highlights</IonNote>
+              <h3>Community Books</h3>
+              <IonNote>Browse and download books shared by others</IonNote>
             </IonLabel>
           </IonItem>
-        </IonList>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>Data & Backup</IonLabel>
-          </IonListHeader>
+          <IonItem button routerLink="/my-shared-books" detail className="settings-nav-item">
+            <IonIcon icon={shareSocialOutline} slot="start" color="tertiary" />
+            <IonLabel>
+              <h3>My Shared Books</h3>
+              <IonNote>Manage books you are sharing</IonNote>
+            </IonLabel>
+          </IonItem>
+        </div>
+
+        {/* ─── Data & Backup ───────────────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--indigo">
+              <IonIcon icon={shieldCheckmarkOutline} />
+            </div>
+            <span className="settings-section-title">Data & Backup</span>
+          </div>
 
           <IonItem>
             <IonIcon icon={downloadOutline} slot="start" color="primary" />
             <IonLabel>
               <h3>Export All Data</h3>
-              <IonNote>Download books, progress, and settings as a ZIP file</IonNote>
+              <IonNote>Books, progress, and settings as ZIP</IonNote>
             </IonLabel>
             <IonButton
               slot="end"
               fill="outline"
+              size="small"
               onClick={handleExport}
               disabled={isExporting || isImporting}
+              style={{ '--border-radius': '8px' }}
             >
               {isExporting ? <IonSpinner name="crescent" /> : 'Export'}
             </IonButton>
@@ -306,13 +385,15 @@ const Settings: React.FC = () => {
             <IonIcon icon={pushOutline} slot="start" color="primary" />
             <IonLabel>
               <h3>Import Data</h3>
-              <IonNote>Restore from a previously exported backup ZIP</IonNote>
+              <IonNote>Restore from a backup ZIP file</IonNote>
             </IonLabel>
             <IonButton
               slot="end"
               fill="outline"
+              size="small"
               onClick={() => fileInputRef.current?.click()}
               disabled={isExporting || isImporting}
+              style={{ '--border-radius': '8px' }}
             >
               {isImporting ? <IonSpinner name="crescent" /> : 'Import'}
             </IonButton>
@@ -324,34 +405,15 @@ const Settings: React.FC = () => {
               onChange={handleImport}
             />
           </IonItem>
-        </IonList>
+        </div>
 
-        <IonList>
-          <IonListHeader>
-            <IonLabel>P2P Sharing</IonLabel>
-          </IonListHeader>
-
-          <IonItem button routerLink="/community-books" detail>
-            <IonIcon icon={peopleOutline} slot="start" color="primary" />
-            <IonLabel>
-              <h3>Community Books</h3>
-              <IonNote>Browse and download books shared by others</IonNote>
-            </IonLabel>
-          </IonItem>
-
-          <IonItem button routerLink="/my-shared-books" detail>
-            <IonIcon icon={peopleOutline} slot="start" color="primary" />
-            <IonLabel>
-              <h3>My Shared Books</h3>
-              <IonNote>Manage books you are sharing</IonNote>
-            </IonLabel>
-          </IonItem>
-        </IonList>
-
-        <div style={{ padding: '16px' }}>
+        {/* ─── Footer ──────────────────────────────────── */}
+        <div className="settings-footer">
           <IonButton expand="block" fill="outline" color="medium" onClick={resetSettings}>
+            <IonIcon icon={refreshOutline} slot="start" />
             Reset to Defaults
           </IonButton>
+          <p className="settings-version">Ebook Reader v1.0</p>
         </div>
 
         <IonToast

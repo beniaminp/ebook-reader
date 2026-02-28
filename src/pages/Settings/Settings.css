@@ -1,0 +1,243 @@
+/* Settings Page Styles */
+
+.settings-page {
+  --background: var(--ion-background-color, #f5f5f5);
+}
+
+.settings-page ion-toolbar {
+  --background: var(--ion-toolbar-background, var(--ion-color-primary));
+  --color: var(--ion-toolbar-color, #fff);
+}
+
+/* ─── Section ────────────────────────────────────────── */
+.settings-section {
+  margin: 12px 16px;
+  background: var(--ion-card-background, #fff);
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 6px;
+}
+
+.settings-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.settings-section-icon--blue { background: linear-gradient(135deg, #4a90d9, #357abd); }
+.settings-section-icon--purple { background: linear-gradient(135deg, #7e57c2, #5e35b1); }
+.settings-section-icon--orange { background: linear-gradient(135deg, #fb8c00, #ef6c00); }
+.settings-section-icon--green { background: linear-gradient(135deg, #43a047, #2e7d32); }
+.settings-section-icon--teal { background: linear-gradient(135deg, #26a69a, #00897b); }
+.settings-section-icon--red { background: linear-gradient(135deg, #ef5350, #d32f2f); }
+.settings-section-icon--indigo { background: linear-gradient(135deg, #5c6bc0, #3949ab); }
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ion-color-medium);
+}
+
+/* ─── Items ──────────────────────────────────────────── */
+.settings-section ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 48px;
+  font-size: 15px;
+}
+
+.settings-section ion-item:last-child {
+  --border-style: none;
+}
+
+.settings-section ion-item ion-label h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.settings-section ion-item ion-note {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.settings-section ion-item ion-range {
+  --bar-height: 3px;
+  --knob-size: 20px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.settings-section ion-item ion-select {
+  font-size: 14px;
+  --placeholder-opacity: 0.6;
+}
+
+.settings-section ion-item ion-toggle {
+  --track-background: #ccc;
+}
+
+/* Item with icon in front */
+.settings-item-icon {
+  font-size: 20px;
+  margin-right: 12px;
+  color: var(--ion-color-primary);
+}
+
+/* ─── Theme Selector Dots ────────────────────────────── */
+.theme-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 16px 14px;
+}
+
+.theme-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.theme-dot:active {
+  transform: scale(0.9);
+}
+
+.theme-dot--active {
+  border-color: var(--ion-color-primary);
+  box-shadow: 0 0 0 2px var(--ion-color-primary);
+}
+
+.theme-dot--active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ion-color-primary);
+}
+
+.theme-dot--light { background: #ffffff; }
+.theme-dot--dark { background: #1a1a1a; }
+.theme-dot--sepia { background: #f4ecd8; }
+.theme-dot--eye-comfort { background: #fdf6e3; }
+.theme-dot--night { background: #0d1117; }
+.theme-dot--invert { background: #000000; }
+.theme-dot--ocean { background: #1a2332; }
+.theme-dot--forest { background: #1a2e1a; }
+.theme-dot--sunset { background: #2d1b2e; }
+.theme-dot--paper { background: #f5f0e8; }
+.theme-dot--slate { background: #2d3748; }
+
+.theme-dot-label {
+  text-align: center;
+  font-size: 9px;
+  color: var(--ion-color-medium);
+  margin-top: 2px;
+}
+
+/* ─── Font Preview ───────────────────────────────────── */
+.font-preview {
+  padding: 10px 16px;
+  margin: 0 16px 8px;
+  border-radius: 8px;
+  background: var(--ion-color-light);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ion-text-color);
+  text-align: left;
+}
+
+.font-preview--serif { font-family: Georgia, 'Times New Roman', serif; }
+.font-preview--sans-serif { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+.font-preview--mono { font-family: 'Courier New', Courier, monospace; }
+.font-preview--literata { font-family: 'Literata', Georgia, serif; }
+
+/* ─── Range with value ───────────────────────────────── */
+.settings-range-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.settings-range-row ion-range {
+  flex: 1;
+}
+
+.settings-range-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-primary);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── Nav items ──────────────────────────────────────── */
+.settings-nav-item {
+  cursor: pointer;
+}
+
+.settings-nav-item ion-icon[slot="start"] {
+  font-size: 22px;
+  margin-right: 12px;
+}
+
+/* ─── Footer ─────────────────────────────────────────── */
+.settings-footer {
+  padding: 8px 16px 32px;
+  text-align: center;
+}
+
+.settings-footer ion-button {
+  --border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.settings-version {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  opacity: 0.6;
+}
+
+/* ─── Dark Mode ──────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .settings-page {
+    --background: #1a1a1a;
+  }
+
+  .settings-section {
+    background: #252525;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .font-preview {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .theme-dot {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
