@@ -1,11 +1,12 @@
 /**
- * TextSelectionMenu - Floating menu that appears on text selection
- * Provides quick actions like Translate, Define, Highlight
+ * TextSelectionMenu - Bottom action bar that appears on text selection
+ * Shows as a fixed bottom bar on mobile to avoid being covered by
+ * Android's native selection toolbar which renders above the WebView.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { IonButton, IonButtons, IonIcon } from '@ionic/react';
+import { IonButton, IonIcon } from '@ionic/react';
 import { language, bookmark, glasses, copy, create } from 'ionicons/icons';
 import { useTranslationStore } from '../../stores/useTranslationStore';
 import './TextSelectionMenu.css';
@@ -27,148 +28,145 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   onAddNote,
   enabledActions = ['translate', 'highlight', 'copy'],
 }) => {
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [visible, setVisible] = useState(false);
   const [selectedText, setSelectedText] = useState<string>('');
+  const iframeDocRef = useRef<Document | null>(null);
+  const observerRef = useRef<MutationObserver | null>(null);
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
-  // Handle text selection (checks both main document and foliate iframe)
-  useEffect(() => {
-    const getSelectionFromIframe = (): { text: string; rect: DOMRect } | null => {
+  // Get selection from foliate iframe
+  const getIframeSelection = useCallback((): string => {
+    try {
       const foliateView = document.querySelector('foliate-view');
-      if (!foliateView) return null;
+      if (!foliateView) return '';
       const iframe = foliateView.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
-      if (!iframe?.contentWindow) return null;
+      if (!iframe?.contentWindow) return '';
       const sel = iframe.contentWindow.getSelection();
-      if (!sel || sel.isCollapsed) return null;
-      const text = sel.toString().trim();
-      if (!text) return null;
-      const range = sel.getRangeAt(0);
-      const iframeRect = iframe.getBoundingClientRect();
-      const rangeRect = range.getBoundingClientRect();
-      // Translate iframe-relative coordinates to viewport coordinates
-      return {
-        text,
-        rect: new DOMRect(
-          rangeRect.left + iframeRect.left,
-          rangeRect.top + iframeRect.top,
-          rangeRect.width,
-          rangeRect.height
-        ),
-      };
-    };
-
-    const handleSelection = () => {
-      // First try main document selection
-      const selection = window.getSelection();
-      let text = selection?.toString().trim() || '';
-      let rect: DOMRect | null = null;
-
-      if (text && text.length > 0) {
-        const range = selection?.getRangeAt(0);
-        if (range) {
-          rect = range.getBoundingClientRect();
-        }
-      }
-
-      // If no main document selection, try foliate iframe
-      if (!text) {
-        const iframeSel = getSelectionFromIframe();
-        if (iframeSel) {
-          text = iframeSel.text;
-          rect = iframeSel.rect;
-        }
-      }
-
-      if (text && rect) {
-        setPosition({
-          x: rect.left + rect.width / 2,
-          y: rect.top,
-        });
-        setSelectedText(text);
-      } else {
-        setPosition(null);
-        setSelectedText('');
-      }
-    };
-
-    // Debounce the selection handler to avoid flickering
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const debouncedHandler = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleSelection, 100);
-    };
-
-    // Suppress native Android context menu so our custom menu works
-    const preventContextMenu = (e: Event) => e.preventDefault();
-
-    document.addEventListener('selectionchange', debouncedHandler);
-    document.addEventListener('mouseup', debouncedHandler);
-    document.addEventListener('touchend', debouncedHandler);
-    document.addEventListener('contextmenu', preventContextMenu);
-
-    // Also listen inside foliate iframe for selection events
-    let iframeDoc: Document | null = null;
-    const attachIframeListeners = () => {
-      const foliateView = document.querySelector('foliate-view');
-      const iframe = foliateView?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
-      iframeDoc = iframe?.contentDocument ?? null;
-      if (iframeDoc) {
-        iframeDoc.addEventListener('selectionchange', debouncedHandler);
-        iframeDoc.addEventListener('mouseup', debouncedHandler);
-        iframeDoc.addEventListener('touchend', debouncedHandler);
-        iframeDoc.addEventListener('contextmenu', preventContextMenu);
-      }
-    };
-    // Delay to wait for iframe to be ready
-    const iframeTimer = setTimeout(attachIframeListeners, 1000);
-
-    return () => {
-      document.removeEventListener('selectionchange', debouncedHandler);
-      document.removeEventListener('mouseup', debouncedHandler);
-      document.removeEventListener('touchend', debouncedHandler);
-      document.removeEventListener('contextmenu', preventContextMenu);
-      if (iframeDoc) {
-        iframeDoc.removeEventListener('selectionchange', debouncedHandler);
-        iframeDoc.removeEventListener('mouseup', debouncedHandler);
-        iframeDoc.removeEventListener('touchend', debouncedHandler);
-        iframeDoc.removeEventListener('contextmenu', preventContextMenu);
-      }
-      clearTimeout(iframeTimer);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
+      if (!sel || sel.isCollapsed) return '';
+      return sel.toString().trim();
+    } catch {
+      return '';
+    }
   }, []);
 
-  // Hide menu on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (position !== null) {
-        setPosition(null);
-      }
-    };
+  // Check for text selection in both main document and iframe
+  const checkSelection = useCallback(() => {
+    // Check main document
+    const mainSel = window.getSelection();
+    let text = mainSel?.toString().trim() || '';
 
-    window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
-  }, [position]);
+    // If no main selection, check iframe
+    if (!text) {
+      text = getIframeSelection();
+    }
+
+    if (text && text.length > 0) {
+      setSelectedText(text);
+      setVisible(true);
+    } else {
+      setVisible(false);
+      setSelectedText('');
+    }
+  }, [getIframeSelection]);
+
+  // Attach listeners to iframe document (for EPUB content)
+  const attachIframeListeners = useCallback(() => {
+    // Clean up old listeners
+    if (iframeDocRef.current) {
+      iframeDocRef.current.removeEventListener('selectionchange', checkSelection);
+      iframeDocRef.current.removeEventListener('mouseup', checkSelection);
+      iframeDocRef.current.removeEventListener('touchend', checkSelection);
+    }
+
+    const foliateView = document.querySelector('foliate-view');
+    if (!foliateView?.shadowRoot) return;
+
+    const iframe = foliateView.shadowRoot.querySelector('iframe') as HTMLIFrameElement | null;
+    const doc = iframe?.contentDocument;
+    if (!doc) return;
+
+    iframeDocRef.current = doc;
+    doc.addEventListener('selectionchange', checkSelection);
+    doc.addEventListener('mouseup', checkSelection);
+    doc.addEventListener('touchend', checkSelection);
+  }, [checkSelection]);
+
+  useEffect(() => {
+    // Listen on main document
+    document.addEventListener('selectionchange', checkSelection);
+    document.addEventListener('mouseup', checkSelection);
+    document.addEventListener('touchend', checkSelection);
+
+    // Try attaching to iframe immediately and after delays
+    // (iframe may not be ready yet or may change on page turns)
+    attachIframeListeners();
+    const t1 = setTimeout(attachIframeListeners, 1000);
+    const t2 = setTimeout(attachIframeListeners, 3000);
+
+    // Watch for iframe changes via MutationObserver on the foliate-view shadow root
+    const setupObserver = () => {
+      const foliateView = document.querySelector('foliate-view');
+      if (!foliateView?.shadowRoot) return;
+
+      observerRef.current = new MutationObserver(() => {
+        // Re-attach when iframe changes (page turn)
+        setTimeout(attachIframeListeners, 100);
+      });
+      observerRef.current.observe(foliateView.shadowRoot, {
+        childList: true,
+        subtree: true,
+      });
+    };
+    setupObserver();
+    const t3 = setTimeout(setupObserver, 2000);
+
+    return () => {
+      document.removeEventListener('selectionchange', checkSelection);
+      document.removeEventListener('mouseup', checkSelection);
+      document.removeEventListener('touchend', checkSelection);
+
+      if (iframeDocRef.current) {
+        iframeDocRef.current.removeEventListener('selectionchange', checkSelection);
+        iframeDocRef.current.removeEventListener('mouseup', checkSelection);
+        iframeDocRef.current.removeEventListener('touchend', checkSelection);
+      }
+
+      observerRef.current?.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [checkSelection, attachIframeListeners]);
+
+  const clearSelection = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    try {
+      const foliateView = document.querySelector('foliate-view');
+      const iframe = foliateView?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
+      iframe?.contentWindow?.getSelection()?.removeAllRanges();
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const handleTranslate = useCallback(() => {
     openTranslationPanel(selectedText);
     onTranslate?.(selectedText);
-    setPosition(null);
-    window.getSelection()?.removeAllRanges();
-  }, [selectedText, onTranslate, openTranslationPanel]);
+    setVisible(false);
+    clearSelection();
+  }, [selectedText, onTranslate, openTranslationPanel, clearSelection]);
 
   const handleDefine = useCallback(() => {
     onDefine?.(selectedText);
-    setPosition(null);
-    window.getSelection()?.removeAllRanges();
-  }, [selectedText, onDefine]);
+    setVisible(false);
+    clearSelection();
+  }, [selectedText, onDefine, clearSelection]);
 
   const handleHighlight = useCallback(() => {
     onHighlight?.(selectedText);
-    setPosition(null);
-    window.getSelection()?.removeAllRanges();
+    setVisible(false);
+    // Don't clear selection yet — the color picker needs it
   }, [selectedText, onHighlight]);
 
   const handleCopy = useCallback(async () => {
@@ -178,62 +176,57 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-    setPosition(null);
-    window.getSelection()?.removeAllRanges();
-  }, [selectedText, onCopy]);
+    setVisible(false);
+    clearSelection();
+  }, [selectedText, onCopy, clearSelection]);
 
   const handleAddNote = useCallback(() => {
     onAddNote?.(selectedText);
-    setPosition(null);
-    window.getSelection()?.removeAllRanges();
-  }, [selectedText, onAddNote]);
+    setVisible(false);
+    clearSelection();
+  }, [selectedText, onAddNote, clearSelection]);
 
-  // Don't render if no selection
-  if (!position || !selectedText) {
+  if (!visible || !selectedText) {
     return null;
   }
 
-  // Clamp position so the menu doesn't go off-screen
-  const menuX = Math.max(80, Math.min(position.x, window.innerWidth - 80));
-  const menuY = Math.max(50, position.y - 50);
-
-  const menuStyle: React.CSSProperties = {
-    position: 'fixed',
-    left: `${menuX}px`,
-    top: `${menuY}px`,
-    transform: 'translateX(-50%)',
-    zIndex: 9999,
-  };
-
   return createPortal(
-    <div className="text-selection-menu" style={menuStyle}>
-      <IonButtons>
-        {enabledActions.includes('translate') && (
-          <IonButton onClick={handleTranslate} color="primary" size="small">
-            <IonIcon icon={language} slot="icon-only" />
-          </IonButton>
-        )}
+    <div className="text-selection-menu">
+      <div className="text-selection-menu-preview">
+        &ldquo;{selectedText.length > 60 ? selectedText.slice(0, 60) + '...' : selectedText}&rdquo;
+      </div>
+      <div className="text-selection-menu-actions">
         {enabledActions.includes('highlight') && (
-          <IonButton onClick={handleHighlight} color="warning" size="small">
-            <IonIcon icon={bookmark} slot="icon-only" />
-          </IonButton>
-        )}
-        {enabledActions.includes('define') && (
-          <IonButton onClick={handleDefine} color="success" size="small">
-            <IonIcon icon={glasses} slot="icon-only" />
+          <IonButton onClick={handleHighlight} color="warning" size="small" fill="solid">
+            <IonIcon icon={bookmark} slot="start" />
+            Highlight
           </IonButton>
         )}
         {enabledActions.includes('copy') && (
-          <IonButton onClick={handleCopy} color="medium" size="small">
-            <IonIcon icon={copy} slot="icon-only" />
+          <IonButton onClick={handleCopy} color="medium" size="small" fill="solid">
+            <IonIcon icon={copy} slot="start" />
+            Copy
+          </IonButton>
+        )}
+        {enabledActions.includes('translate') && (
+          <IonButton onClick={handleTranslate} color="primary" size="small" fill="solid">
+            <IonIcon icon={language} slot="start" />
+            Translate
+          </IonButton>
+        )}
+        {enabledActions.includes('define') && (
+          <IonButton onClick={handleDefine} color="success" size="small" fill="solid">
+            <IonIcon icon={glasses} slot="start" />
+            Define
           </IonButton>
         )}
         {enabledActions.includes('note') && (
-          <IonButton onClick={handleAddNote} color="tertiary" size="small">
-            <IonIcon icon={create} slot="icon-only" />
+          <IonButton onClick={handleAddNote} color="tertiary" size="small" fill="solid">
+            <IonIcon icon={create} slot="start" />
+            Note
           </IonButton>
         )}
-      </IonButtons>
+      </div>
     </div>,
     document.body
   );

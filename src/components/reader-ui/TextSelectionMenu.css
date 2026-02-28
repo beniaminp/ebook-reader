@@ -1,29 +1,53 @@
 /**
  * TextSelectionMenu Styles
+ * Fixed bottom bar — avoids being covered by Android's native selection toolbar
  */
 
 .text-selection-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
   background: var(--ion-background-color, #fff);
-  border-radius: 25px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  padding: 4px;
-  display: flex;
-  gap: 4px;
-  animation: fadeIn 0.2s ease-out;
+  border-top: 1px solid var(--ion-color-light-shade, #ddd);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+  padding: 8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  animation: slideUp 0.2s ease-out;
 }
 
-.text-selection-menu ion-button {
-  --padding-start: 8px;
-  --padding-end: 8px;
+.text-selection-menu-preview {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  padding: 0 4px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
+.text-selection-menu-actions {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.text-selection-menu-actions ion-button {
+  --padding-start: 10px;
+  --padding-end: 10px;
   margin: 0;
   height: 36px;
-  width: 36px;
+  font-size: 13px;
+  text-transform: none;
+  flex-shrink: 0;
 }
 
-@keyframes fadeIn {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
@@ -34,7 +58,8 @@
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .text-selection-menu {
-    background: var(--ion-color-step-100, #2a2a2a);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    background: var(--ion-color-step-100, #1e1e1e);
+    border-top-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
   }
 }
