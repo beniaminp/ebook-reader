@@ -56,6 +56,7 @@ import {
   shareSocialOutline,
   imageOutline,
   searchOutline,
+  layersOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -1161,6 +1162,60 @@ const Library: React.FC = () => {
     </IonList>
   );
 
+  // ─── Shelf View — 3D bookshelf ─────────────────────────
+  const renderShelfView = () => {
+    // Split books into rows of 3–4 per shelf
+    const booksPerShelf = window.innerWidth >= 768 ? 5 : 3;
+    const shelves: Book[][] = [];
+    for (let i = 0; i < filteredBooks.length; i += booksPerShelf) {
+      shelves.push(filteredBooks.slice(i, i + booksPerShelf));
+    }
+
+    return (
+      <div className="bookshelf-container">
+        {shelves.map((shelfBooks, shelfIndex) => (
+          <div className="bookshelf-row" key={shelfIndex}>
+            <div className="bookshelf-books">
+              {shelfBooks.map((book) => (
+                <div
+                  className="bookshelf-book"
+                  key={book.id}
+                  onClick={() => handleBookClick(book)}
+                  onContextMenu={(e) => handleBookLongPress(book, e)}
+                >
+                  <div className="bookshelf-book-spine">
+                    {book.coverPath ? (
+                      <img src={book.coverPath} alt={book.title} />
+                    ) : (
+                      <div className="bookshelf-book-placeholder">
+                        <span className="bookshelf-book-placeholder-title">{book.title}</span>
+                        <span className="bookshelf-book-placeholder-format">{book.format.toUpperCase()}</span>
+                      </div>
+                    )}
+                    {book.progress > 0 && (
+                      <div className="bookshelf-progress">
+                        <div
+                          className="bookshelf-progress-fill"
+                          style={{ width: `${getProgressWidth(book)}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="bookshelf-book-shadow" />
+                  <p className="bookshelf-book-title">{book.title}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bookshelf-plank">
+              <div className="bookshelf-plank-front" />
+              <div className="bookshelf-plank-top" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderEmptyState = () => (
     <div className="empty-state">
       <IonIcon icon={bookOutline} className="empty-state-icon" />
@@ -1352,8 +1407,12 @@ const Library: React.FC = () => {
                 </IonBadge>
               )}
             </IonButton>
-            <IonButton onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
-              <IonIcon icon={viewMode === 'grid' ? listOutline : gridOutline} />
+            <IonButton onClick={() => {
+              const modes: Array<'grid' | 'list' | 'shelf'> = ['grid', 'list', 'shelf'];
+              const idx = modes.indexOf(viewMode);
+              setViewMode(modes[(idx + 1) % modes.length]);
+            }}>
+              <IonIcon icon={viewMode === 'grid' ? listOutline : viewMode === 'list' ? layersOutline : gridOutline} />
             </IonButton>
           </IonButtons>
         </IonToolbar>
@@ -1507,7 +1566,7 @@ const Library: React.FC = () => {
               )
             ) : (
               <div className="books-container">
-                {viewMode === 'grid' ? renderGridView() : renderListView()}
+                {viewMode === 'grid' ? renderGridView() : viewMode === 'list' ? renderListView() : renderShelfView()}
               </div>
             )}
           </>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'grid' | 'list';
+export type ViewMode = 'grid' | 'list' | 'shelf';
 export type SortOption = 'title' | 'author' | 'dateAdded' | 'lastRead';
 export type ReadStatus = 'all' | 'unread' | 'reading' | 'finished';
 
