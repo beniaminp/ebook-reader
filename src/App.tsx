@@ -11,10 +11,11 @@ import {
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { library, settings, globeOutline } from 'ionicons/icons';
+import { library, settings, globeOutline, compassOutline } from 'ionicons/icons';
 import Library from './pages/Library/Library';
 import Reader from './pages/Reader/Reader';
 import Settings from './pages/Settings/Settings';
+import Browse from './pages/Browse/Browse';
 import CalibreWebSettings from './pages/CalibreWebSettings';
 import Statistics from './pages/Statistics/Statistics';
 import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
@@ -79,6 +80,9 @@ const AppTabs: React.FC = () => {
         <Route exact path="/library">
           <Library />
         </Route>
+        <Route exact path="/browse">
+          <Browse />
+        </Route>
         <Route exact path="/reader/:bookId">
           <Reader />
         </Route>
@@ -114,6 +118,10 @@ const AppTabs: React.FC = () => {
         <IonTabButton tab="library" href="/library">
           <IonIcon aria-hidden="true" icon={library} />
           <IonLabel>Library</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="browse" href="/browse">
+          <IonIcon aria-hidden="true" icon={compassOutline} />
+          <IonLabel>Browse</IonLabel>
         </IonTabButton>
         <IonTabButton tab="opds" href="/opds">
           <IonIcon aria-hidden="true" icon={globeOutline} />
