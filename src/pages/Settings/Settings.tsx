@@ -87,8 +87,10 @@ const Settings: React.FC = () => {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      await downloadExport();
-      setToastMessage('Backup exported successfully!');
+      const stats = await downloadExport();
+      setToastMessage(
+        `Exported: ${stats.books} books, ${stats.bookmarks} bookmarks, ${stats.highlights} highlights, ${stats.files} files`
+      );
     } catch (err) {
       setToastMessage(`Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
@@ -104,7 +106,7 @@ const Settings: React.FC = () => {
       const result = await importAllData(file);
       if (result.success) {
         setToastMessage(
-          `Imported: ${result.booksAdded} books added, ${result.booksUpdated} updated, ${result.filesRestored} files restored`
+          `Imported: ${result.booksAdded} books, ${result.bookmarksAdded} bookmarks, ${result.highlightsAdded} highlights, ${result.filesRestored} files restored`
         );
       } else {
         setToastMessage(`Import completed with errors: ${result.errors.join(', ')}`);
@@ -367,7 +369,7 @@ const Settings: React.FC = () => {
             <IonIcon icon={downloadOutline} slot="start" color="primary" />
             <IonLabel>
               <h3>Export All Data</h3>
-              <IonNote>Books, progress, and settings as ZIP</IonNote>
+              <IonNote>Books, bookmarks, highlights, progress, and settings as ZIP</IonNote>
             </IonLabel>
             <IonButton
               slot="end"

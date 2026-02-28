@@ -28,7 +28,14 @@ export interface ImportResult {
 /**
  * Export all app data to a ZIP blob.
  */
-export async function exportAllData(): Promise<Blob> {
+export interface ExportStats {
+  books: number;
+  bookmarks: number;
+  highlights: number;
+  files: number;
+}
+
+export async function exportAllData(): Promise<{ blob: Blob; stats: ExportStats }> {
   const zip = new JSZip();
 
   // 1. Export database (books, collections, progress, bookmarks, highlights, tags, settings)
@@ -61,18 +68,29 @@ export async function exportAllData(): Promise<Blob> {
       version: EXPORT_VERSION,
       exportDate: Date.now(),
       bookCount: dbExport.books.length,
+      bookmarkCount: dbExport.bookmarks.length,
+      highlightCount: dbExport.highlights.length,
       fileCount: fileKeys.length,
     })
   );
 
-  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  return {
+    blob,
+    stats: {
+      books: dbExport.books.length,
+      bookmarks: dbExport.bookmarks.length,
+      highlights: dbExport.highlights.length,
+      files: fileKeys.length,
+    },
+  };
 }
 
 /**
  * Trigger a browser download of the exported ZIP.
  */
-export async function downloadExport(): Promise<void> {
-  const blob = await exportAllData();
+export async function downloadExport(): Promise<ExportStats> {
+  const { blob, stats } = await exportAllData();
   const date = new Date().toISOString().slice(0, 10);
   const filename = `ebook-reader-backup-${date}.zip`;
 
@@ -84,6 +102,7 @@ export async function downloadExport(): Promise<void> {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  return stats;
 }
 
 /**
