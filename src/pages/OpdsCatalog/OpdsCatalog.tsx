@@ -45,6 +45,8 @@ import {
   homeOutline,
   refreshOutline,
   peopleOutline,
+  folderOpenOutline,
+  shareSocialOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -92,6 +94,11 @@ function getFormatBadgeColor(format: string): string {
     default:
       return 'medium';
   }
+}
+
+const CATALOG_COLORS = ['blue', 'green', 'orange', 'purple', 'teal', 'red'];
+function getCatalogColor(index: number): string {
+  return CATALOG_COLORS[index % CATALOG_COLORS.length];
 }
 
 function formatToBookFormat(format: string): Book['format'] {
@@ -417,156 +424,184 @@ const OpdsCatalogPage: React.FC = () => {
   // RENDER
   // ============================================================================
 
-  const renderCoverImage = (entry: OpdsBook | OpdsNavEntry) => {
-    const imgSrc = entry.thumbnailUrl || entry.coverUrl;
-    if (imgSrc) {
-      return (
-        <IonThumbnail slot="start" className="opds-thumbnail">
-          <img src={imgSrc} alt={entry.title} loading="lazy" />
-        </IonThumbnail>
-      );
-    }
-    return (
-      <IonThumbnail slot="start" className="opds-thumbnail opds-thumbnail--placeholder">
-        <IonIcon icon={bookOutline} />
-      </IonThumbnail>
-    );
-  };
-
   const renderFeedEntry = (entry: OpdsBook | OpdsNavEntry) => {
     if (entry.isAcquisition) {
       const book = entry as OpdsBook;
+      const imgSrc = entry.thumbnailUrl || entry.coverUrl;
       return (
-        <IonItem
+        <div
           key={entry.id}
-          button
+          className="opds-book-card"
           onClick={() => handleBookEntryClick(book)}
-          className="opds-entry opds-entry--book"
         >
-          {renderCoverImage(entry)}
-          <IonLabel>
-            <h2>{entry.title}</h2>
-            {entry.author && <p className="opds-author">{entry.author}</p>}
-            {entry.summary && <p className="opds-summary">{entry.summary.length > 120 ? `${entry.summary.slice(0, 120)}...` : entry.summary}</p>}
-            <div className="opds-formats">
-              {book.downloadLinks.map((link, i) => (
-                <IonChip
-                  key={i}
-                  color={getFormatBadgeColor(link.format)}
-                  outline
-                  className="opds-format-chip"
-                >
-                  {link.format.toUpperCase()}
-                </IonChip>
-              ))}
+          <div className={`opds-book-cover${imgSrc ? '' : ' opds-book-cover--placeholder'}`}>
+            {imgSrc ? (
+              <img src={imgSrc} alt={entry.title} loading="lazy" />
+            ) : (
+              <IonIcon icon={bookOutline} />
+            )}
+          </div>
+          <div className="opds-book-info">
+            <h3 className="opds-book-title">{entry.title}</h3>
+            {entry.author && <p className="opds-book-author">{entry.author}</p>}
+            {entry.summary && (
+              <p className="opds-book-summary">
+                {entry.summary.length > 140 ? `${entry.summary.slice(0, 140)}...` : entry.summary}
+              </p>
+            )}
+            <div className="opds-book-footer">
+              <div className="opds-formats">
+                {book.downloadLinks.map((link, i) => (
+                  <IonChip
+                    key={i}
+                    color={getFormatBadgeColor(link.format)}
+                    outline
+                    className="opds-format-chip"
+                  >
+                    {link.format.toUpperCase()}
+                  </IonChip>
+                ))}
+              </div>
+              {downloadingBookId === entry.id ? (
+                <IonSpinner name="crescent" style={{ width: 20, height: 20 }} />
+              ) : (
+                <IonIcon icon={cloudDownloadOutline} className="opds-download-btn" />
+              )}
             </div>
-          </IonLabel>
-          {downloadingBookId === entry.id ? (
-            <IonSpinner slot="end" name="crescent" />
-          ) : (
-            <IonIcon icon={cloudDownloadOutline} slot="end" color="primary" />
-          )}
-        </IonItem>
+          </div>
+        </div>
       );
     }
 
     // Navigation entry
+    const navImgSrc = entry.thumbnailUrl || entry.coverUrl;
     return (
-      <IonItem
+      <div
         key={entry.id}
-        button
+        className="opds-nav-card"
         onClick={() => handleEntryNav(entry as OpdsNavEntry)}
-        className="opds-entry opds-entry--nav"
       >
-        {renderCoverImage(entry)}
-        <IonLabel>
-          <h2>{entry.title}</h2>
-          {entry.summary && <p>{entry.summary.length > 100 ? `${entry.summary.slice(0, 100)}...` : entry.summary}</p>}
-        </IonLabel>
-        <IonIcon icon={chevronForwardOutline} slot="end" />
-      </IonItem>
+        {navImgSrc ? (
+          <div className="opds-book-cover" style={{ width: 40, height: 56, borderRadius: 3 }}>
+            <img src={navImgSrc} alt={entry.title} loading="lazy" />
+          </div>
+        ) : (
+          <div className="opds-nav-icon">
+            <IonIcon icon={folderOpenOutline} />
+          </div>
+        )}
+        <div className="opds-nav-info">
+          <h3 className="opds-nav-title">{entry.title}</h3>
+          {entry.summary && (
+            <p className="opds-nav-subtitle">
+              {entry.summary.length > 80 ? `${entry.summary.slice(0, 80)}...` : entry.summary}
+            </p>
+          )}
+        </div>
+        <IonIcon icon={chevronForwardOutline} className="opds-nav-chevron" />
+      </div>
     );
   };
 
   const renderCatalogList = () => (
     <IonContent>
-      <IonList>
-        {catalogs.map((catalog) => (
-          <IonItem
-            key={catalog.id}
-            button
-            onClick={() => handleCatalogSelect(catalog)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              openCatalogModal(catalog);
-            }}
-            className="opds-catalog-item"
-          >
-            <IonIcon icon={globeOutline} slot="start" color="primary" />
-            <IonLabel>
-              <h2>
-                {catalog.name}
-                {catalog.username && (
-                  <IonIcon
-                    icon={lockClosedOutline}
-                    style={{ fontSize: '14px', marginLeft: '6px', verticalAlign: 'middle' }}
-                  />
-                )}
-              </h2>
-              {catalog.description && <p>{catalog.description}</p>}
-              <p className="opds-catalog-url">{catalog.url}</p>
-            </IonLabel>
-            <IonButton
-              fill="clear"
-              size="small"
-              slot="end"
-              onClick={(e) => {
-                e.stopPropagation();
-                openCatalogModal(catalog);
-              }}
-              aria-label="Edit catalog"
-            >
-              <IonIcon icon={createOutline} color="primary" />
-            </IonButton>
-            <IonButton
-              fill="clear"
-              size="small"
-              slot="end"
-              onClick={(e) => {
-                e.stopPropagation();
-                setCatalogToDelete(catalog);
-                setShowDeleteAlert(true);
-              }}
-              aria-label="Delete catalog"
-            >
-              <IonIcon icon={trashOutline} color="danger" />
-            </IonButton>
-          </IonItem>
-        ))}
-      </IonList>
+      {catalogs.length > 0 && (
+        <>
+          <div className="opds-section-header">OPDS Catalogs</div>
+          <div className="opds-catalog-cards">
+            {catalogs.map((catalog, index) => (
+              <div
+                key={catalog.id}
+                className="opds-catalog-card"
+                onClick={() => handleCatalogSelect(catalog)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  openCatalogModal(catalog);
+                }}
+              >
+                <div className={`opds-catalog-icon opds-catalog-icon--${getCatalogColor(index)}`}>
+                  <IonIcon icon={globeOutline} />
+                </div>
+                <div className="opds-catalog-info">
+                  <h3 className="opds-catalog-name">
+                    {catalog.name}
+                    {catalog.username && <IonIcon icon={lockClosedOutline} />}
+                  </h3>
+                  {catalog.description && (
+                    <p className="opds-catalog-desc">{catalog.description}</p>
+                  )}
+                  <p className="opds-catalog-url">{catalog.url}</p>
+                </div>
+                <div className="opds-catalog-actions">
+                  <IonButton
+                    fill="clear"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openCatalogModal(catalog);
+                    }}
+                    aria-label="Edit catalog"
+                  >
+                    <IonIcon icon={createOutline} color="medium" />
+                  </IonButton>
+                  <IonButton
+                    fill="clear"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCatalogToDelete(catalog);
+                      setShowDeleteAlert(true);
+                    }}
+                    aria-label="Delete catalog"
+                  >
+                    <IonIcon icon={trashOutline} color="danger" />
+                  </IonButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
-      <IonList>
-        <IonItem button routerLink="/community-books" detail>
-          <IonIcon icon={peopleOutline} slot="start" color="tertiary" />
-          <IonLabel>
-            <h2>Community Books</h2>
+      <div className="opds-section-header">Community</div>
+      <div className="opds-community-cards">
+        <div
+          className="opds-community-card"
+          onClick={() => history.push('/community-books')}
+        >
+          <div className="opds-catalog-icon opds-catalog-icon--teal">
+            <IonIcon icon={peopleOutline} className="community-icon" />
+          </div>
+          <div className="opds-catalog-info">
+            <h3>Community Books</h3>
             <p>Browse books shared via P2P</p>
-          </IonLabel>
-        </IonItem>
-        <IonItem button routerLink="/my-shared-books" detail>
-          <IonIcon icon={peopleOutline} slot="start" color="tertiary" />
-          <IonLabel>
-            <h2>My Shared Books</h2>
+          </div>
+          <IonIcon icon={chevronForwardOutline} className="chevron-icon" />
+        </div>
+        <div
+          className="opds-community-card"
+          onClick={() => history.push('/my-shared-books')}
+        >
+          <div className="opds-catalog-icon opds-catalog-icon--purple">
+            <IonIcon icon={shareSocialOutline} className="community-icon" />
+          </div>
+          <div className="opds-catalog-info">
+            <h3>My Shared Books</h3>
             <p>Manage your P2P shared books</p>
-          </IonLabel>
-        </IonItem>
-      </IonList>
+          </div>
+          <IonIcon icon={chevronForwardOutline} className="chevron-icon" />
+        </div>
+      </div>
 
       {catalogs.length === 0 && (
         <div className="opds-empty-state">
           <IonIcon icon={globeOutline} />
           <h3>No Catalogs</h3>
           <p>Add an OPDS catalog to start browsing books</p>
+          <IonButton fill="outline" size="small" onClick={() => openCatalogModal()} style={{ marginTop: 8 }}>
+            <IonIcon icon={addOutline} slot="start" />
+            Add Catalog
+          </IonButton>
         </div>
       )}
     </IonContent>
@@ -646,7 +681,7 @@ const OpdsCatalogPage: React.FC = () => {
             </div>
           )}
 
-          <IonList>{currentFeed.entries.map(renderFeedEntry)}</IonList>
+          <div className="opds-entries-grid">{currentFeed.entries.map(renderFeedEntry)}</div>
 
           {/* Pagination */}
           <div className="opds-pagination">
@@ -701,7 +736,7 @@ const OpdsCatalogPage: React.FC = () => {
 
           <IonTitle>
             {viewState === 'catalog-list'
-              ? 'OPDS Catalogs'
+              ? 'Catalogs'
               : currentFeed?.title || breadcrumbs[breadcrumbs.length - 1]?.title || 'Catalog'}
           </IonTitle>
 
