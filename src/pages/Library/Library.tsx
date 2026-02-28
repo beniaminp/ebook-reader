@@ -935,7 +935,7 @@ const Library: React.FC = () => {
     <IonGrid className="book-grid">
       <IonRow>
         {filteredBooks.map((book) => (
-          <IonCol size="6" sizeMd="4" sizeLg="3" key={book.id}>
+          <IonCol size="4" sizeMd="3" sizeLg="2" key={book.id}>
             <IonCard
               className="book-card"
               onClick={() => handleBookClick(book)}
@@ -947,9 +947,7 @@ const Library: React.FC = () => {
                 ) : (
                   <div className="book-cover-placeholder">
                     <IonIcon icon={bookOutline} />
-                    <IonText color="medium">
-                      <p>{book.format.toUpperCase()}</p>
-                    </IonText>
+                    <p>{book.format.toUpperCase()}</p>
                   </div>
                 )}
                 {book.progress > 0 && (
@@ -1014,23 +1012,23 @@ const Library: React.FC = () => {
           <IonLabel>
             <h2>{book.title}</h2>
             <p>{book.author}</p>
-            {book.progress > 0 && (
-              <div className="book-progress-container">
-                <div className="book-progress-bar-small">
-                  <div
-                    className="book-progress-fill"
-                    style={{ width: `${getProgressWidth(book)}%` }}
-                  />
+            <div className="book-list-meta">
+              <span className="book-list-format">{book.format.toUpperCase()}</span>
+              {book.progress > 0 && (
+                <div className="book-progress-container">
+                  <div className="book-progress-bar-small">
+                    <div
+                      className="book-progress-fill"
+                      style={{ width: `${getProgressWidth(book)}%` }}
+                    />
+                  </div>
+                  <IonText color="medium" className="book-progress-text">
+                    {Math.min(100, Math.round(book.progress * 100))}%
+                  </IonText>
                 </div>
-                <IonText color="medium" className="book-progress-text">
-                  {Math.min(100, Math.round(book.progress * 100))}%
-                </IonText>
-              </div>
-            )}
+              )}
+            </div>
           </IonLabel>
-          <IonChip outline={true} color={getFormatColor(book.format)} slot="end">
-            {book.format.toUpperCase()}
-          </IonChip>
         </IonItem>
       ))}
     </IonList>
@@ -1055,36 +1053,34 @@ const Library: React.FC = () => {
         const bTime = b.lastRead instanceof Date ? b.lastRead.getTime() : 0;
         return bTime - aTime;
       })
-      .slice(0, 3);
+      .slice(0, 6);
 
     if (recentBooks.length === 0) return null;
 
     return (
       <div className="continue-reading-section">
         <h3>Continue Reading</h3>
-        <IonRow>
+        <div className="continue-reading-scroll">
           {recentBooks.map((book) => (
-            <IonCol size="4" key={`continue-${book.id}`}>
-              <div className="continue-reading-card" onClick={() => handleBookClick(book)}>
-                <div className="continue-reading-cover">
-                  {book.coverPath ? (
-                    <img src={book.coverPath} alt={book.title} />
-                  ) : (
-                    <div className="continue-reading-placeholder">
-                      <IonIcon icon={bookOutline} />
-                    </div>
-                  )}
-                  <div className="continue-reading-progress">
-                    {Math.min(100, Math.round(book.progress * 100))}%
+            <div className="continue-reading-card" key={`continue-${book.id}`} onClick={() => handleBookClick(book)}>
+              <div className="continue-reading-cover">
+                {book.coverPath ? (
+                  <img src={book.coverPath} alt={book.title} />
+                ) : (
+                  <div className="continue-reading-placeholder">
+                    <IonIcon icon={bookOutline} />
                   </div>
+                )}
+                <div className="continue-reading-progress">
+                  {Math.min(100, Math.round(book.progress * 100))}%
                 </div>
-                <IonText className="continue-reading-title">
-                  <p>{book.title}</p>
-                </IonText>
               </div>
-            </IonCol>
+              <IonText className="continue-reading-title">
+                <p>{book.title}</p>
+              </IonText>
+            </div>
           ))}
-        </IonRow>
+        </div>
       </div>
     );
   };
@@ -1267,6 +1263,9 @@ const Library: React.FC = () => {
               <IonSelectOption value="author">Author</IonSelectOption>
               <IonSelectOption value="lastRead">Last Read</IonSelectOption>
             </IonSelect>
+            <span className="library-book-count">
+              {filteredBooks.length} book{filteredBooks.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
           {/* Active filter chips */}
