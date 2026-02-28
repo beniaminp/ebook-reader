@@ -412,6 +412,83 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
   }
 }
 
+export async function updateBookMetadata(
+  id: string,
+  metadata: import('../types/index').BookMetadata
+): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    const index = webBooks.findIndex((b) => b.id === id);
+    if (index !== -1) {
+      webBooks[index] = {
+        ...webBooks[index],
+        metadata: { ...(webBooks[index] as any).metadata, ...metadata },
+        updatedAt: Date.now(),
+      };
+      saveWebData();
+      return true;
+    }
+    return false;
+  }
+
+  try {
+    const database = await getDb();
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (metadata.description !== undefined) {
+      fields.push('description = ?');
+      values.push(metadata.description);
+    }
+    if (metadata.publisher !== undefined) {
+      fields.push('publisher = ?');
+      values.push(metadata.publisher);
+    }
+    if (metadata.publishDate !== undefined) {
+      fields.push('publish_date = ?');
+      values.push(metadata.publishDate);
+    }
+    if (metadata.isbn !== undefined) {
+      fields.push('isbn = ?');
+      values.push(metadata.isbn);
+    }
+    if (metadata.language !== undefined) {
+      fields.push('language = ?');
+      values.push(metadata.language);
+    }
+    if (metadata.series !== undefined) {
+      fields.push('series = ?');
+      values.push(metadata.series);
+    }
+    if (metadata.seriesIndex !== undefined) {
+      fields.push('series_index = ?');
+      values.push(metadata.seriesIndex);
+    }
+    if (metadata.rating !== undefined) {
+      fields.push('rating = ?');
+      values.push(metadata.rating);
+    }
+    if (metadata.tags !== undefined) {
+      fields.push('tags = ?');
+      values.push(JSON.stringify(metadata.tags));
+    }
+
+    if (fields.length > 0) {
+      fields.push('updated_at = ?');
+      values.push(Math.floor(Date.now() / 1000));
+      values.push(id);
+      await database.query(
+        `UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`,
+        values
+      );
+    }
+    return true;
+  } catch (error) {
+    console.error('Error updating book metadata:', error);
+    return false;
+  }
+}
+
 export async function deleteBook(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     ensureWebInit();
@@ -510,6 +587,23 @@ function mapRowToBook(row: any): Book | null {
     console.error(`Book ${row.id} has missing file_path — skipping`, row);
     return null;
   }
+  const metadata: import('../types/index').BookMetadata = {};
+  if (row.isbn) metadata.isbn = row.isbn;
+  if (row.publisher) metadata.publisher = row.publisher;
+  if (row.publish_date) metadata.publishDate = row.publish_date;
+  if (row.language) metadata.language = row.language;
+  if (row.description) metadata.description = row.description;
+  if (row.series) metadata.series = row.series;
+  if (row.series_index != null) metadata.seriesIndex = row.series_index;
+  if (row.rating != null) metadata.rating = row.rating;
+  if (row.tags) {
+    try {
+      metadata.tags = JSON.parse(row.tags);
+    } catch {
+      metadata.tags = row.tags.split(',').map((t: string) => t.trim());
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
@@ -526,6 +620,7 @@ function mapRowToBook(row: any): Book | null {
     sourceId: row.source_id,
     sourceUrl: row.source_url,
     downloaded: row.downloaded === 1,
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }
 
@@ -1869,6 +1964,7 @@ export const databaseService = {
   getBookById,
   addBook,
   updateBook,
+  updateBookMetadata,
   deleteBook,
   searchBooks,
   getBooksByFormat,

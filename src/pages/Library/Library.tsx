@@ -61,6 +61,7 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
 import { webFileStorage } from '../../services/webFileStorage';
+import { metadataLookupService } from '../../services/metadataLookupService';
 import { fb2Service } from '../../services/fb2Service';
 import { chmService } from '../../services/chmService';
 import { comicService } from '../../services/comicService';
@@ -956,6 +957,13 @@ const Library: React.FC = () => {
     };
 
     await databaseService.addBook(newBook);
+
+    // Fire-and-forget: fetch metadata from online APIs
+    metadataLookupService.fetchBookMetadata(title, author).then((meta) => {
+      if (meta) {
+        databaseService.updateBookMetadata(bookId, meta);
+      }
+    });
   };
 
   const handleDeleteBook = async () => {
@@ -1541,6 +1549,31 @@ const Library: React.FC = () => {
             icon: imageOutline,
             handler: () => {
               if (selectedBook) openCoverSearch(selectedBook);
+            },
+          },
+          {
+            text: 'Fetch Metadata',
+            icon: cloudDownloadOutline,
+            handler: () => {
+              if (selectedBook) {
+                metadataLookupService
+                  .fetchBookMetadata(selectedBook.title, selectedBook.author)
+                  .then(async (meta) => {
+                    if (meta) {
+                      await databaseService.updateBookMetadata(selectedBook.id, meta);
+                      await loadBooks();
+                      setToastColor('success');
+                      setToastMessage('Metadata updated successfully');
+                    } else {
+                      setToastColor('warning');
+                      setToastMessage('No metadata found online');
+                    }
+                  })
+                  .catch(() => {
+                    setToastColor('danger');
+                    setToastMessage('Failed to fetch metadata');
+                  });
+              }
             },
           },
           {

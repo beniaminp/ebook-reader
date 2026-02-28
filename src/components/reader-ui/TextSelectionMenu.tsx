@@ -32,25 +32,60 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
-  // Handle text selection
+  // Handle text selection (checks both main document and foliate iframe)
   useEffect(() => {
+    const getSelectionFromIframe = (): { text: string; rect: DOMRect } | null => {
+      const foliateView = document.querySelector('foliate-view');
+      if (!foliateView) return null;
+      const iframe = foliateView.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
+      if (!iframe?.contentWindow) return null;
+      const sel = iframe.contentWindow.getSelection();
+      if (!sel || sel.isCollapsed) return null;
+      const text = sel.toString().trim();
+      if (!text) return null;
+      const range = sel.getRangeAt(0);
+      const iframeRect = iframe.getBoundingClientRect();
+      const rangeRect = range.getBoundingClientRect();
+      // Translate iframe-relative coordinates to viewport coordinates
+      return {
+        text,
+        rect: new DOMRect(
+          rangeRect.left + iframeRect.left,
+          rangeRect.top + iframeRect.top,
+          rangeRect.width,
+          rangeRect.height
+        ),
+      };
+    };
+
     const handleSelection = () => {
+      // First try main document selection
       const selection = window.getSelection();
-      const text = selection?.toString().trim();
+      let text = selection?.toString().trim() || '';
+      let rect: DOMRect | null = null;
 
       if (text && text.length > 0) {
         const range = selection?.getRangeAt(0);
         if (range) {
-          const rect = range.getBoundingClientRect();
-          const scrollX = window.scrollX || window.pageXOffset;
-          const scrollY = window.scrollY || window.pageYOffset;
-
-          setPosition({
-            x: rect.left + rect.width / 2 + scrollX,
-            y: rect.top + scrollY,
-          });
-          setSelectedText(text);
+          rect = range.getBoundingClientRect();
         }
+      }
+
+      // If no main document selection, try foliate iframe
+      if (!text) {
+        const iframeSel = getSelectionFromIframe();
+        if (iframeSel) {
+          text = iframeSel.text;
+          rect = iframeSel.rect;
+        }
+      }
+
+      if (text && rect) {
+        setPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top,
+        });
+        setSelectedText(text);
       } else {
         setPosition(null);
         setSelectedText('');
@@ -65,14 +100,42 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       timeoutId = setTimeout(handleSelection, 100);
     };
 
+    // Suppress native Android context menu so our custom menu works
+    const preventContextMenu = (e: Event) => e.preventDefault();
+
     document.addEventListener('selectionchange', debouncedHandler);
     document.addEventListener('mouseup', debouncedHandler);
     document.addEventListener('touchend', debouncedHandler);
+    document.addEventListener('contextmenu', preventContextMenu);
+
+    // Also listen inside foliate iframe for selection events
+    let iframeDoc: Document | null = null;
+    const attachIframeListeners = () => {
+      const foliateView = document.querySelector('foliate-view');
+      const iframe = foliateView?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
+      iframeDoc = iframe?.contentDocument ?? null;
+      if (iframeDoc) {
+        iframeDoc.addEventListener('selectionchange', debouncedHandler);
+        iframeDoc.addEventListener('mouseup', debouncedHandler);
+        iframeDoc.addEventListener('touchend', debouncedHandler);
+        iframeDoc.addEventListener('contextmenu', preventContextMenu);
+      }
+    };
+    // Delay to wait for iframe to be ready
+    const iframeTimer = setTimeout(attachIframeListeners, 1000);
 
     return () => {
       document.removeEventListener('selectionchange', debouncedHandler);
       document.removeEventListener('mouseup', debouncedHandler);
       document.removeEventListener('touchend', debouncedHandler);
+      document.removeEventListener('contextmenu', preventContextMenu);
+      if (iframeDoc) {
+        iframeDoc.removeEventListener('selectionchange', debouncedHandler);
+        iframeDoc.removeEventListener('mouseup', debouncedHandler);
+        iframeDoc.removeEventListener('touchend', debouncedHandler);
+        iframeDoc.removeEventListener('contextmenu', preventContextMenu);
+      }
+      clearTimeout(iframeTimer);
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
@@ -130,10 +193,14 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     return null;
   }
 
+  // Clamp position so the menu doesn't go off-screen
+  const menuX = Math.max(80, Math.min(position.x, window.innerWidth - 80));
+  const menuY = Math.max(50, position.y - 50);
+
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
-    left: `${position.x}px`,
-    top: `${position.y - 50}px`, // Position above selection
+    left: `${menuX}px`,
+    top: `${menuY}px`,
     transform: 'translateX(-50%)',
     zIndex: 9999,
   };

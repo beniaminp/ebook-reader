@@ -45,6 +45,11 @@
   min-height: 44px;
 }
 
+/* Suppress native Android context menu so the custom TextSelectionMenu works */
+.unified-reader-page {
+  -webkit-touch-callout: none;
+}
+
 .unified-bottom-bar .page-info {
   font-size: 13px;
   color: var(--ion-color-medium);

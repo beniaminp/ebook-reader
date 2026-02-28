@@ -33,6 +33,7 @@ import {
   arrowBack,
   bookmarkOutline,
   bookmark,
+  bookmarksOutline,
   searchOutline,
   settingsOutline,
   chevronBack,
@@ -63,6 +64,8 @@ import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { useAppStore } from '../../stores/useAppStore';
 import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
 import { HighlightsPanel } from '../common/HighlightsPanel';
+import { BookmarksPanel } from '../common/BookmarksPanel';
+import type { EpubBookmark } from '../../services/annotationsService';
 import type { FoliateHighlight } from './FoliateEngine';
 
 import './UnifiedReaderContainer.css';
@@ -153,6 +156,10 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Highlights panel
   const [highlightsPanelOpen, setHighlightsPanelOpen] = useState(false);
 
+  // Bookmarks panel
+  const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
+  const [bookmarksList, setBookmarksList] = useState<EpubBookmark[]>([]);
+
   // Toast
   const [toastMessage, setToastMessage] = useState('');
 
@@ -199,6 +206,27 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       prevHighlightsRef.current = loaded;
     });
   }, [book.id]);
+
+  // ─── Load bookmarks for bookmark panel ─────────────────────────
+
+  const loadBookmarks = useCallback(async () => {
+    const bms = await databaseService.getBookmarks(book.id);
+    setBookmarksList(
+      bms.map((b) => ({
+        id: b.id,
+        bookId: b.bookId,
+        cfi: b.location?.cfi || '',
+        chapterTitle: b.chapter,
+        textPreview: b.text,
+        createdAt: b.timestamp instanceof Date ? b.timestamp.getTime() : Date.now(),
+        updatedAt: b.timestamp instanceof Date ? b.timestamp.getTime() : Date.now(),
+      }))
+    );
+  }, [book.id]);
+
+  useEffect(() => {
+    loadBookmarks();
+  }, [loadBookmarks]);
 
   // PDF highlights change handler — diff and persist to DB
   const handlePdfHighlightsChange = useCallback(
@@ -269,13 +297,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // ─── Progress from engine ─────────────────────────
 
   const handleRelocate = useCallback(
-    (p: ReaderProgress) => {
+    async (p: ReaderProgress) => {
       setProgress(p);
       if (p.locationString) {
         onProgressChange?.(p.locationString, p.fraction * 100);
+
+        // Check if the new location has an existing bookmark
+        const bms = await databaseService.getBookmarks(book.id);
+        const match = bms.find((b) => b.location?.cfi === p.locationString);
+        setIsBookmarked(!!match);
+        currentBookmarkIdRef.current = match?.id || null;
       }
     },
-    [onProgressChange]
+    [onProgressChange, book.id]
   );
 
   // ─── Load complete from engine ─────────────────────────
@@ -577,7 +611,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       setIsBookmarked(true);
       setToastMessage('Bookmark added');
     }
-  }, [book.id, progress, isBookmarked, onBookmark]);
+    // Refresh bookmarks list for the panel
+    loadBookmarks();
+  }, [book.id, progress, isBookmarked, onBookmark, loadBookmarks]);
 
   // ─── Search ─────────────────────────
 
