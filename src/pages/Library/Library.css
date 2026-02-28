@@ -250,7 +250,7 @@
 
 /* ─── Grid View — Cover-focused ──────────────────────── */
 .book-grid {
-  padding: 8px 6px;
+  padding: 8px 12px;
 }
 
 .book-grid ion-row {
@@ -258,7 +258,7 @@
 }
 
 .book-card {
-  margin: 4px;
+  margin: 4px 2px;
   cursor: pointer;
   transition: transform 0.15s;
   overflow: hidden;
@@ -382,7 +382,7 @@
 
 /* ─── List View ──────────────────────────────────────── */
 .book-list {
-  padding: 0;
+  padding: 0 8px;
 }
 
 .book-list-item {
@@ -498,7 +498,7 @@
 /* ─── Responsive ─────────────────────────────────────── */
 @media (min-width: 768px) {
   .book-grid {
-    padding: 12px;
+    padding: 16px 20px;
   }
 
   .continue-reading-section {
