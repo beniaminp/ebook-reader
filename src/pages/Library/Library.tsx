@@ -90,6 +90,8 @@ const Library: React.FC = () => {
   const [showBookDetails, setShowBookDetails] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [folderInputKey, setFolderInputKey] = useState(0);
+  const [showImportSheet, setShowImportSheet] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState<string>('danger');
   const { shareBook: shareBookP2P, isSharingBook } = useSharingStore();
@@ -509,11 +511,13 @@ const Library: React.FC = () => {
 
   const [importingCount, setImportingCount] = useState(0);
 
-  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  const SUPPORTED_EXTENSIONS = new Set([
+    '.epub', '.pdf', '.mobi', '.azw', '.azw3', '.fb2',
+    '.cbz', '.cbr', '.txt', '.html', '.htm', '.md', '.docx', '.odt',
+  ]);
 
-    const fileList = Array.from(files);
+  const importFiles = async (fileList: File[], resetKey: 'file' | 'folder') => {
+    if (fileList.length === 0) return;
     setImportingCount(fileList.length);
 
     let imported = 0;
@@ -531,17 +535,49 @@ const Library: React.FC = () => {
     }
 
     setImportingCount(0);
-    // Reset input to allow importing the same file again
-    setFileInputKey((prev) => prev + 1);
+    if (resetKey === 'file') {
+      setFileInputKey((prev) => prev + 1);
+    } else {
+      setFolderInputKey((prev) => prev + 1);
+    }
     await loadBooks();
 
-    if (errors.length > 0) {
+    if (errors.length > 0 && imported === 0) {
       setToastColor('danger');
       setToastMessage(`Failed to import: ${errors.join('; ')}`);
+    } else if (errors.length > 0) {
+      setToastColor('warning');
+      setToastMessage(`Imported ${imported} book${imported > 1 ? 's' : ''}, ${errors.length} failed`);
     } else if (imported > 0) {
       setToastColor('success');
       setToastMessage(`Imported ${imported} book${imported > 1 ? 's' : ''} successfully`);
     }
+  };
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    await importFiles(Array.from(files), 'file');
+  };
+
+  const handleFolderImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Filter to only supported ebook formats
+    const supportedFiles = Array.from(files).filter((file) => {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      return SUPPORTED_EXTENSIONS.has(ext);
+    });
+
+    if (supportedFiles.length === 0) {
+      setToastColor('warning');
+      setToastMessage('No supported ebook files found in selected folder');
+      setFolderInputKey((prev) => prev + 1);
+      return;
+    }
+
+    await importFiles(supportedFiles, 'folder');
   };
 
   /** Race a promise against a timeout. Returns null if the timeout fires first. */
@@ -1221,9 +1257,16 @@ const Library: React.FC = () => {
       <IonIcon icon={bookOutline} className="empty-state-icon" />
       <h2>No books yet</h2>
       <p>Import your first ebook to get started</p>
-      <IonButton fill="clear" onClick={() => document.getElementById('file-input')?.click()}>
-        <IonIcon slot="icon-only" icon={addOutline} />
-      </IonButton>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <IonButton fill="outline" size="small" onClick={() => document.getElementById('file-input')?.click()}>
+          <IonIcon slot="start" icon={documentTextOutline} />
+          Select Files
+        </IonButton>
+        <IonButton fill="outline" size="small" onClick={() => document.getElementById('folder-input')?.click()}>
+          <IonIcon slot="start" icon={libraryOutline} />
+          Select Folder
+        </IonButton>
+      </div>
     </div>
   );
 
@@ -1574,10 +1617,36 @@ const Library: React.FC = () => {
       </IonContent>
 
       <IonFab vertical="bottom" horizontal="end" slot="fixed">
-        <IonFabButton onClick={() => document.getElementById('file-input')?.click()}>
+        <IonFabButton onClick={() => setShowImportSheet(true)}>
           <IonIcon icon={addOutline} />
         </IonFabButton>
       </IonFab>
+
+      <IonActionSheet
+        isOpen={showImportSheet}
+        onDidDismiss={() => setShowImportSheet(false)}
+        header="Import Books"
+        buttons={[
+          {
+            text: 'Select Files',
+            icon: documentTextOutline,
+            handler: () => {
+              document.getElementById('file-input')?.click();
+            },
+          },
+          {
+            text: 'Select Folder',
+            icon: libraryOutline,
+            handler: () => {
+              document.getElementById('folder-input')?.click();
+            },
+          },
+          {
+            text: 'Cancel',
+            role: 'cancel',
+          },
+        ]}
+      />
 
       <input
         id="file-input"
@@ -1586,6 +1655,20 @@ const Library: React.FC = () => {
         accept=".epub,.pdf,.mobi,.azw,.azw3,.fb2,.cbz,.cbr,.txt,.html,.htm,.md,.docx,.odt"
         style={{ display: 'none' }}
         onChange={handleFileImport}
+        multiple
+      />
+      <input
+        id="folder-input"
+        type="file"
+        key={folderInputKey}
+        style={{ display: 'none' }}
+        onChange={handleFolderImport}
+        ref={(el) => {
+          if (el) {
+            el.setAttribute('webkitdirectory', '');
+            el.setAttribute('directory', '');
+          }
+        }}
         multiple
       />
 
