@@ -78,7 +78,34 @@ const CommunityBooks: React.FC = () => {
     return () => { cancelled = true; };
   }, [loadCommunityBooks]);
 
-  const filteredBooks = communityBooks.filter(
+  // Count how many people are sharing each book (grouped by title+author)
+  const seederCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const book of communityBooks) {
+      const key = `${(book.title || '').toLowerCase()}|${(book.author || '').toLowerCase()}`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return counts;
+  }, [communityBooks]);
+
+  const getSeederCount = (book: SharedBookDoc) => {
+    const key = `${(book.title || '').toLowerCase()}|${(book.author || '').toLowerCase()}`;
+    return seederCounts.get(key) || 1;
+  };
+
+  // Deduplicate books by title+author, keeping the most recent entry
+  const uniqueBooks = React.useMemo(() => {
+    const seen = new Map<string, SharedBookDoc>();
+    for (const book of communityBooks) {
+      const key = `${(book.title || '').toLowerCase()}|${(book.author || '').toLowerCase()}`;
+      if (!seen.has(key)) {
+        seen.set(key, book);
+      }
+    }
+    return Array.from(seen.values());
+  }, [communityBooks]);
+
+  const filteredBooks = uniqueBooks.filter(
     (b) =>
       (b.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (b.author || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -151,6 +178,9 @@ const CommunityBooks: React.FC = () => {
                     </IonChip>
                     <span className="community-book-size">
                       {formatFileSize(book.fileSize)}
+                    </span>
+                    <span className="community-book-seeders">
+                      <IonIcon icon={peopleOutline} /> {getSeederCount(book)} seeder{getSeederCount(book) !== 1 ? 's' : ''}
                     </span>
                     {book.sharedAt && (
                       <span className="community-book-time">

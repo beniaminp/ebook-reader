@@ -25,6 +25,15 @@
   color: var(--ion-color-medium);
 }
 
+.community-book-seeders {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8em;
+  color: var(--ion-color-success);
+  font-weight: 500;
+}
+
 .community-empty {
   display: flex;
   flex-direction: column;
