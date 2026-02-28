@@ -22,6 +22,15 @@ import { comicService } from '../../services/comicService';
 
 import './EpubReader.css';
 
+export interface FoliateHighlight {
+  /** CFI value identifying the highlight location. */
+  value: string;
+  /** CSS color string. */
+  color: string;
+  /** Optional note. */
+  note?: string;
+}
+
 export interface FoliateEngineProps {
   /** Raw book bytes. */
   arrayBuffer: ArrayBuffer;
@@ -31,12 +40,16 @@ export interface FoliateEngineProps {
   format: string;
   /** Initial location to restore (CFI or fraction string). */
   initialLocation?: string;
+  /** Existing highlights to render. */
+  highlights?: FoliateHighlight[];
   /** Called on every relocation (page turn, chapter change, etc.). */
   onRelocate?: (progress: ReaderProgress) => void;
   /** Called after the book is successfully loaded. */
   onLoadComplete?: (metadata: { title: string; author: string }) => void;
   /** Called on error. */
   onError?: (error: string) => void;
+  /** Called when user taps an existing highlight. */
+  onHighlightTap?: (value: string) => void;
 }
 
 /** Map format string to MIME type for foliate-js. */
@@ -96,8 +109,17 @@ function tocToChapters(toc: FoliateTocItem[] | undefined | null): Chapter[] {
 }
 
 export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((props, ref) => {
-  const { arrayBuffer, bookId, format, initialLocation, onRelocate, onLoadComplete, onError } =
-    props;
+  const {
+    arrayBuffer,
+    bookId,
+    format,
+    initialLocation,
+    highlights,
+    onRelocate,
+    onLoadComplete,
+    onError,
+    onHighlightTap,
+  } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<FoliateView | null>(null);
@@ -126,13 +148,19 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const bionicReadingRef = useRef<boolean>(false);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
+  // Track highlight annotations applied to the view
+  const highlightsRef = useRef<FoliateHighlight[]>(highlights || []);
+  highlightsRef.current = highlights || [];
+
   // Stable callback refs
   const onRelocateRef = useRef(onRelocate);
   const onLoadCompleteRef = useRef(onLoadComplete);
   const onErrorRef = useRef(onError);
+  const onHighlightTapRef = useRef(onHighlightTap);
   onRelocateRef.current = onRelocate;
   onLoadCompleteRef.current = onLoadComplete;
   onErrorRef.current = onError;
+  onHighlightTapRef.current = onHighlightTap;
 
   const injectStyles = useCallback((doc: Document) => {
     const existingStyle = doc.getElementById('foliate-reader-style');
@@ -226,6 +254,57 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           if (destroyed) return;
           loadedDocsRef.current.add(e.detail.doc);
           injectStyles(e.detail.doc);
+        }) as EventListener);
+
+        // Annotation support: draw highlights when foliate creates overlayers
+        view.addEventListener('draw-annotation', ((
+          e: CustomEvent<{
+            draw: (func: any, opts: any) => void;
+            annotation: { value: string; color?: string };
+            doc: Document;
+            range: Range;
+          }>
+        ) => {
+          if (destroyed) return;
+          const { draw, annotation } = e.detail;
+          const color = annotation.color || '#ffff00';
+          // Import Overlayer.highlight statically — it's already loaded
+          draw(
+            (rects: any[], opts: any) => {
+              // Create SVG highlight rects
+              const ns = 'http://www.w3.org/2000/svg';
+              const g = document.createElementNS(ns, 'g');
+              g.setAttribute('fill', color);
+              g.style.opacity = '0.3';
+              g.style.mixBlendMode = 'multiply';
+              for (const { left, top, height, width } of rects) {
+                const el = document.createElementNS(ns, 'rect');
+                el.setAttribute('x', String(left));
+                el.setAttribute('y', String(top));
+                el.setAttribute('height', String(height));
+                el.setAttribute('width', String(width));
+                g.append(el);
+              }
+              return g;
+            },
+            { color }
+          );
+        }) as EventListener);
+
+        // When user taps an existing highlight
+        view.addEventListener('show-annotation', ((
+          e: CustomEvent<{ value: string; index: number; range: Range }>
+        ) => {
+          if (destroyed) return;
+          onHighlightTapRef.current?.(e.detail.value);
+        }) as EventListener);
+
+        // When a new overlayer is created (section loaded), re-add all highlights
+        view.addEventListener('create-overlay', ((e: CustomEvent<{ index: number }>) => {
+          if (destroyed) return;
+          for (const hl of highlightsRef.current) {
+            view.addAnnotation?.({ value: hl.value, color: hl.color } as any);
+          }
         }) as EventListener);
 
         view.addEventListener('relocate', ((e: CustomEvent<FoliateLocation>) => {
@@ -387,9 +466,44 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         bionicReadingRef.current = enabled;
         reapplyStyles();
       },
+      getSelectionInfo: () => {
+        const view = viewRef.current;
+        if (!view) return null;
+        try {
+          const contents = (view as any).renderer?.getContents?.() || [];
+          for (const { doc, index } of contents) {
+            const sel = doc?.defaultView?.getSelection?.();
+            if (!sel || sel.isCollapsed) continue;
+            const text = sel.toString().trim();
+            if (!text) continue;
+            const range = sel.getRangeAt(0);
+            const cfi = (view as any).getCFI(index, range);
+            return { cfi, text };
+          }
+        } catch (err) {
+          console.error('Failed to get selection info:', err);
+        }
+        return null;
+      },
+      addHighlightAnnotation: (cfi: string, color: string) => {
+        viewRef.current?.addAnnotation?.({ value: cfi, color } as any);
+      },
+      removeHighlightAnnotation: (cfi: string) => {
+        viewRef.current?.deleteAnnotation?.({ value: cfi });
+      },
     }),
     [chapters, reapplyStyles]
   );
+
+  // Sync highlights when prop changes
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !highlights) return;
+    // Re-add all annotations when highlights change
+    for (const hl of highlights) {
+      view.addAnnotation?.({ value: hl.value, color: hl.color } as any);
+    }
+  }, [highlights]);
 
   return <div ref={containerRef} className="epub-viewer" />;
 });

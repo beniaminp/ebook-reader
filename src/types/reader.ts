@@ -86,4 +86,10 @@ export interface ReaderEngineRef {
   setMarginSize?(size: string): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
+  /** Get current text selection info (CFI + text for EPUB, offsets for scroll). */
+  getSelectionInfo?(): { cfi?: string; text: string; startOffset?: number; endOffset?: number } | null;
+  /** Add a visual highlight annotation (EPUB). */
+  addHighlightAnnotation?(cfi: string, color: string): void;
+  /** Remove a visual highlight annotation (EPUB). */
+  removeHighlightAnnotation?(cfi: string): void;
 }

@@ -17,6 +17,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { ReaderContainer } from '../reader-ui/ReaderContainer';
 import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter } from '../../types/reader';
+import type { Highlight } from '../../types/index';
 
 export interface ScrollEngineProps {
   /** Raw text content (plain text, HTML, or Markdown source). */
@@ -25,6 +26,8 @@ export interface ScrollEngineProps {
   contentType: 'text' | 'html' | 'markdown';
   /** Ref to the parent IonContent for scroll control. */
   ionContentRef?: React.RefObject<HTMLIonContentElement | null>;
+  /** Existing highlights to render. */
+  highlights?: Highlight[];
   /** Called on scroll progress changes. */
   onRelocate?: (progress: ReaderProgress) => void;
   /** Called once content is ready. */
@@ -79,7 +82,7 @@ const SANITIZE_CONFIG = {
 };
 
 export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((props, ref) => {
-  const { content, contentType, ionContentRef, onRelocate, onLoadComplete } = props;
+  const { content, contentType, ionContentRef, highlights, onRelocate, onLoadComplete } = props;
 
   const innerRef = useRef<HTMLDivElement>(null);
 
@@ -232,9 +235,129 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
 
         return results;
       },
+      getSelectionInfo: () => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || !innerRef.current) return null;
+        const text = selection.toString().trim();
+        if (!text) return null;
+
+        const range = selection.getRangeAt(0);
+        // Check selection is within our content
+        if (!innerRef.current.contains(range.commonAncestorContainer)) return null;
+
+        // Calculate character offsets relative to the text content
+        const treeWalker = document.createTreeWalker(
+          innerRef.current,
+          NodeFilter.SHOW_TEXT,
+          null
+        );
+        let charCount = 0;
+        let startOffset = -1;
+        let endOffset = -1;
+        let node: Node | null;
+
+        while ((node = treeWalker.nextNode())) {
+          const nodeLen = (node.textContent || '').length;
+          if (node === range.startContainer) {
+            startOffset = charCount + range.startOffset;
+          }
+          if (node === range.endContainer) {
+            endOffset = charCount + range.endOffset;
+            break;
+          }
+          charCount += nodeLen;
+        }
+
+        if (startOffset < 0 || endOffset < 0) return null;
+        return { text, startOffset, endOffset };
+      },
     }),
     [scrollByViewport, scrollToCharIndex, ionContentRef, plainText]
   );
+
+  // Compute highlight overlay rects
+  const [highlightRects, setHighlightRects] = useState<
+    Array<{ id: string; color: string; rects: DOMRect[] }>
+  >([]);
+
+  useEffect(() => {
+    if (!highlights?.length || !innerRef.current || loading) {
+      setHighlightRects([]);
+      return;
+    }
+
+    // Delay slightly to ensure content is rendered
+    const timer = setTimeout(() => {
+      const container = innerRef.current;
+      if (!container) return;
+
+      const result: Array<{ id: string; color: string; rects: DOMRect[] }> = [];
+
+      for (const hl of highlights) {
+        // Parse location: "startOffset-endOffset"
+        const cfi = hl.location?.cfi;
+        if (!cfi) continue;
+        const parts = cfi.split('-');
+        if (parts.length !== 2) continue;
+        const start = parseInt(parts[0], 10);
+        const end = parseInt(parts[1], 10);
+        if (isNaN(start) || isNaN(end)) continue;
+
+        // Walk text nodes to find the range
+        const treeWalker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+        let charCount = 0;
+        let startNode: Node | null = null;
+        let startOff = 0;
+        let endNode: Node | null = null;
+        let endOff = 0;
+        let node: Node | null;
+
+        while ((node = treeWalker.nextNode())) {
+          const nodeLen = (node.textContent || '').length;
+          if (!startNode && charCount + nodeLen > start) {
+            startNode = node;
+            startOff = start - charCount;
+          }
+          if (charCount + nodeLen >= end) {
+            endNode = node;
+            endOff = end - charCount;
+            break;
+          }
+          charCount += nodeLen;
+        }
+
+        if (startNode && endNode) {
+          try {
+            const range = document.createRange();
+            range.setStart(startNode, startOff);
+            range.setEnd(endNode, endOff);
+            const clientRects = Array.from(range.getClientRects());
+            const containerRect = container.getBoundingClientRect();
+            const rects = clientRects
+              .filter((r) => r.width > 0 && r.height > 0)
+              .map(
+                (r) =>
+                  new DOMRect(
+                    r.left - containerRect.left,
+                    r.top - containerRect.top,
+                    r.width,
+                    r.height
+                  )
+              );
+            if (rects.length > 0) {
+              result.push({ id: hl.id, color: hl.color, rects });
+            }
+          } catch {
+            /* range error */
+          }
+        }
+      }
+
+      setHighlightRects(result);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [highlights, loading]);
 
   if (loading) {
     return null; // Parent shows loading spinner
@@ -242,7 +365,7 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
 
   return (
     <ReaderContainer>
-      <div ref={innerRef} style={{ wordBreak: 'break-word' }}>
+      <div ref={innerRef} style={{ wordBreak: 'break-word', position: 'relative' }}>
         {renderedHtml === null ? (
           // Plain text
           <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
@@ -252,6 +375,24 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
             dangerouslySetInnerHTML={{ __html: renderedHtml }}
             className={contentType === 'markdown' ? 'markdown-content' : undefined}
           />
+        )}
+        {/* Highlight overlays */}
+        {highlightRects.map((hl) =>
+          hl.rects.map((rect, idx) => (
+            <div
+              key={`${hl.id}-${idx}`}
+              style={{
+                position: 'absolute',
+                left: `${rect.x}px`,
+                top: `${rect.y}px`,
+                width: `${rect.width}px`,
+                height: `${rect.height}px`,
+                backgroundColor: hl.color,
+                opacity: 0.3,
+                pointerEvents: 'none',
+              }}
+            />
+          ))
         )}
       </div>
     </ReaderContainer>

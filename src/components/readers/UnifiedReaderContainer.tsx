@@ -38,6 +38,7 @@ import {
   chevronBack,
   chevronForward,
   list,
+  colorPaletteOutline,
 } from 'ionicons/icons';
 
 import { FoliateEngine } from './FoliateEngine';
@@ -58,8 +59,11 @@ import type {
 } from '../../types/reader';
 import type { Book, Highlight } from '../../types/index';
 import { databaseService } from '../../services/database';
+import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { useAppStore } from '../../stores/useAppStore';
 import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
+import { HighlightsPanel } from '../common/HighlightsPanel';
+import type { FoliateHighlight } from './FoliateEngine';
 
 import './UnifiedReaderContainer.css';
 import './EpubReader.css';
@@ -133,8 +137,21 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
   const [selectedWord, setSelectedWord] = useState('');
 
-  // PDF highlights state
-  const [pdfHighlights, setPdfHighlights] = useState<Highlight[]>([]);
+  // Highlights state (all formats)
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const prevHighlightsRef = useRef<Highlight[]>([]);
+
+  // Color picker state
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [pendingHighlightText, setPendingHighlightText] = useState('');
+  const [pendingHighlightMeta, setPendingHighlightMeta] = useState<{
+    cfi?: string;
+    startOffset?: number;
+    endOffset?: number;
+  } | null>(null);
+
+  // Highlights panel
+  const [highlightsPanelOpen, setHighlightsPanelOpen] = useState(false);
 
   // Toast
   const [toastMessage, setToastMessage] = useState('');
@@ -174,17 +191,60 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     };
   }, []);
 
-  // ─── Load PDF highlights ─────────────────────────
+  // ─── Load highlights for all formats ─────────────────────────
 
   useEffect(() => {
-    if (isPdf) {
-      databaseService.getHighlights(book.id).then(setPdfHighlights);
-    }
-  }, [isPdf, book.id]);
+    databaseService.getHighlights(book.id).then((loaded) => {
+      setHighlights(loaded);
+      prevHighlightsRef.current = loaded;
+    });
+  }, [book.id]);
 
-  const handlePdfHighlightsChange = useCallback((updatedHighlights: Highlight[]) => {
-    setPdfHighlights(updatedHighlights);
-  }, []);
+  // PDF highlights change handler — diff and persist to DB
+  const handlePdfHighlightsChange = useCallback(
+    (updatedHighlights: Highlight[]) => {
+      const prev = prevHighlightsRef.current;
+      const prevIds = new Set(prev.map((h) => h.id));
+      const newIds = new Set(updatedHighlights.map((h) => h.id));
+
+      // Find added highlights
+      for (const h of updatedHighlights) {
+        if (!prevIds.has(h.id)) {
+          databaseService.addHighlight({
+            id: h.id,
+            bookId: h.bookId,
+            location: h.location?.cfi || String(h.pageNumber || ''),
+            text: h.text,
+            color: h.color,
+            note: h.note,
+            pageNumber: h.pageNumber,
+            rects: h.rects ? JSON.stringify(h.rects) : undefined,
+          });
+        }
+      }
+
+      // Find deleted highlights
+      for (const h of prev) {
+        if (!newIds.has(h.id)) {
+          databaseService.deleteHighlight(h.id);
+        }
+      }
+
+      // Find updated highlights (color/note changes)
+      for (const h of updatedHighlights) {
+        if (prevIds.has(h.id)) {
+          const old = prev.find((p) => p.id === h.id);
+          if (old && (old.color !== h.color || old.note !== h.note)) {
+            databaseService.updateHighlight(h.id, { color: h.color, note: h.note });
+          }
+        }
+      }
+
+      setHighlights(updatedHighlights);
+      prevHighlightsRef.current = updatedHighlights;
+    },
+    []
+  );
 
   // ─── Stable callback refs for renderEngine (prevent remounting on handler change) ─────────────────────────
 
@@ -198,7 +258,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const handleScrollLoadCompleteRef = useRef<() => void>(() => {});
   const handleErrorRef = useRef<(error: string) => void>(() => {});
   const handlePdfHighlightsChangeRef = useRef<(highlights: Highlight[]) => void>(() => {});
-  const pdfHighlightsRef = useRef<Highlight[]>([]);
+  const highlightsRef = useRef<Highlight[]>([]);
 
   // ─── Navigation handlers ─────────────────────────
 
@@ -254,7 +314,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   handleScrollLoadCompleteRef.current = handleScrollLoadComplete;
   handleErrorRef.current = handleError;
   handlePdfHighlightsChangeRef.current = handlePdfHighlightsChange;
-  pdfHighlightsRef.current = pdfHighlights;
+  highlightsRef.current = highlights;
 
   // ─── Apply theme/font changes to foliate engine ─────────────────────────
 
@@ -688,6 +748,25 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     []
   );
 
+  // Convert Highlight[] to FoliateHighlight[] for EPUB engine
+  const foliateHighlights: FoliateHighlight[] = useMemo(
+    () =>
+      isFoliate
+        ? highlights
+            .filter((h) => h.location?.cfi)
+            .map((h) => ({ value: h.location.cfi!, color: h.color, note: h.note }))
+        : [],
+    [isFoliate, highlights]
+  );
+
+  const stableOnHighlightTap = useCallback((value: string) => {
+    // Find the highlight by CFI and open for editing
+    const hl = highlightsRef.current.find((h) => h.location?.cfi === value);
+    if (hl) {
+      setHighlightsPanelOpen(true);
+    }
+  }, []);
+
   const renderEngine = useMemo(() => {
     if (isFoliate && fileData) {
       return (
@@ -697,9 +776,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           bookId={book.id}
           format={format}
           initialLocation={initialLocation}
+          highlights={foliateHighlights}
           onRelocate={stableOnRelocate}
           onLoadComplete={stableOnFoliateLoadComplete}
           onError={stableOnError}
+          onHighlightTap={stableOnHighlightTap}
         />
       );
     }
@@ -714,7 +795,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           onRelocate={stableOnRelocate}
           onLoadComplete={stableOnPdfLoadComplete}
           onError={stableOnError}
-          existingHighlights={pdfHighlightsRef.current}
+          existingHighlights={highlightsRef.current}
           onHighlightsChange={stableOnPdfHighlightsChange}
         />
       );
@@ -727,6 +808,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           content={textContent}
           contentType={scrollContentType(format)}
           ionContentRef={ionContentRef}
+          highlights={highlightsRef.current}
           onRelocate={stableOnRelocate}
           onLoadComplete={stableOnScrollLoadComplete}
         />
@@ -743,12 +825,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     book.id,
     format,
     initialLocation,
+    foliateHighlights,
     stableOnRelocate,
     stableOnFoliateLoadComplete,
     stableOnPdfLoadComplete,
     stableOnScrollLoadComplete,
     stableOnError,
     stableOnPdfHighlightsChange,
+    stableOnHighlightTap,
   ]);
 
   // ─── Toolbar theme styling ─────────────────────────
@@ -791,6 +875,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
               <IonButton onClick={handleToggleBookmark} style={iconColor}>
                 <IonIcon icon={isBookmarked ? bookmark : bookmarkOutline} />
               </IonButton>
+              {!isPdf && (
+                <IonButton onClick={() => setHighlightsPanelOpen(true)} style={iconColor}>
+                  <IonIcon icon={colorPaletteOutline} />
+                </IonButton>
+              )}
               <IonButton onClick={() => setSettingsOpen(true)} style={iconColor}>
                 <IonIcon icon={settingsOutline} />
               </IonButton>
@@ -1039,8 +1128,22 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       <TextSelectionMenu
         enabledActions={['translate', 'highlight', 'copy', 'define']}
         onHighlight={(text) => {
-          // Handle highlight - this would integrate with annotations service
-          setToastMessage('Highlight added');
+          // For PDF, the PdfEngineWithHighlights has its own menu
+          if (isPdf) return;
+
+          // For EPUB and scroll formats, get selection info from engine
+          const selInfo = engineRef.current?.getSelectionInfo?.();
+          if (selInfo) {
+            setPendingHighlightText(selInfo.text || text);
+            setPendingHighlightMeta({
+              cfi: selInfo.cfi,
+              startOffset: selInfo.startOffset,
+              endOffset: selInfo.endOffset,
+            });
+            setColorPickerOpen(true);
+          } else {
+            setToastMessage('Could not capture selection');
+          }
         }}
         onCopy={(text) => {
           setToastMessage('Copied to clipboard');
@@ -1048,6 +1151,122 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         onDefine={(text) => {
           setSelectedWord(text.split(/\s+/)[0]);
           setDictionaryOpen(true);
+        }}
+      />
+
+      {/* ─── Color Picker Popover ─── */}
+      <IonPopover
+        isOpen={colorPickerOpen}
+        onDidDismiss={() => {
+          setColorPickerOpen(false);
+          setPendingHighlightText('');
+          setPendingHighlightMeta(null);
+        }}
+      >
+        <div style={{ padding: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <p style={{ width: '100%', textAlign: 'center', margin: '0 0 8px', fontSize: '14px' }}>
+            Pick highlight color
+          </p>
+          {HIGHLIGHT_COLORS.map((color) => (
+            <button
+              key={color.value}
+              onClick={async () => {
+                const meta = pendingHighlightMeta;
+                const text = pendingHighlightText;
+                if (!meta) return;
+
+                // Determine location string
+                let locationStr = '';
+                if (meta.cfi) {
+                  locationStr = meta.cfi;
+                } else if (meta.startOffset !== undefined && meta.endOffset !== undefined) {
+                  locationStr = `${meta.startOffset}-${meta.endOffset}`;
+                }
+
+                // Save to database
+                const saved = await databaseService.addHighlight({
+                  bookId: book.id,
+                  location: locationStr,
+                  text,
+                  color: color.value,
+                });
+
+                if (saved) {
+                  const updated = [...highlights, saved];
+                  setHighlights(updated);
+                  prevHighlightsRef.current = updated;
+
+                  // For EPUB, also add visual annotation
+                  if (isFoliate && meta.cfi) {
+                    engineRef.current?.addHighlightAnnotation?.(meta.cfi, color.value);
+                  }
+
+                  setToastMessage('Highlight added');
+                }
+
+                setColorPickerOpen(false);
+                setPendingHighlightText('');
+                setPendingHighlightMeta(null);
+                window.getSelection()?.removeAllRanges();
+              }}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                backgroundColor: color.value,
+                border: '2px solid #fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+              }}
+              title={color.name}
+            />
+          ))}
+        </div>
+      </IonPopover>
+
+      {/* ─── Highlights Panel (EPUB / Scroll) ─── */}
+      <HighlightsPanel
+        isOpen={highlightsPanelOpen}
+        onClose={() => setHighlightsPanelOpen(false)}
+        highlights={highlights
+          .filter((h) => !isPdf) // PDF has its own panel
+          .map((h) => ({
+            id: h.id,
+            bookId: h.bookId,
+            cfiRange: h.location?.cfi || '',
+            text: h.text,
+            color: h.color,
+            note: h.note,
+            chapterTitle: undefined,
+            createdAt: h.timestamp instanceof Date ? h.timestamp.getTime() : Date.now(),
+            updatedAt: h.timestamp instanceof Date ? h.timestamp.getTime() : Date.now(),
+          }))}
+        onGoToHighlight={(cfiRange) => {
+          if (cfiRange) {
+            engineRef.current?.goToLocation(cfiRange);
+          }
+        }}
+        onDeleteHighlight={async (id) => {
+          const hl = highlights.find((h) => h.id === id);
+          await databaseService.deleteHighlight(id);
+          const updated = highlights.filter((h) => h.id !== id);
+          setHighlights(updated);
+          prevHighlightsRef.current = updated;
+
+          // Remove visual annotation for EPUB
+          if (isFoliate && hl?.location?.cfi) {
+            engineRef.current?.removeHighlightAnnotation?.(hl.location.cfi);
+          }
+
+          setToastMessage('Highlight removed');
+        }}
+        onUpdateHighlight={async (id, updates) => {
+          await databaseService.updateHighlight(id, updates);
+          const updated = highlights.map((h) =>
+            h.id === id ? { ...h, ...updates } : h
+          );
+          setHighlights(updated);
+          prevHighlightsRef.current = updated;
         }}
       />
 
