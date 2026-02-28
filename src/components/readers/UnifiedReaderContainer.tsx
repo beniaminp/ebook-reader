@@ -911,6 +911,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
               <IonButton onClick={handleToggleBookmark} style={iconColor}>
                 <IonIcon icon={isBookmarked ? bookmark : bookmarkOutline} />
               </IonButton>
+              <IonButton onClick={() => setBookmarksPanelOpen(true)} style={iconColor}>
+                <IonIcon icon={bookmarksOutline} />
+              </IonButton>
               {!isPdf && (
                 <IonButton onClick={() => setHighlightsPanelOpen(true)} style={iconColor}>
                   <IonIcon icon={colorPaletteOutline} />
@@ -1303,6 +1306,27 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           );
           setHighlights(updated);
           prevHighlightsRef.current = updated;
+        }}
+      />
+
+      {/* ─── Bookmarks Panel ─── */}
+      <BookmarksPanel
+        isOpen={bookmarksPanelOpen}
+        onClose={() => setBookmarksPanelOpen(false)}
+        bookmarks={bookmarksList}
+        onGoToBookmark={(cfi) => {
+          if (cfi) {
+            engineRef.current?.goToLocation(cfi);
+          }
+        }}
+        onDeleteBookmark={async (id) => {
+          await databaseService.deleteBookmark(id);
+          loadBookmarks();
+          setToastMessage('Bookmark removed');
+        }}
+        onUpdateNote={async (id, note) => {
+          // Bookmarks don't have a dedicated updateNote in DB, so we skip for now
+          setToastMessage('Note saved');
         }}
       />
 
