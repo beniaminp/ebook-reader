@@ -791,7 +791,8 @@ export async function addBookmark(bookmark: DbBookmark): Promise<Bookmark | null
       chapter: bookmark.chapter,
       timestamp: new Date(),
     };
-    localStorage.setItem(`bookmark_${newBookmark.id}`, JSON.stringify(newBookmark));
+    // Key includes bookId so getBookmarks can find all bookmarks for a book
+    localStorage.setItem(`bookmark_${bookmark.bookId}_${newBookmark.id}`, JSON.stringify(newBookmark));
     return newBookmark;
   }
 
@@ -840,9 +841,10 @@ export async function addBookmark(bookmark: DbBookmark): Promise<Bookmark | null
 export async function getBookmarks(bookId: string): Promise<Bookmark[]> {
   if (!Capacitor.isNativePlatform()) {
     const bookmarks: Bookmark[] = [];
+    const prefix = `bookmark_${bookId}_`;
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith(`bookmark_${bookId}`)) {
+      if (key?.startsWith(prefix)) {
         const data = localStorage.getItem(key);
         if (data) {
           bookmarks.push(JSON.parse(data));
@@ -878,6 +880,15 @@ export async function getBookmarks(bookId: string): Promise<Bookmark[]> {
 
 export async function deleteBookmark(id: string): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
+    // Find and remove the bookmark key that ends with the bookmark id
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('bookmark_') && key.endsWith(`_${id}`)) {
+        localStorage.removeItem(key);
+        return true;
+      }
+    }
+    // Fallback: old key format
     localStorage.removeItem(`bookmark_${id}`);
     return true;
   }

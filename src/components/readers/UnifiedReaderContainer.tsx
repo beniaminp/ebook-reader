@@ -304,9 +304,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
         // Check if the new location has an existing bookmark
         const bms = await databaseService.getBookmarks(book.id);
-        const match = bms.find((b) => b.location?.cfi === p.locationString);
+        const loc = p.locationString;
+        const match = bms.find((b) => {
+          // Match by CFI/location string
+          if (b.location?.cfi && b.location.cfi === loc) return true;
+          // Match by page number for PDF
+          if (b.location?.pageNumber && p.current !== undefined && b.location.pageNumber === p.current) return true;
+          return false;
+        });
         setIsBookmarked(!!match);
         currentBookmarkIdRef.current = match?.id || null;
+      } else {
+        setIsBookmarked(false);
+        currentBookmarkIdRef.current = null;
       }
     },
     [onProgressChange, book.id]
@@ -599,10 +609,10 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       setIsBookmarked(false);
       setToastMessage('Bookmark removed');
     } else {
-      const bookmarkId = `bookmark-${Date.now()}`;
-      currentBookmarkIdRef.current = bookmarkId;
       // Add via the store so it persists to the database
-      await useAppStore.getState().addBookmark(book.id, loc, undefined, undefined, undefined);
+      const chapterTitle = '';
+      const textPreview = progress?.label || '';
+      await useAppStore.getState().addBookmark(book.id, loc, progress?.current, chapterTitle, textPreview);
       // Fetch back the saved bookmark to capture its real ID
       const saved = await databaseService.getBookmarks(book.id);
       const match = saved.find((b) => b.location?.cfi === loc);
@@ -612,7 +622,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       setToastMessage('Bookmark added');
     }
     // Refresh bookmarks list for the panel
-    loadBookmarks();
+    await loadBookmarks();
   }, [book.id, progress, isBookmarked, onBookmark, loadBookmarks]);
 
   // ─── Search ─────────────────────────
