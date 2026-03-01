@@ -50,13 +50,18 @@ const MySharedBooks: React.FC = () => {
   }, [loadMySharedBooks]);
 
   useEffect(() => {
-    const poll = () => {
+    const poll = async () => {
       const stats: Record<string, TorrentStats | null> = {};
       const status: Record<string, boolean> = {};
       for (const book of mySharedBooks) {
-        const s = torrentService.getSeedingStats(book.magnetURI);
-        stats[book.magnetURI] = s;
-        status[book.magnetURI] = !!s;
+        try {
+          const s = await torrentService.getSeedingStats(book.magnetURI);
+          stats[book.magnetURI] = s;
+          status[book.magnetURI] = !!s;
+        } catch {
+          stats[book.magnetURI] = null;
+          status[book.magnetURI] = false;
+        }
       }
       setSeedingStats(stats);
       setSeedingStatus(status);

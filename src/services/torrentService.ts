@@ -1,4 +1,4 @@
-import WebTorrent from 'webtorrent';
+import { Capacitor } from '@capacitor/core';
 
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
@@ -15,22 +15,39 @@ export interface TorrentStats {
   timeRemaining: number;
 }
 
-class TorrentService {
-  private client: WebTorrent.Instance | null = null;
+// Lazy-load WebTorrent to avoid crashes on Android WebView
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let WebTorrentModule: any = null;
+async function loadWebTorrent() {
+  if (!WebTorrentModule) {
+    const mod = await import('webtorrent');
+    WebTorrentModule = mod.default;
+  }
+  return WebTorrentModule;
+}
 
-  private getClient(): WebTorrent.Instance {
+class TorrentService {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private client: any = null;
+
+  private async getClient() {
+    if (Capacitor.isNativePlatform()) {
+      throw new Error('WebTorrent is not supported on native platforms');
+    }
     if (!this.client) {
-      this.client = new WebTorrent({ dht: false, lsd: false } as unknown as WebTorrent.Options);
+      const WT = await loadWebTorrent();
+      this.client = new WT({ dht: false, lsd: false } as unknown as Record<string, unknown>);
     }
     return this.client;
   }
 
-  seed(fileData: ArrayBuffer, fileName: string): Promise<string> {
+  async seed(fileData: ArrayBuffer, fileName: string): Promise<string> {
+    const client = await this.getClient();
     return new Promise((resolve, reject) => {
       let settled = false;
-      const client = this.getClient();
       const file = new File([fileData], fileName);
-      client.seed(file as unknown as Buffer, { announce: WSS_TRACKERS }, (torrent) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      client.seed(file as unknown as Buffer, { announce: WSS_TRACKERS }, (torrent: any) => {
         const finish = () => {
           if (!settled) {
             settled = true;
@@ -55,14 +72,15 @@ class TorrentService {
     });
   }
 
-  download(
+  async download(
     magnetURI: string,
     onProgress?: (stats: TorrentStats) => void
   ): Promise<{ data: ArrayBuffer; fileName: string }> {
+    const client = await this.getClient();
     return new Promise((resolve, reject) => {
       let settled = false;
-      const client = this.getClient();
-      client.add(magnetURI, { announce: WSS_TRACKERS }, (torrent) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      client.add(magnetURI, { announce: WSS_TRACKERS }, (torrent: any) => {
         const emitStats = () => {
           if (onProgress) {
             onProgress({
@@ -111,9 +129,10 @@ class TorrentService {
     });
   }
 
-  getSeedingStats(magnetURI: string): TorrentStats | null {
-    const client = this.getClient();
-    const torrent = client.get(magnetURI) as unknown as WebTorrent.Torrent | void;
+  async getSeedingStats(magnetURI: string): Promise<TorrentStats | null> {
+    const client = await this.getClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const torrent = client.get(magnetURI) as any;
     if (!torrent) return null;
     return {
       progress: torrent.progress,
@@ -127,7 +146,7 @@ class TorrentService {
   }
 
   async stopSeeding(magnetURI: string): Promise<void> {
-    const client = this.getClient();
+    const client = await this.getClient();
     const torrent = await client.get(magnetURI);
     if (torrent) {
       torrent.destroy();
@@ -135,7 +154,8 @@ class TorrentService {
   }
 
   async isSeeding(magnetURI: string): Promise<boolean> {
-    const client = this.getClient();
+    if (Capacitor.isNativePlatform()) return false;
+    const client = await this.getClient();
     const torrent = await client.get(magnetURI);
     return !!torrent;
   }

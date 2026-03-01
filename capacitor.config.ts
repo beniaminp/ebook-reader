@@ -4,13 +4,14 @@ const config: CapacitorConfig = {
   appId: 'com.ebookreader.app',
   appName: 'EBook Reader',
   webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+  },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
-      launchAutoHide: true,
+      launchShowDuration: 1500,
+      launchAutoHide: false,
       backgroundColor: '#2C5F8A',
-      androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true,
