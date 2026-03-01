@@ -198,6 +198,36 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     };
   }, []);
 
+  // ─── Keep screen awake while reading ─────────────────────────
+  useEffect(() => {
+    let wakeLock: WakeLockSentinel | null = null;
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch {
+        // Wake Lock request failed (e.g. low battery, tab not visible)
+      }
+    };
+
+    requestWakeLock();
+
+    // Re-acquire wake lock when page becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      wakeLock?.release().catch(() => {});
+    };
+  }, []);
+
   // ─── Load highlights for all formats ─────────────────────────
 
   useEffect(() => {
