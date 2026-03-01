@@ -227,7 +227,6 @@ const Library: React.FC = () => {
   const loadBooks = async () => {
     setIsLoading(true);
     try {
-      await databaseService.initDatabase();
       const loadedBooks = await databaseService.getAllBooks();
       setBooks(loadedBooks);
 

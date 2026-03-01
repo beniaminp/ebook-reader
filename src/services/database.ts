@@ -126,7 +126,21 @@ export async function initDatabase(): Promise<boolean> {
       return initWebDatabase();
     }
 
-    db = await sqliteConnection.createConnection(DB_NAME, false, 'no-encryption', 1, false);
+    // If we already have a valid connection, skip re-creating
+    if (db) {
+      const isOpen = await db.isDBOpen();
+      if (isOpen.result) return true;
+      // Connection exists but is not open — discard and recreate
+      db = null;
+    }
+
+    // Check if connection already exists in the plugin before creating
+    const isConn = await sqliteConnection.isConnection(DB_NAME, false);
+    if (isConn.result) {
+      db = await sqliteConnection.retrieveConnection(DB_NAME, false);
+    } else {
+      db = await sqliteConnection.createConnection(DB_NAME, false, 'no-encryption', 1, false);
+    }
 
     await db.open();
     const isOpen = await db.isDBOpen();
