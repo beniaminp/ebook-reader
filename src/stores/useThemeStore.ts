@@ -11,6 +11,7 @@ import type {
   FontFamily,
   TextAlignment,
   MarginSize,
+  CustomMargins,
   ReadingRulerSettings,
   FocusModeSettings,
   RulerColor,
@@ -168,6 +169,7 @@ interface ThemeState extends ReadingSettings {
   setLineHeight: (height: number) => void;
   setTextAlign: (align: TextAlignment) => void;
   setMarginSize: (size: MarginSize) => void;
+  setCustomMargins: (margins: Partial<CustomMargins>) => void;
   setBlueLightFilter: (enabled: boolean) => void;
   setBlueLightIntensity: (intensity: number) => void;
   setReadingRuler: (enabled: boolean) => void;
@@ -234,6 +236,7 @@ export const useThemeStore = create<ThemeState>()(
       lineHeight: DEFAULT_SETTINGS.lineHeight,
       textAlign: DEFAULT_SETTINGS.textAlign,
       marginSize: DEFAULT_SETTINGS.marginSize,
+      customMargins: DEFAULT_SETTINGS.customMargins,
       blueLightFilter: DEFAULT_SETTINGS.blueLightFilter,
       blueLightIntensity: DEFAULT_SETTINGS.blueLightIntensity,
       readingRuler: DEFAULT_SETTINGS.readingRuler,
@@ -288,6 +291,11 @@ export const useThemeStore = create<ThemeState>()(
 
       setMarginSize: (marginSize) => set({ marginSize }),
 
+      setCustomMargins: (margins) =>
+        set((state) => ({
+          customMargins: { ...state.customMargins, ...margins },
+        })),
+
       setBlueLightFilter: (blueLightFilter) => set({ blueLightFilter }),
 
       setBlueLightIntensity: (blueLightIntensity) => set({ blueLightIntensity }),
@@ -335,6 +343,7 @@ export const useThemeStore = create<ThemeState>()(
           lineHeight: DEFAULT_SETTINGS.lineHeight,
           textAlign: DEFAULT_SETTINGS.textAlign,
           marginSize: DEFAULT_SETTINGS.marginSize,
+          customMargins: DEFAULT_SETTINGS.customMargins,
           blueLightFilter: DEFAULT_SETTINGS.blueLightFilter,
           blueLightIntensity: DEFAULT_SETTINGS.blueLightIntensity,
           readingRuler: DEFAULT_SETTINGS.readingRuler,
@@ -405,6 +414,7 @@ export const useThemeStore = create<ThemeState>()(
         lineHeight: state.lineHeight,
         textAlign: state.textAlign,
         marginSize: state.marginSize,
+        customMargins: state.customMargins,
         blueLightFilter: state.blueLightFilter,
         blueLightIntensity: state.blueLightIntensity,
         readingRuler: state.readingRuler,
@@ -431,6 +441,7 @@ export type {
   FontFamily,
   TextAlignment,
   MarginSize,
+  CustomMargins,
   ReadingRulerSettings,
   FocusModeSettings,
   RulerColor,

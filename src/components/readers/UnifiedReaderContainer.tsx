@@ -397,6 +397,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   useEffect(() => {
     if (!isFoliate) return;
+    engineRef.current?.setCustomMargins?.(themeStore.customMargins);
+  }, [themeStore.customMargins, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
     engineRef.current?.setBionicReading?.(themeStore.bionicReading);
   }, [themeStore.bionicReading, isFoliate]);
 

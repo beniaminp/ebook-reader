@@ -145,6 +145,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const lineHeightRef = useRef<number>(1.6);
   const textAlignRef = useRef<string>('left');
   const marginSizeRef = useRef<string>('medium');
+  const customMarginsRef = useRef<{ top: number; bottom: number; left: number; right: number }>({ top: 16, bottom: 16, left: 24, right: 24 });
   const bionicReadingRef = useRef<boolean>(false);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
@@ -181,8 +182,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     );
     rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
     rules.push(`body, p, div { text-align: ${textAlignRef.current} !important; }`);
-    const marginPadding = marginSizeRef.current === 'small' ? '8px 12px' : marginSizeRef.current === 'large' ? '24px 32px' : '16px 24px';
-    rules.push(`body { padding: ${marginPadding} !important; }`);
+    const cm = customMarginsRef.current;
+    rules.push(`body { padding: ${cm.top}px ${cm.right}px ${cm.bottom}px ${cm.left}px !important; }`);
     if (bionicReadingRef.current) {
       rules.push(`
         body { word-spacing: 0.1em !important; letter-spacing: 0.02em !important; }
@@ -460,6 +461,10 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setMarginSize: (size: string) => {
         marginSizeRef.current = size;
+        reapplyStyles();
+      },
+      setCustomMargins: (margins: { top: number; bottom: number; left: number; right: number }) => {
+        customMarginsRef.current = margins;
         reapplyStyles();
       },
       setBionicReading: (enabled: boolean) => {

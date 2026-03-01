@@ -42,8 +42,8 @@ import type {
   ThemeType,
   FontFamily,
   TextAlignment,
-  MarginSize,
   RulerColor,
+  CustomMargins,
 } from '../../services/themeService';
 import { PREDEFINED_THEMES, FONT_FAMILIES } from '../../services/themeService';
 import { fontService } from '../../services/fontService';
@@ -63,6 +63,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     lineHeight,
     textAlign,
     marginSize,
+    customMargins,
     blueLightFilter,
     blueLightIntensity,
     readingRuler,
@@ -84,6 +85,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setLineHeight,
     setTextAlign,
     setMarginSize,
+    setCustomMargins,
     setBlueLightFilter,
     setBlueLightIntensity,
     setReadingRuler,
@@ -525,21 +527,47 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
             </IonItem>
 
             <IonItem>
-              <IonLabel position="stacked">Page Margin</IonLabel>
-              <IonSegment
-                value={marginSize}
-                onIonChange={(e) => setMarginSize(e.detail.value as MarginSize)}
-              >
-                <IonSegmentButton value="small">
-                  <IonLabel>S</IonLabel>
-                </IonSegmentButton>
-                <IonSegmentButton value="medium">
-                  <IonLabel>M</IonLabel>
-                </IonSegmentButton>
-                <IonSegmentButton value="large">
-                  <IonLabel>L</IonLabel>
-                </IonSegmentButton>
-              </IonSegment>
+              <IonLabel position="stacked">Margin Top: {customMargins.top}px</IonLabel>
+              <IonRange
+                min={0}
+                max={64}
+                step={2}
+                value={customMargins.top}
+                onIonChange={(e) => setCustomMargins({ top: e.detail.value as number })}
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Margin Bottom: {customMargins.bottom}px</IonLabel>
+              <IonRange
+                min={0}
+                max={64}
+                step={2}
+                value={customMargins.bottom}
+                onIonChange={(e) => setCustomMargins({ bottom: e.detail.value as number })}
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Margin Left: {customMargins.left}px</IonLabel>
+              <IonRange
+                min={0}
+                max={64}
+                step={2}
+                value={customMargins.left}
+                onIonChange={(e) => setCustomMargins({ left: e.detail.value as number })}
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Margin Right: {customMargins.right}px</IonLabel>
+              <IonRange
+                min={0}
+                max={64}
+                step={2}
+                value={customMargins.right}
+                onIonChange={(e) => setCustomMargins({ right: e.detail.value as number })}
+              />
             </IonItem>
           </IonList>
         )}

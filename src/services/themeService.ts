@@ -30,6 +30,12 @@ export type BuiltInFontFamily =
 export type FontFamily = BuiltInFontFamily | `custom-${string}`;
 export type TextAlignment = 'left' | 'center' | 'justify' | 'right';
 export type MarginSize = 'small' | 'medium' | 'large';
+export interface CustomMargins {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink';
 export type RulerColor = 'accent' | 'yellow' | 'green' | 'blue' | 'pink' | 'red';
 
@@ -52,6 +58,7 @@ export interface ReadingSettings {
   lineHeight: number;
   textAlign: TextAlignment;
   marginSize: MarginSize;
+  customMargins: CustomMargins;
   blueLightFilter: boolean;
   blueLightIntensity: number;
   readingRuler: boolean;
@@ -190,6 +197,7 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   lineHeight: 1.6,
   textAlign: 'justify',
   marginSize: 'medium',
+  customMargins: { top: 16, bottom: 16, left: 24, right: 24 },
   blueLightFilter: false,
   blueLightIntensity: 15,
   readingRuler: false,

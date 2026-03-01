@@ -84,6 +84,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     lineHeight,
     textAlign,
     marginSize,
+    customMargins,
     blueLightFilter,
     blueLightIntensity,
     readingRuler,
@@ -208,6 +209,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     fontSize: `${fontSize}px`,
     lineHeight: lineHeight.toString(),
     textAlign,
+    padding: `${customMargins.top}px ${customMargins.right}px ${customMargins.bottom}px ${customMargins.left}px`,
   };
 
   // Apply custom background if set

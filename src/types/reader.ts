@@ -84,6 +84,8 @@ export interface ReaderEngineRef {
   setTextAlign?(align: string): void;
   /** Set margin/padding size. */
   setMarginSize?(size: string): void;
+  /** Set custom per-side margins in px. */
+  setCustomMargins?(margins: { top: number; bottom: number; left: number; right: number }): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
   /** Get current text selection info (CFI + text for EPUB, offsets for scroll). */
