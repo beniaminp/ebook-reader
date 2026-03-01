@@ -37,6 +37,7 @@ import {
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { downloadExport, importAllData } from '../../services/localExportService';
 import './Settings.css';
 
@@ -78,6 +79,19 @@ const Settings: React.FC = () => {
     setAutoScrollSpeed,
     resetSettings,
   } = useThemeStore();
+
+  const {
+    isSignedIn,
+    user,
+    isBackingUp,
+    isRestoring,
+    lastBackupTime,
+    backupError,
+    signIn: authSignIn,
+    signOut: authSignOut,
+    triggerBackup,
+    triggerRestore,
+  } = useAuthStore();
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -364,6 +378,79 @@ const Settings: React.FC = () => {
             </div>
             <span className="settings-section-title">Data & Backup</span>
           </div>
+
+          {isSignedIn ? (
+            <>
+              <IonItem>
+                <IonIcon icon={cloudOutline} slot="start" color="success" />
+                <IonLabel>
+                  <h3>Signed in as {user?.displayName || user?.email}</h3>
+                  <IonNote>
+                    {lastBackupTime
+                      ? `Last backup: ${new Date(lastBackupTime).toLocaleString()}`
+                      : 'No backup yet'}
+                  </IonNote>
+                  {backupError && <IonNote color="danger">{backupError}</IonNote>}
+                </IonLabel>
+              </IonItem>
+              <IonItem>
+                <IonLabel>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '8px 0' }}>
+                    <IonButton
+                      fill="outline"
+                      size="small"
+                      onClick={triggerBackup}
+                      disabled={isBackingUp || isRestoring}
+                      style={{ '--border-radius': '8px' }}
+                    >
+                      {isBackingUp ? <IonSpinner name="crescent" /> : <>
+                        <IonIcon icon={cloudOutline} slot="start" />
+                        Backup Now
+                      </>}
+                    </IonButton>
+                    <IonButton
+                      fill="outline"
+                      size="small"
+                      onClick={triggerRestore}
+                      disabled={isBackingUp || isRestoring}
+                      style={{ '--border-radius': '8px' }}
+                    >
+                      {isRestoring ? <IonSpinner name="crescent" /> : <>
+                        <IonIcon icon={syncOutline} slot="start" />
+                        Restore
+                      </>}
+                    </IonButton>
+                    <IonButton
+                      fill="outline"
+                      size="small"
+                      color="medium"
+                      onClick={authSignOut}
+                      style={{ '--border-radius': '8px' }}
+                    >
+                      Sign Out
+                    </IonButton>
+                  </div>
+                </IonLabel>
+              </IonItem>
+            </>
+          ) : (
+            <IonItem>
+              <IonIcon icon={cloudOutline} slot="start" color="primary" />
+              <IonLabel>
+                <h3>Cloud Backup</h3>
+                <IonNote>Sign in with Google to auto-backup your library</IonNote>
+              </IonLabel>
+              <IonButton
+                slot="end"
+                fill="outline"
+                size="small"
+                onClick={authSignIn}
+                style={{ '--border-radius': '8px' }}
+              >
+                Sign In
+              </IonButton>
+            </IonItem>
+          )}
 
           <IonItem>
             <IonIcon icon={downloadOutline} slot="start" color="primary" />

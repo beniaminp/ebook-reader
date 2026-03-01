@@ -1,6 +1,7 @@
 import { Redirect, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import {
+  IonAlert,
   IonApp,
   IonIcon,
   IonLabel,
@@ -24,6 +25,8 @@ import CommunityBooks from './pages/CommunityBooks/CommunityBooks';
 import MySharedBooks from './pages/MySharedBooks/MySharedBooks';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
+import { useAuthStore } from './stores/useAuthStore';
+import { useAutoRestore } from './hooks/useAutoRestore';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -76,8 +79,32 @@ const AppTabs: React.FC = () => {
     });
   }, []);
 
+  // Initialize Firebase auth listener
+  useEffect(() => {
+    const unsubscribe = useAuthStore.getState().initialize();
+    return unsubscribe;
+  }, []);
+
+  // Auto-restore from cloud backup on fresh install
+  const { showPrompt, backupInfo, isRestoring, confirmRestore, dismiss } = useAutoRestore();
+
   return (
-    <IonTabs>
+    <>
+      <IonAlert
+        isOpen={showPrompt}
+        header="Restore from Cloud Backup?"
+        message={
+          backupInfo
+            ? `Found a backup with ${backupInfo.bookCount} books from ${new Date(backupInfo.timestamp).toLocaleDateString()}. Would you like to restore it?`
+            : 'A cloud backup was found. Restore it?'
+        }
+        buttons={[
+          { text: 'Skip', role: 'cancel', handler: dismiss },
+          { text: isRestoring ? 'Restoring...' : 'Restore', handler: confirmRestore },
+        ]}
+        onDidDismiss={dismiss}
+      />
+      <IonTabs>
       <IonRouterOutlet>
         <Route exact path="/library">
           <Library />
@@ -135,6 +162,7 @@ const AppTabs: React.FC = () => {
         </IonTabButton>
       </IonTabBar>
     </IonTabs>
+    </>
   );
 };
 

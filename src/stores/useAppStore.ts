@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { databaseService } from '../services/database';
+import { markDirty } from '../services/firebaseAutoBackupManager';
 import type { Book, Bookmark, Highlight } from '../types/index';
 
 interface AppState {
@@ -101,6 +102,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const books = await databaseService.getAllBooks();
         const newBook = books.find((b) => b.id === bookData.id) || null;
         set({ books, isLoading: false });
+        markDirty();
         return newBook;
       }
       set({ isLoading: false });
@@ -124,6 +126,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           currentBook: state.currentBook?.id === bookId ? null : state.currentBook,
           isLoading: false,
         }));
+        markDirty();
       }
       return success;
     } catch (error) {
@@ -202,6 +205,7 @@ export const useAppStore = create<AppState>((set, get) => ({
               }
             : state.currentBook,
       }));
+      markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update progress' });
     }
@@ -238,6 +242,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         text: textPreview,
       });
       await get().loadBookmarks(bookId);
+      markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to add bookmark' });
     }
@@ -250,6 +255,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (currentBook) {
         await get().loadBookmarks(currentBook.id);
       }
+      markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to remove bookmark' });
     }
@@ -291,6 +297,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         note,
       });
       await get().loadHighlights(bookId);
+      markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to add highlight' });
     }
@@ -303,6 +310,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (currentBook) {
         await get().loadHighlights(currentBook.id);
       }
+      markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to remove highlight' });
     }
