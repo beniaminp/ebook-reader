@@ -1152,8 +1152,6 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       <IonModal
         isOpen={settingsOpen}
         onDidDismiss={() => setSettingsOpen(false)}
-        breakpoints={[0, 0.5, 0.85]}
-        initialBreakpoint={0.5}
       >
         <ReadingSettingsPanel onDismiss={() => setSettingsOpen(false)} />
       </IonModal>
