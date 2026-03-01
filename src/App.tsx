@@ -65,7 +65,9 @@ const AppTabs: React.FC = () => {
 
   useEffect(() => {
     // Load custom fonts on app startup
-    loadCustomFonts();
+    loadCustomFonts().catch((err) => {
+      console.error('Failed to load custom fonts:', err);
+    });
   }, [loadCustomFonts]);
 
   useEffect(() => {
