@@ -20,6 +20,7 @@ import {
 import {
   shareSocialOutline,
   trashOutline,
+  cloudOutline,
 } from 'ionicons/icons';
 import { useSharingStore } from '../../stores/useSharingStore';
 import { torrentService, TorrentStats } from '../../services/torrentService';
@@ -54,6 +55,7 @@ const MySharedBooks: React.FC = () => {
       const stats: Record<string, TorrentStats | null> = {};
       const status: Record<string, boolean> = {};
       for (const book of mySharedBooks) {
+        if (!book.magnetURI) continue;
         try {
           const s = await torrentService.getSeedingStats(book.magnetURI);
           stats[book.magnetURI] = s;
@@ -72,6 +74,7 @@ const MySharedBooks: React.FC = () => {
   }, [mySharedBooks]);
 
   const seedingCount = Object.values(seedingStatus).filter(Boolean).length;
+  const cloudCount = mySharedBooks.filter((b) => b.downloadURL && !seedingStatus[b.magnetURI ?? '']).length;
 
   const handleUnshare = async (doc: SharedBookDoc) => {
     await unshareBook(doc);
@@ -89,10 +92,21 @@ const MySharedBooks: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        {seedingCount > 0 && (
+        {(seedingCount > 0 || cloudCount > 0) && (
           <div className="seeding-banner">
-            <span className="seeding-dot active" />
-            Seeding {seedingCount} book{seedingCount !== 1 ? 's' : ''}. Keep app open to share.
+            {seedingCount > 0 && (
+              <span>
+                <span className="seeding-dot active" />
+                Seeding {seedingCount} book{seedingCount !== 1 ? 's' : ''}.{' '}
+              </span>
+            )}
+            {cloudCount > 0 && (
+              <span>
+                <IonIcon icon={cloudOutline} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                {cloudCount} shared via cloud.
+              </span>
+            )}
+            {seedingCount > 0 && ' Keep app open to seed.'}
           </div>
         )}
 
@@ -107,13 +121,22 @@ const MySharedBooks: React.FC = () => {
         ) : (
           <IonList className="my-shared-books-list">
             {mySharedBooks.map((book) => {
-              const seeding = seedingStatus[book.magnetURI] ?? false;
+              const seeding = book.magnetURI ? (seedingStatus[book.magnetURI] ?? false) : false;
+              const isCloudOnly = !!book.downloadURL && !seeding;
               return (
                 <IonItem key={book.id}>
-                  <span
-                    className={`seeding-dot ${seeding ? 'active' : 'inactive'}`}
-                    slot="start"
-                  />
+                  {isCloudOnly ? (
+                    <IonIcon
+                      icon={cloudOutline}
+                      slot="start"
+                      style={{ color: 'var(--ion-color-primary)', fontSize: '1.2em' }}
+                    />
+                  ) : (
+                    <span
+                      className={`seeding-dot ${seeding ? 'active' : 'inactive'}`}
+                      slot="start"
+                    />
+                  )}
                   <IonLabel>
                     <h2>{book.title}</h2>
                     <p>{book.author}</p>
@@ -124,8 +147,13 @@ const MySharedBooks: React.FC = () => {
                       <span style={{ fontSize: '0.8em', color: 'var(--ion-color-medium)' }}>
                         {formatFileSize(book.fileSize)}
                       </span>
+                      {isCloudOnly && (
+                        <span style={{ fontSize: '0.8em', color: 'var(--ion-color-primary)' }}>
+                          Shared via cloud
+                        </span>
+                      )}
                     </div>
-                    {seeding && seedingStats[book.magnetURI] && (
+                    {seeding && book.magnetURI && seedingStats[book.magnetURI] && (
                       <div className="seeding-stats-row">
                         <span className="seeding-stat">
                           &#x2191; {formatSpeed(seedingStats[book.magnetURI]!.uploadSpeed)}

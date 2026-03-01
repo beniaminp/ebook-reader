@@ -12,7 +12,8 @@ import { db } from '../config/firebaseConfig';
 
 export interface SharedBookDoc {
   id?: string;
-  magnetURI: string;
+  magnetURI?: string;
+  downloadURL?: string;
   title: string;
   author: string;
   format: string;
@@ -55,7 +56,8 @@ export async function getAllSharedBooks(): Promise<SharedBookDoc[]> {
     const data = d.data();
     return {
       id: d.id,
-      magnetURI: data.magnetURI || '',
+      magnetURI: data.magnetURI || undefined,
+      downloadURL: data.downloadURL || undefined,
       title: data.title || '',
       author: data.author || '',
       format: data.format || '',

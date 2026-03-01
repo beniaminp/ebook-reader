@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { torrentService, type TorrentStats } from '../services/torrentService';
+import { firebaseStorageService } from '../services/firebaseStorageService';
 import { sharingService, type SharedBookDoc } from '../services/sharingService';
 import { getUserId } from '../services/userIdentityService';
 import { webFileStorage } from '../services/webFileStorage';
@@ -50,9 +51,25 @@ export const useSharingStore = create<SharingState>((set, get) => ({
         console.warn('File is larger than 50MB, sharing may be slow');
       }
       const fileName = `${book.title}.${book.format}`;
-      const magnetURI = await torrentService.seed(fileData, fileName);
+
+      let magnetURI: string | undefined;
+      let downloadURL: string | undefined;
+
+      // Try WebTorrent first
+      try {
+        magnetURI = await torrentService.seed(fileData, fileName);
+      } catch (err) {
+        console.warn('WebTorrent seeding failed, falling back to Firebase Storage:', err);
+      }
+
+      // Fall back to Firebase Storage if WebTorrent failed
+      if (!magnetURI) {
+        downloadURL = await firebaseStorageService.uploadBook(book.id, fileData, fileName);
+      }
+
       await sharingService.shareBook({
         magnetURI,
+        downloadURL,
         title: book.title,
         author: book.author,
         format: book.format,
@@ -72,8 +89,22 @@ export const useSharingStore = create<SharingState>((set, get) => ({
 
   unshareBook: async (doc) => {
     try {
+      // Stop WebTorrent seeding if applicable
       if (doc.magnetURI) {
-        torrentService.stopSeeding(doc.magnetURI);
+        try {
+          await torrentService.stopSeeding(doc.magnetURI);
+        } catch {
+          // WebTorrent may not be available, ignore
+        }
+      }
+      // Delete from Firebase Storage if applicable
+      if (doc.downloadURL) {
+        try {
+          const fileName = `${doc.title}.${doc.format}`;
+          await firebaseStorageService.deleteBook(doc.localBookId, fileName);
+        } catch (err) {
+          console.warn('Failed to delete from Firebase Storage:', err);
+        }
       }
       if (doc.id) {
         await sharingService.unshareBook(doc.id);
@@ -89,10 +120,44 @@ export const useSharingStore = create<SharingState>((set, get) => ({
   downloadSharedBook: async (doc) => {
     set({ isDownloading: true, downloadProgress: 0, error: null });
     try {
-      const { data, fileName } = await torrentService.download(
-        doc.magnetURI,
-        (stats) => set({ downloadProgress: stats.progress, downloadStats: stats })
-      );
+      let data: ArrayBuffer;
+      let fileName: string;
+
+      // Try WebTorrent first if magnetURI is available
+      if (doc.magnetURI) {
+        try {
+          const result = await torrentService.download(
+            doc.magnetURI,
+            (stats) => set({ downloadProgress: stats.progress, downloadStats: stats })
+          );
+          data = result.data;
+          fileName = result.fileName;
+        } catch (err) {
+          console.warn('WebTorrent download failed:', err);
+          // Fall back to Firebase Storage if available
+          if (doc.downloadURL) {
+            const result = await firebaseStorageService.downloadBook(
+              doc.downloadURL,
+              (progress) => set({ downloadProgress: progress, downloadStats: null })
+            );
+            data = result.data;
+            fileName = result.fileName;
+          } else {
+            throw err;
+          }
+        }
+      } else if (doc.downloadURL) {
+        // Only Firebase Storage available
+        const result = await firebaseStorageService.downloadBook(
+          doc.downloadURL,
+          (progress) => set({ downloadProgress: progress, downloadStats: null })
+        );
+        data = result.data;
+        fileName = result.fileName;
+      } else {
+        throw new Error('No download source available for this book');
+      }
+
       const bookId = `p2p_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       await webFileStorage.storeFile(bookId, data);
       const appStore = useAppStore.getState();
@@ -148,12 +213,19 @@ export const useSharingStore = create<SharingState>((set, get) => ({
       const myBooks = await sharingService.getMySharedBooks(userId);
       set({ mySharedBooks: myBooks });
       for (const book of myBooks) {
-        if (!(await torrentService.isSeeding(book.magnetURI))) {
-          const fileData = await webFileStorage.getFile(book.localBookId);
-          if (fileData) {
-            const fileName = `${book.title}.${book.format}`;
-            await torrentService.seed(fileData, fileName);
+        // Only try to resume WebTorrent seeding for books that have a magnetURI
+        if (!book.magnetURI) continue;
+        try {
+          if (!(await torrentService.isSeeding(book.magnetURI))) {
+            const fileData = await webFileStorage.getFile(book.localBookId);
+            if (fileData) {
+              const fileName = `${book.title}.${book.format}`;
+              await torrentService.seed(fileData, fileName);
+            }
           }
+        } catch (err) {
+          // WebTorrent may fail on some platforms — skip this book silently
+          console.warn(`Failed to resume seeding for "${book.title}":`, err);
         }
       }
     } catch (error) {

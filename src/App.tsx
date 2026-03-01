@@ -1,6 +1,5 @@
 import { Redirect, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
 import {
   IonApp,
   IonIcon,
@@ -72,12 +71,9 @@ const AppTabs: React.FC = () => {
 
   useEffect(() => {
     // Resume seeding shared books on app startup (fire-and-forget, don't block UI)
-    // Skip on native platforms where WebTorrent is not supported
-    if (!Capacitor.isNativePlatform()) {
-      useSharingStore.getState().resumeSeeding().catch((err) => {
-        console.error('Failed to resume seeding:', err);
-      });
-    }
+    useSharingStore.getState().resumeSeeding().catch((err) => {
+      console.error('Failed to resume seeding:', err);
+    });
   }, []);
 
   return (

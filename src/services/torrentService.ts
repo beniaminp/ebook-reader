@@ -1,5 +1,3 @@
-import { Capacitor } from '@capacitor/core';
-
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
   'wss://tracker.btorrent.xyz',
@@ -31,12 +29,15 @@ class TorrentService {
   private client: any = null;
 
   private async getClient() {
-    if (Capacitor.isNativePlatform()) {
-      throw new Error('WebTorrent is not supported on native platforms');
-    }
     if (!this.client) {
-      const WT = await loadWebTorrent();
-      this.client = new WT({ dht: false, lsd: false } as unknown as Record<string, unknown>);
+      try {
+        const WT = await loadWebTorrent();
+        this.client = new WT({ dht: false, lsd: false } as unknown as Record<string, unknown>);
+      } catch (err) {
+        throw new Error(
+          `WebTorrent initialization failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     }
     return this.client;
   }
@@ -154,7 +155,6 @@ class TorrentService {
   }
 
   async isSeeding(magnetURI: string): Promise<boolean> {
-    if (Capacitor.isNativePlatform()) return false;
     const client = await this.getClient();
     const torrent = await client.get(magnetURI);
     return !!torrent;
