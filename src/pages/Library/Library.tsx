@@ -998,10 +998,22 @@ const Library: React.FC = () => {
     const currentBooks = useAppStore.getState().books;
     setBooks([newBook, ...currentBooks]);
 
-    // Fire-and-forget: fetch metadata from online APIs
-    metadataLookupService.fetchBookMetadata(title, author).then((meta) => {
+    // Fetch metadata from online APIs and update both DB and store
+    metadataLookupService.fetchBookMetadata(title, author).then(async (meta) => {
       if (meta) {
-        databaseService.updateBookMetadata(bookId, meta);
+        await databaseService.updateBookMetadata(bookId, meta);
+        // Update the book in the store with genre/metadata
+        const updatedBooks = useAppStore.getState().books.map((b) =>
+          b.id === bookId
+            ? {
+                ...b,
+                genre: meta.genre,
+                subgenres: meta.subgenres,
+                metadata: { ...b.metadata, ...meta },
+              }
+            : b
+        );
+        setBooks(updatedBooks);
       }
     });
   };

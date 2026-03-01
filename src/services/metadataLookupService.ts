@@ -23,15 +23,6 @@ interface GoogleBooksResponse {
   items?: GoogleBooksVolume[];
 }
 
-interface OpenLibraryDoc {
-  publish_date?: string[];
-  subject?: string[];
-  publisher?: string[];
-  isbn?: string[];
-  language?: string[];
-  description?: string | { value: string };
-}
-
 interface OpenLibrarySearchResponse {
   docs?: Array<{
     key: string;
@@ -41,6 +32,41 @@ interface OpenLibrarySearchResponse {
     isbn?: string[];
     language?: string[];
   }>;
+}
+
+/**
+ * Parse categories/subjects into a main genre and subgenres.
+ *
+ * Google Books returns categories like:
+ *   ["Fiction / Thriller / General", "Fiction / Mystery & Detective"]
+ * Open Library returns subjects like:
+ *   ["Fiction", "Thriller", "Mystery", "English literature", "Suspense"]
+ *
+ * Strategy:
+ * - Main genre = first broad category (e.g. "Fiction", "Science", "History")
+ * - Subgenres = all unique narrower categories after deduplication
+ */
+function parseGenres(categories: string[]): { genre: string; subgenres: string[] } {
+  const allParts: string[] = [];
+
+  for (const cat of categories) {
+    // Split on " / " (Google Books style) or " - " separators
+    const parts = cat.split(/\s*[/\-]\s*/).map((p) => p.trim()).filter(Boolean);
+    allParts.push(...parts);
+  }
+
+  // Remove generic terms and deduplicate
+  const generic = new Set(['General', 'General & Miscellaneous']);
+  const unique = [...new Set(allParts)].filter((p) => !generic.has(p));
+
+  if (unique.length === 0) {
+    return { genre: categories[0] || 'Unknown', subgenres: [] };
+  }
+
+  const genre = unique[0];
+  const subgenres = unique.slice(1);
+
+  return { genre, subgenres };
 }
 
 async function fetchFromGoogleBooks(
@@ -65,7 +91,12 @@ async function fetchFromGoogleBooks(
   const metadata: BookMetadata = {};
 
   if (info.publishedDate) metadata.publishDate = info.publishedDate;
-  if (info.categories) metadata.genres = info.categories;
+  if (info.categories) {
+    metadata.genres = info.categories;
+    const { genre, subgenres } = parseGenres(info.categories);
+    metadata.genre = genre;
+    metadata.subgenres = subgenres;
+  }
   if (info.description) metadata.description = info.description;
   if (info.publisher) metadata.publisher = info.publisher;
   if (info.language) metadata.language = info.language;
@@ -99,7 +130,12 @@ async function fetchFromOpenLibrary(
   const metadata: BookMetadata = {};
 
   if (doc.publish_date?.[0]) metadata.publishDate = doc.publish_date[0];
-  if (doc.subject) metadata.genres = doc.subject.slice(0, 5);
+  if (doc.subject && doc.subject.length > 0) {
+    metadata.genres = doc.subject.slice(0, 10);
+    const { genre, subgenres } = parseGenres(doc.subject.slice(0, 10));
+    metadata.genre = genre;
+    metadata.subgenres = subgenres;
+  }
   if (doc.publisher?.[0]) metadata.publisher = doc.publisher[0];
   if (doc.isbn?.[0]) metadata.isbn = doc.isbn[0];
   if (doc.language?.[0]) metadata.language = doc.language[0];

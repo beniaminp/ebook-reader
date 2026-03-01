@@ -38,6 +38,8 @@ export interface Book {
   sourceId?: string; // ID from the source system (e.g., Calibre book ID)
   sourceUrl?: string; // URL for downloading from source
   downloaded: boolean; // Whether the book file is downloaded locally
+  genre?: string; // Main genre (e.g., "Fiction", "Science")
+  subgenres?: string[]; // Sub-genres (e.g., ["Thriller", "Mystery", "Suspense"])
   metadata?: BookMetadata;
 }
 
@@ -48,6 +50,8 @@ export interface BookMetadata {
   language?: string;
   description?: string;
   genres?: string[];
+  genre?: string; // Main genre
+  subgenres?: string[]; // Sub-genres
   tags?: string[];
   series?: string;
   seriesIndex?: number;

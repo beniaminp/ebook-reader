@@ -11,6 +11,7 @@ import {
   getAllCreateStatements,
   getAllIndexStatements,
   getAllSeedStatements,
+  MIGRATION_SQL,
 } from './schema';
 import type { Book, ReadingProgress, Collection, Bookmark, Highlight } from '../types/index';
 import { webFileStorage } from './webFileStorage';
@@ -159,6 +160,17 @@ export async function initDatabase(): Promise<boolean> {
       const seeds = getAllSeedStatements();
       for (const seed of seeds) {
         await db.execute(seed);
+      }
+
+      // Run migrations (safe to re-run — ALTER TABLE ADD COLUMN errors are caught)
+      for (const [, sql] of Object.entries(MIGRATION_SQL)) {
+        for (const stmt of sql.split(';').map((s) => s.trim()).filter(Boolean)) {
+          try {
+            await db.execute(stmt);
+          } catch {
+            // Column likely already exists — safe to ignore
+          }
+        }
       }
 
       console.log('Database initialized successfully');
@@ -437,8 +449,10 @@ export async function updateBookMetadata(
       webBooks[index] = {
         ...webBooks[index],
         metadata: { ...(webBooks[index] as any).metadata, ...metadata },
+        genre: metadata.genre ?? (webBooks[index] as any).genre,
+        subgenres: metadata.subgenres ?? (webBooks[index] as any).subgenres,
         updatedAt: Date.now(),
-      };
+      } as any;
       saveWebData();
       return true;
     }
@@ -485,6 +499,14 @@ export async function updateBookMetadata(
     if (metadata.tags !== undefined) {
       fields.push('tags = ?');
       values.push(JSON.stringify(metadata.tags));
+    }
+    if (metadata.genre !== undefined) {
+      fields.push('genre = ?');
+      values.push(metadata.genre);
+    }
+    if (metadata.subgenres !== undefined) {
+      fields.push('subgenres = ?');
+      values.push(JSON.stringify(metadata.subgenres));
     }
 
     if (fields.length > 0) {
@@ -618,6 +640,18 @@ function mapRowToBook(row: any): Book | null {
     }
   }
 
+  // Parse genre/subgenres
+  let genre: string | undefined;
+  let subgenres: string[] | undefined;
+  if (row.genre) genre = row.genre;
+  if (row.subgenres) {
+    try {
+      subgenres = JSON.parse(row.subgenres);
+    } catch {
+      subgenres = row.subgenres.split(',').map((s: string) => s.trim());
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
@@ -634,6 +668,8 @@ function mapRowToBook(row: any): Book | null {
     sourceId: row.source_id,
     sourceUrl: row.source_url,
     downloaded: row.downloaded === 1,
+    genre,
+    subgenres,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }
@@ -660,6 +696,9 @@ function webBookToBook(webBook: WebBook): Book {
     sourceId: webBook.sourceId,
     sourceUrl: webBook.sourceUrl,
     downloaded: webBook.downloaded,
+    genre: (webBook as any).genre,
+    subgenres: (webBook as any).subgenres,
+    metadata: (webBook as any).metadata,
   };
 }
 
