@@ -1,0 +1,125 @@
+name: Build Signed Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'What to build'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - apk
+          - aab
+          - both
+
+permissions:
+  contents: write
+
+jobs:
+  build-signed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - run: npx cap sync android
+
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed release APK
+        if: inputs.build_type == 'apk' || inputs.build_type == 'both'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Build signed release AAB
+        if: inputs.build_type == 'aab' || inputs.build_type == 'both'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease
+
+      - name: Rename artifacts
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SHORT_SHA=${GITHUB_SHA::7}
+          UPLOAD_FILES=""
+
+          APK_SRC="android/app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$APK_SRC" ]; then
+            APK_NAME="ebook-reader-v${VERSION}-${SHORT_SHA}-signed.apk"
+            cp "$APK_SRC" "$APK_NAME"
+            echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
+            UPLOAD_FILES="$APK_NAME"
+          fi
+
+          AAB_SRC="android/app/build/outputs/bundle/release/app-release.aab"
+          if [ -f "$AAB_SRC" ]; then
+            AAB_NAME="ebook-reader-v${VERSION}-${SHORT_SHA}-signed.aab"
+            cp "$AAB_SRC" "$AAB_NAME"
+            echo "AAB_NAME=$AAB_NAME" >> $GITHUB_ENV
+            UPLOAD_FILES="$UPLOAD_FILES $AAB_NAME"
+          fi
+
+          echo "UPLOAD_FILES=$UPLOAD_FILES" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload APK artifact
+        if: env.APK_NAME != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebook-reader-signed-apk
+          path: ${{ env.APK_NAME }}
+
+      - name: Upload AAB artifact
+        if: env.AAB_NAME != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebook-reader-signed-aab
+          path: ${{ env.AAB_NAME }}
+
+      - name: Create or update signed release
+        run: |
+          TAG="v${VERSION}"
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes "Signed release build from commit ${{ github.sha }}" \
+            --latest 2>/dev/null || \
+          gh release edit "$TAG" \
+            --title "Release $TAG" \
+            --notes "Signed release build from commit ${{ github.sha }}" \
+            --latest
+          for f in $UPLOAD_FILES; do
+            gh release upload "$TAG" "$f" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
