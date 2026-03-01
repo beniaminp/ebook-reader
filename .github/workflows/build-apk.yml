@@ -57,18 +57,20 @@ jobs:
           name: ebook-reader-apk
           path: ${{ env.APK_NAME }}
 
-      - name: Delete existing latest release
-        run: gh release delete latest --yes --cleanup-tag || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create release with APK
+      - name: Create or update release
         run: |
+          # Create the release if it doesn't exist yet
           gh release create latest \
             --title "Latest Build" \
             --notes "Automated APK build from commit ${{ github.sha }}" \
             --prerelease \
-            --latest \
-            "${{ env.APK_NAME }}"
+            --latest 2>/dev/null || \
+          gh release edit latest \
+            --title "Latest Build" \
+            --notes "Automated APK build from commit ${{ github.sha }}" \
+            --prerelease \
+            --latest
+          # Upload APK, overwriting any existing asset with same name
+          gh release upload latest "${{ env.APK_NAME }}" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
