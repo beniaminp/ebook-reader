@@ -994,6 +994,10 @@ const Library: React.FC = () => {
 
     await databaseService.addBook(newBook);
 
+    // Immediately update the store so the book appears in the library without waiting for full reload
+    const currentBooks = useAppStore.getState().books;
+    setBooks([newBook, ...currentBooks]);
+
     // Fire-and-forget: fetch metadata from online APIs
     metadataLookupService.fetchBookMetadata(title, author).then((meta) => {
       if (meta) {
