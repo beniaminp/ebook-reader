@@ -88,6 +88,8 @@ export interface ReaderEngineRef {
   setCustomMargins?(margins: { top: number; bottom: number; left: number; right: number }): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
+  /** Enable/disable interlinear translation mode. */
+  setInterlinearMode?(enabled: boolean, targetLanguage: string): void;
   /** Get current text selection info (CFI + text for EPUB, offsets for scroll). */
   getSelectionInfo?(): { cfi?: string; text: string; startOffset?: number; endOffset?: number } | null;
   /** Add a visual highlight annotation (EPUB). */

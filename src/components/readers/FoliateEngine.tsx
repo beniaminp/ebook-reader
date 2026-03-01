@@ -20,6 +20,7 @@ import type { EpubTheme } from '../../types/epub';
 import type { ReaderEngineRef, Chapter, SearchResult, ReaderProgress } from '../../types/reader';
 import { comicService } from '../../services/comicService';
 
+import { translateParagraph, clearInterlinearCache } from '../../services/interlinearTranslationService';
 import './EpubReader.css';
 
 export interface FoliateHighlight {
@@ -147,6 +148,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const marginSizeRef = useRef<string>('medium');
   const customMarginsRef = useRef<{ top: number; bottom: number; left: number; right: number }>({ top: 16, bottom: 16, left: 24, right: 24 });
   const bionicReadingRef = useRef<boolean>(false);
+  const interlinearEnabledRef = useRef<boolean>(false);
+  const interlinearLanguageRef = useRef<string>('en');
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Track highlight annotations applied to the view
@@ -190,9 +193,51 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         b, strong { font-weight: 900 !important; }
       `);
     }
+    if (interlinearEnabledRef.current) {
+      rules.push(`
+        .interlinear-translation {
+          font-size: 0.78em;
+          font-style: italic;
+          opacity: 0.6;
+          margin: 2px 0 10px 0;
+          padding-left: 6px;
+          border-left: 2px solid currentColor;
+          line-height: 1.3;
+        }
+      `);
+    }
 
     style.textContent = rules.join('\n');
     doc.head.appendChild(style);
+  }, []);
+
+  const applyInterlinear = useCallback(async (doc: Document) => {
+    if (!interlinearEnabledRef.current) return;
+    const elements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+    for (const el of elements) {
+      if (el.getAttribute('data-interlinear-processed')) continue;
+      const text = (el.textContent || '').trim();
+      if (!text || text.length < 2) continue;
+      el.setAttribute('data-interlinear-processed', 'true');
+      try {
+        const translated = await translateParagraph(text, 'auto', interlinearLanguageRef.current);
+        if (translated && translated !== text) {
+          const div = doc.createElement('div');
+          div.className = 'interlinear-translation';
+          div.textContent = translated;
+          el.insertAdjacentElement('afterend', div);
+        }
+      } catch {
+        /* translation failed for this paragraph — skip */
+      }
+    }
+  }, []);
+
+  const removeInterlinear = useCallback((doc: Document) => {
+    doc.querySelectorAll('.interlinear-translation').forEach((el) => el.remove());
+    doc.querySelectorAll('[data-interlinear-processed]').forEach((el) =>
+      el.removeAttribute('data-interlinear-processed')
+    );
   }, []);
 
   const reapplyStyles = useCallback(() => {
@@ -255,6 +300,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           if (destroyed) return;
           loadedDocsRef.current.add(e.detail.doc);
           injectStyles(e.detail.doc);
+          applyInterlinear(e.detail.doc);
         }) as EventListener);
 
         // Annotation support: draw highlights when foliate creates overlayers
@@ -471,6 +517,35 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         bionicReadingRef.current = enabled;
         reapplyStyles();
       },
+      setInterlinearMode: (enabled: boolean, targetLanguage: string) => {
+        const langChanged = interlinearLanguageRef.current !== targetLanguage;
+        interlinearEnabledRef.current = enabled;
+        interlinearLanguageRef.current = targetLanguage;
+        if (enabled) {
+          if (langChanged) {
+            clearInterlinearCache();
+            // Remove old translations and re-apply
+            for (const doc of loadedDocsRef.current) {
+              try {
+                removeInterlinear(doc);
+              } catch { /* detached doc */ }
+            }
+          }
+          reapplyStyles();
+          for (const doc of loadedDocsRef.current) {
+            try {
+              applyInterlinear(doc);
+            } catch { /* detached doc */ }
+          }
+        } else {
+          for (const doc of loadedDocsRef.current) {
+            try {
+              removeInterlinear(doc);
+            } catch { /* detached doc */ }
+          }
+          reapplyStyles();
+        }
+      },
       getSelectionInfo: () => {
         const view = viewRef.current;
         if (!view) return null;
@@ -497,7 +572,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         viewRef.current?.deleteAnnotation?.({ value: cfi });
       },
     }),
-    [chapters, reapplyStyles]
+    [chapters, reapplyStyles, applyInterlinear, removeInterlinear]
   );
 
   // Sync highlights when prop changes

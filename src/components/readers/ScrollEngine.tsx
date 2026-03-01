@@ -17,6 +17,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { ReaderContainer } from '../reader-ui/ReaderContainer';
 import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter } from '../../types/reader';
+import { translateParagraph, clearInterlinearCache } from '../../services/interlinearTranslationService';
 import type { Highlight } from '../../types/index';
 
 export interface ScrollEngineProps {
@@ -270,6 +271,36 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
 
         if (startOffset < 0 || endOffset < 0) return null;
         return { text, startOffset, endOffset };
+      },
+      setInterlinearMode: (enabled: boolean, targetLanguage: string) => {
+        const container = innerRef.current;
+        if (!container) return;
+
+        // Remove existing interlinear translations
+        container.querySelectorAll('.interlinear-translation').forEach((el) => el.remove());
+        container.querySelectorAll('[data-interlinear-processed]').forEach((el) =>
+          el.removeAttribute('data-interlinear-processed')
+        );
+
+        if (!enabled) return;
+
+        clearInterlinearCache();
+        const elements = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+        for (const el of elements) {
+          const text = (el.textContent || '').trim();
+          if (!text || text.length < 2) continue;
+          el.setAttribute('data-interlinear-processed', 'true');
+          translateParagraph(text, 'auto', targetLanguage)
+            .then((translated) => {
+              if (translated && translated !== text) {
+                const div = document.createElement('div');
+                div.className = 'interlinear-translation';
+                div.textContent = translated;
+                el.insertAdjacentElement('afterend', div);
+              }
+            })
+            .catch(() => { /* skip failed translations */ });
+        }
       },
     }),
     [scrollByViewport, scrollToCharIndex, ionContentRef, plainText]

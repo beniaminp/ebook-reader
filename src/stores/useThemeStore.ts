@@ -177,6 +177,8 @@ interface ThemeState extends ReadingSettings {
   setReadingRulerOpacity: (opacity: number) => void;
   setReadingRulerColor: (color: RulerColor) => void;
   setBionicReading: (enabled: boolean) => void;
+  setInterlinearMode: (enabled: boolean) => void;
+  setInterlinearLanguage: (language: string) => void;
   setFocusMode: (enabled: boolean) => void;
   setFocusModeOpacity: (opacity: number) => void;
   setAutoScroll: (enabled: boolean) => void;
@@ -242,6 +244,8 @@ export const useThemeStore = create<ThemeState>()(
       readingRuler: DEFAULT_SETTINGS.readingRuler,
       readingRulerSettings: DEFAULT_SETTINGS.readingRulerSettings,
       bionicReading: DEFAULT_SETTINGS.bionicReading,
+      interlinearMode: DEFAULT_SETTINGS.interlinearMode,
+      interlinearLanguage: DEFAULT_SETTINGS.interlinearLanguage,
       focusMode: DEFAULT_SETTINGS.focusMode,
       focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
       autoScroll: DEFAULT_SETTINGS.autoScroll,
@@ -319,6 +323,10 @@ export const useThemeStore = create<ThemeState>()(
 
       setBionicReading: (bionicReading) => set({ bionicReading }),
 
+      setInterlinearMode: (interlinearMode) => set({ interlinearMode }),
+
+      setInterlinearLanguage: (interlinearLanguage) => set({ interlinearLanguage }),
+
       setFocusMode: (focusMode) => set({ focusMode }),
 
       setFocusModeOpacity: (opacity) =>
@@ -349,6 +357,8 @@ export const useThemeStore = create<ThemeState>()(
           readingRuler: DEFAULT_SETTINGS.readingRuler,
           readingRulerSettings: DEFAULT_SETTINGS.readingRulerSettings,
           bionicReading: DEFAULT_SETTINGS.bionicReading,
+          interlinearMode: DEFAULT_SETTINGS.interlinearMode,
+          interlinearLanguage: DEFAULT_SETTINGS.interlinearLanguage,
           focusMode: DEFAULT_SETTINGS.focusMode,
           focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
           autoScroll: DEFAULT_SETTINGS.autoScroll,
@@ -420,6 +430,8 @@ export const useThemeStore = create<ThemeState>()(
         readingRuler: state.readingRuler,
         readingRulerSettings: state.readingRulerSettings,
         bionicReading: state.bionicReading,
+        interlinearMode: state.interlinearMode,
+        interlinearLanguage: state.interlinearLanguage,
         focusMode: state.focusMode,
         focusModeSettings: state.focusModeSettings,
         autoScroll: state.autoScroll,

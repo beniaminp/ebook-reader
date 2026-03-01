@@ -435,6 +435,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     engineRef.current?.setBionicReading?.(themeStore.bionicReading);
   }, [themeStore.bionicReading, isFoliate]);
 
+  useEffect(() => {
+    if (isPdf) return;
+    engineRef.current?.setInterlinearMode?.(
+      themeStore.interlinearMode,
+      themeStore.interlinearLanguage
+    );
+  }, [themeStore.interlinearMode, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
+
   // ─── Overlay tap zones (for foliate iframe) ─────────────────────────
 
   const handleOverlayTouchStart = useCallback(

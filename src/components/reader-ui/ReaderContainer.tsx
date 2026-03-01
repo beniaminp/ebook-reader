@@ -13,6 +13,7 @@ import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
 import { ReadingRuler } from './ReadingRuler';
 import { FocusMode } from './FocusMode';
 import './ReaderContainer.css';
+import './Interlinear.css';
 
 export interface ReaderContainerProps {
   children: React.ReactNode;

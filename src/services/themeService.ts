@@ -64,6 +64,8 @@ export interface ReadingSettings {
   readingRuler: boolean;
   readingRulerSettings: ReadingRulerSettings;
   bionicReading: boolean;
+  interlinearMode: boolean;
+  interlinearLanguage: string;
   focusMode: boolean;
   focusModeSettings: FocusModeSettings;
   autoScroll: boolean;
@@ -208,6 +210,8 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
     color: 'accent',
   },
   bionicReading: false,
+  interlinearMode: false,
+  interlinearLanguage: 'en',
   focusMode: false,
   focusModeSettings: {
     enabled: false,

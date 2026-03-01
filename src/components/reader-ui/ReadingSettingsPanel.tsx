@@ -46,6 +46,7 @@ import type {
   CustomMargins,
 } from '../../services/themeService';
 import { PREDEFINED_THEMES, FONT_FAMILIES } from '../../services/themeService';
+import { SUPPORTED_LANGUAGES } from '../../services/translationService';
 import { fontService } from '../../services/fontService';
 import './ReadingSettingsPanel.css';
 
@@ -69,6 +70,8 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     readingRuler,
     readingRulerSettings,
     bionicReading,
+    interlinearMode,
+    interlinearLanguage,
     focusMode,
     focusModeSettings,
     autoScroll,
@@ -93,6 +96,8 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setReadingRulerOpacity,
     setReadingRulerColor,
     setBionicReading,
+    setInterlinearMode,
+    setInterlinearLanguage,
     setFocusMode,
     setFocusModeOpacity,
     setAutoScroll,
@@ -611,6 +616,30 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                 onIonChange={(e) => setBionicReading(e.detail.checked)}
               />
             </IonItem>
+
+            <IonItem>
+              <IonLabel>Interlinear Translation</IonLabel>
+              <IonToggle
+                checked={interlinearMode}
+                onIonChange={(e) => setInterlinearMode(e.detail.checked)}
+              />
+            </IonItem>
+
+            {interlinearMode && (
+              <IonItem>
+                <IonLabel>Target Language</IonLabel>
+                <IonSelect
+                  value={interlinearLanguage}
+                  onIonChange={(e) => setInterlinearLanguage(e.detail.value)}
+                >
+                  {SUPPORTED_LANGUAGES.filter((l) => l.target).map((lang) => (
+                    <IonSelectOption key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            )}
 
             <IonItem>
               <IonLabel>Auto Scroll</IonLabel>
