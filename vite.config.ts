@@ -69,7 +69,7 @@ function corsProxyPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/ebook-reader/' : '/',
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     react(),
     legacy({
