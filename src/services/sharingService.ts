@@ -7,7 +7,7 @@ import {
   query,
   where,
   Timestamp,
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import { db } from '../config/firebaseConfig';
 
 export interface SharedBookDoc {
