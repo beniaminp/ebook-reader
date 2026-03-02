@@ -28,8 +28,12 @@ const COLLECTION = 'sharedBooks';
 export async function shareBook(
   data: Omit<SharedBookDoc, 'id' | 'sharedAt'>
 ): Promise<string> {
+  // Firestore rejects undefined values — strip them out
+  const cleaned = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  );
   const docRef = await addDoc(collection(db, COLLECTION), {
-    ...data,
+    ...cleaned,
     sharedAt: Timestamp.now(),
   });
   return docRef.id;
