@@ -199,7 +199,7 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   lineHeight: 1.6,
   textAlign: 'justify',
   marginSize: 'medium',
-  customMargins: { top: 16, bottom: 16, left: 24, right: 24 },
+  customMargins: { top: 0, bottom: 0, left: 0, right: 0 },
   blueLightFilter: false,
   blueLightIntensity: 15,
   readingRuler: false,

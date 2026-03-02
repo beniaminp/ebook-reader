@@ -1,5 +1,7 @@
 import { Redirect, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import {
   IonAlert,
   IonApp,
@@ -26,6 +28,7 @@ import MySharedBooks from './pages/MySharedBooks/MySharedBooks';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
+import { useAppStore } from './stores/useAppStore';
 import { useAutoRestore } from './hooks/useAutoRestore';
 
 /* Core CSS required for Ionic components to work properly */
@@ -83,6 +86,21 @@ const AppTabs: React.FC = () => {
   useEffect(() => {
     const unsubscribe = useAuthStore.getState().initialize();
     return unsubscribe;
+  }, []);
+
+  // Reload library when app resumes from background (Android)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listener = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        useAppStore.getState().loadBooks();
+      }
+    });
+
+    return () => {
+      listener.then((l) => l.remove());
+    };
   }, []);
 
   // Auto-restore from cloud backup on fresh install

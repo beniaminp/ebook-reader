@@ -63,7 +63,7 @@ import {
 } from '../../services/opdsService';
 import type { Book } from '../../types/index';
 import { webFileStorage } from '../../services/webFileStorage';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import './OpdsCatalog.css';
 
 // ============================================================================
@@ -287,13 +287,38 @@ const OpdsCatalogPage: React.FC = () => {
           );
           downloadHeaders['Authorization'] = `Basic ${credentials}`;
         }
-        const response = await fetch(proxyUrl(link.href), { headers: downloadHeaders });
-        if (!response.ok) {
-          throw new Error(`Download failed: ${response.statusText}`);
-        }
 
-        const blob = await response.blob();
-        const buffer = await blob.arrayBuffer();
+        let buffer: ArrayBuffer;
+        let blob: Blob;
+
+        if (Capacitor.isNativePlatform()) {
+          // Use CapacitorHttp on native to bypass WebView CORS restrictions
+          const res = await CapacitorHttp.request({
+            url: link.href,
+            method: 'GET',
+            headers: downloadHeaders,
+            responseType: 'blob',
+          });
+          if (res.status < 200 || res.status >= 300) {
+            throw new Error(`Download failed: ${res.status}`);
+          }
+          // CapacitorHttp returns base64 data for blob responseType
+          const base64 = typeof res.data === 'string' ? res.data : '';
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          buffer = bytes.buffer;
+          blob = new Blob([buffer]);
+        } else {
+          const response = await fetch(proxyUrl(link.href), { headers: downloadHeaders });
+          if (!response.ok) {
+            throw new Error(`Download failed: ${response.statusText}`);
+          }
+          blob = await response.blob();
+          buffer = await blob.arrayBuffer();
+        }
         const format = formatToBookFormat(link.format);
         const bookId =
           crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;

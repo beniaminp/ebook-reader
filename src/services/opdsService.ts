@@ -5,6 +5,7 @@
  */
 
 import { XMLParser } from 'fast-xml-parser';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 // ============================================================================
 // TYPES
@@ -384,13 +385,27 @@ export async function fetchOpdsFeed(
     headers['Authorization'] = `Basic ${credentials}`;
   }
 
-  const response = await fetch(proxyUrl(url), { headers, signal });
+  let text: string;
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch OPDS feed: ${response.status} ${response.statusText}`);
+  if (Capacitor.isNativePlatform()) {
+    // Use CapacitorHttp on native to bypass WebView CORS restrictions
+    const res = await CapacitorHttp.request({
+      url,
+      method: 'GET',
+      headers,
+    });
+    if (res.status < 200 || res.status >= 300) {
+      throw new Error(`Failed to fetch OPDS feed: ${res.status}`);
+    }
+    text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+  } else {
+    const response = await fetch(proxyUrl(url), { headers, signal });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch OPDS feed: ${response.status} ${response.statusText}`);
+    }
+    text = await response.text();
   }
 
-  const text = await response.text();
   return parseOpdsFeed(text, url);
 }
 

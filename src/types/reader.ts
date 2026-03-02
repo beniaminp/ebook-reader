@@ -86,6 +86,8 @@ export interface ReaderEngineRef {
   setMarginSize?(size: string): void;
   /** Set custom per-side margins in px. */
   setCustomMargins?(margins: { top: number; bottom: number; left: number; right: number }): void;
+  /** Set custom background image (or undefined to clear). */
+  setCustomBackgroundImage?(imageUri: string | undefined): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
   /** Enable/disable interlinear translation mode. */

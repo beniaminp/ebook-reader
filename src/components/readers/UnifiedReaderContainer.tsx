@@ -165,7 +165,15 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // Theme
   const themeStore = useThemeStore();
-  const currentTheme = EPUB_THEMES[themeStore.theme] || EPUB_THEMES.light;
+  const baseTheme = EPUB_THEMES[themeStore.theme] || EPUB_THEMES.light;
+  // Merge custom background color into the effective theme
+  const currentTheme = useMemo(
+    () =>
+      themeStore.customBackgroundColor
+        ? { ...baseTheme, backgroundColor: themeStore.customBackgroundColor }
+        : baseTheme,
+    [baseTheme, themeStore.customBackgroundColor]
+  );
 
   // Brightness gesture hook
   const brightnessGesture = useBrightnessGesture({
@@ -399,6 +407,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       textColor: currentTheme.textColor,
     });
   }, [currentTheme, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setCustomBackgroundImage?.(themeStore.customBackgroundImage);
+  }, [themeStore.customBackgroundImage, isFoliate]);
 
   useEffect(() => {
     if (!isFoliate) return;
@@ -938,14 +951,29 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // ─── Render ─────────────────────────
 
+  const pageStyle: React.CSSProperties | undefined = isFoliate
+    ? themeStore.customBackgroundImage
+      ? {
+          '--reader-bg': currentTheme.backgroundColor,
+          backgroundImage: `url(${themeStore.customBackgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        } as React.CSSProperties
+      : { '--reader-bg': currentTheme.backgroundColor } as React.CSSProperties
+    : themeStore.customBackgroundImage
+      ? {
+          backgroundImage: `url(${themeStore.customBackgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }
+      : undefined;
+
   return (
     <IonPage
       className={`unified-reader-page${toolbarVisible ? '' : ' fullscreen'}`}
-      style={
-        isFoliate
-          ? ({ '--reader-bg': currentTheme.backgroundColor } as React.CSSProperties)
-          : undefined
-      }
+      style={pageStyle}
     >
       {/* ─── Top toolbar ─── */}
       {toolbarVisible && (
@@ -989,8 +1017,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         scrollEvents={isScroll}
         style={
           isFoliate
-            ? ({ '--background': currentTheme.backgroundColor } as React.CSSProperties)
-            : undefined
+            ? ({
+                '--background': themeStore.customBackgroundImage
+                  ? 'transparent'
+                  : currentTheme.backgroundColor,
+              } as React.CSSProperties)
+            : themeStore.customBackgroundImage
+              ? ({ '--background': 'transparent' } as React.CSSProperties)
+              : undefined
         }
         onTouchStart={handleContentTouchStart}
         onTouchEnd={handleContentTouchEnd}

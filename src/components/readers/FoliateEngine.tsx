@@ -147,6 +147,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const textAlignRef = useRef<string>('left');
   const marginSizeRef = useRef<string>('medium');
   const customMarginsRef = useRef<{ top: number; bottom: number; left: number; right: number }>({ top: 16, bottom: 16, left: 24, right: 24 });
+  const customBackgroundImageRef = useRef<string | undefined>(undefined);
   const bionicReadingRef = useRef<boolean>(false);
   const interlinearEnabledRef = useRef<boolean>(false);
   const interlinearLanguageRef = useRef<string>('en');
@@ -176,9 +177,16 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     const rules: string[] = [];
     const theme = themeRef.current;
     if (theme) {
-      rules.push(
-        `body { background: ${theme.backgroundColor} !important; color: ${theme.textColor} !important; }`
-      );
+      if (customBackgroundImageRef.current) {
+        // Make body semi-transparent so outer container's background image shows through
+        rules.push(
+          `body { background: rgba(0,0,0,0.5) !important; color: ${theme.textColor} !important; }`
+        );
+      } else {
+        rules.push(
+          `body { background: ${theme.backgroundColor} !important; color: ${theme.textColor} !important; }`
+        );
+      }
     }
     rules.push(
       `body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`
@@ -487,6 +495,10 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setTheme: (theme: { backgroundColor: string; textColor: string }) => {
         themeRef.current = theme;
+        reapplyStyles();
+      },
+      setCustomBackgroundImage: (imageUri: string | undefined) => {
+        customBackgroundImageRef.current = imageUri;
         reapplyStyles();
       },
       setFontSize: (size: number) => {
