@@ -40,6 +40,13 @@ jobs:
 
       - run: npm ci
 
+      - name: Compute version
+        run: |
+          BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          VERSION="${BASE}.${{ github.run_number }}"
+          echo "VERSION_NAME=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
       - name: Build web assets
         run: npm run build
 
@@ -56,6 +63,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
         run: ./gradlew assembleRelease
 
       - name: Build signed release AAB
@@ -66,17 +74,17 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
         run: ./gradlew bundleRelease
 
       - name: Rename artifacts
         run: |
-          VERSION=$(node -p "require('./package.json').version")
           SHORT_SHA=${GITHUB_SHA::7}
           UPLOAD_FILES=""
 
           APK_SRC="android/app/build/outputs/apk/release/app-release.apk"
           if [ -f "$APK_SRC" ]; then
-            APK_NAME="ebook-reader-v${VERSION}-${SHORT_SHA}-signed.apk"
+            APK_NAME="ebook-reader-v${{ env.VERSION }}-${SHORT_SHA}-signed.apk"
             cp "$APK_SRC" "$APK_NAME"
             echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
             UPLOAD_FILES="$APK_NAME"
@@ -84,14 +92,13 @@ jobs:
 
           AAB_SRC="android/app/build/outputs/bundle/release/app-release.aab"
           if [ -f "$AAB_SRC" ]; then
-            AAB_NAME="ebook-reader-v${VERSION}-${SHORT_SHA}-signed.aab"
+            AAB_NAME="ebook-reader-v${{ env.VERSION }}-${SHORT_SHA}-signed.aab"
             cp "$AAB_SRC" "$AAB_NAME"
             echo "AAB_NAME=$AAB_NAME" >> $GITHUB_ENV
             UPLOAD_FILES="$UPLOAD_FILES $AAB_NAME"
           fi
 
           echo "UPLOAD_FILES=$UPLOAD_FILES" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload APK artifact
         if: env.APK_NAME != ''
