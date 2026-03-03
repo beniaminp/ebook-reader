@@ -64,6 +64,10 @@ import { databaseService } from '../../services/database';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { useAppStore } from '../../stores/useAppStore';
 import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
+import { useSleepTimer } from '../../hooks/useSleepTimer';
+import { SleepTimerButton } from '../reader-ui/SleepTimerButton';
+import { SleepTimerWarning } from '../reader-ui/SleepTimerWarning';
+import { SleepTimerOverlay } from '../reader-ui/SleepTimerOverlay';
 import { HighlightsPanel } from '../common/HighlightsPanel';
 import { BookmarksPanel } from '../common/BookmarksPanel';
 import type { EpubBookmark } from '../../services/annotationsService';
@@ -181,6 +185,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Brightness gesture hook
   const brightnessGesture = useBrightnessGesture({
     enabled: true,
+  });
+
+  // Sleep timer hook — stop TTS via Web Speech API on expiry
+  const sleepTimer = useSleepTimer({
+    onExpire: () => {
+      // Stop any active TTS playback
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    },
   });
 
   // Track the active bookmark ID so we can remove it
@@ -855,6 +869,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                   <IonIcon icon={colorPaletteOutline} />
                 </IonButton>
               )}
+              <SleepTimerButton sleepTimer={sleepTimer} iconStyle={iconColor} />
               <IonButton onClick={() => setSettingsOpen(true)} style={iconColor}>
                 <IonIcon icon={settingsOutline} />
               </IonButton>
@@ -1265,6 +1280,24 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
       {/* ─── Brightness Gesture Overlay ─── */}
       {brightnessGesture.brightnessOverlay}
+
+      {/* ─── Sleep Timer Warning (1 min remaining) ─── */}
+      <SleepTimerWarning
+        visible={sleepTimer.showWarning}
+        remainingSeconds={sleepTimer.remainingSeconds}
+        onExtend={(minutes) => sleepTimer.extendTimer(minutes)}
+        onDismiss={() => sleepTimer.dismissWarning()}
+      />
+
+      {/* ─── Sleep Timer Expiry Overlay ─── */}
+      <SleepTimerOverlay
+        visible={sleepTimer.hasExpired}
+        onDismiss={() => sleepTimer.dismissExpired()}
+        onRestart={(minutes) => {
+          sleepTimer.dismissExpired();
+          sleepTimer.startTimer(minutes);
+        }}
+      />
     </IonPage>
   );
 };

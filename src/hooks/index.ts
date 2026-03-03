@@ -25,3 +25,6 @@ export type {
   UseBrightnessGestureOptions,
   UseBrightnessGestureReturn,
 } from './useBrightnessGesture';
+
+export { useSleepTimer } from './useSleepTimer';
+export type { UseSleepTimerOptions, UseSleepTimerReturn } from './useSleepTimer';

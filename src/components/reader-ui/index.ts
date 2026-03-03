@@ -8,6 +8,10 @@ export { ReadingToolbar } from './ReadingToolbar';
 export { ReaderContainer } from './ReaderContainer';
 export { ThemeToggleButton } from './ThemeToggleButton';
 export { PageTransition } from './PageTransition';
+export { SleepTimerButton } from './SleepTimerButton';
+export { SleepTimerSheet } from './SleepTimerSheet';
+export { SleepTimerOverlay } from './SleepTimerOverlay';
+export { SleepTimerWarning } from './SleepTimerWarning';
 
 export type { ReadingSettingsPanelProps } from './ReadingSettingsPanel';
 export type { PageTransitionProps, PageDirection } from './PageTransition';

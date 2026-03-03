@@ -1,0 +1,257 @@
+/**
+ * Sleep Timer Styles
+ * Button, sheet, warning toast, and expiry overlay
+ */
+
+/* ─── Sleep Timer Button ─── */
+
+.sleep-timer-button {
+  position: relative;
+}
+
+.sleep-timer-button .timer-countdown {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sleep-timer-button.active ion-icon {
+  color: var(--ion-color-primary);
+}
+
+/* ─── Sleep Timer Sheet ─── */
+
+.sleep-timer-sheet {
+  padding: 16px;
+}
+
+.sleep-timer-sheet h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.sleep-timer-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sleep-timer-presets ion-button {
+  --border-radius: 12px;
+  font-size: 15px;
+  height: 48px;
+}
+
+.sleep-timer-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.sleep-timer-custom-row input {
+  flex: 1;
+  height: 44px;
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 15px;
+  background: var(--ion-background-color, #fff);
+  color: var(--ion-text-color, #333);
+  text-align: center;
+  outline: none;
+}
+
+.sleep-timer-custom-row input:focus {
+  border-color: var(--ion-color-primary);
+}
+
+.sleep-timer-custom-row span {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  white-space: nowrap;
+}
+
+.sleep-timer-status {
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ion-color-light-shade);
+}
+
+.sleep-timer-status .remaining-display {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ion-color-primary);
+  font-variant-numeric: tabular-nums;
+  margin: 8px 0;
+}
+
+.sleep-timer-status .remaining-label {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  margin-bottom: 12px;
+}
+
+.sleep-timer-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--ion-color-light-shade);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.sleep-timer-progress-bar {
+  height: 100%;
+  background: var(--ion-color-primary);
+  transition: width 1s linear;
+  border-radius: 2px;
+}
+
+.sleep-timer-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* ─── Warning Toast ─── */
+
+.sleep-timer-warning {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 380px;
+  background: var(--ion-color-warning);
+  color: var(--ion-color-warning-contrast, #000);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideUpFadeIn 0.3s ease-out;
+}
+
+.sleep-timer-warning .warning-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.sleep-timer-warning .warning-content {
+  flex: 1;
+}
+
+.sleep-timer-warning .warning-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+.sleep-timer-warning .warning-subtitle {
+  font-size: 12px;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.sleep-timer-warning .warning-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ─── Expiry Overlay ─── */
+
+.sleep-timer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0);
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: dimIn 1.5s ease-out forwards;
+}
+
+.sleep-timer-overlay-content {
+  text-align: center;
+  color: #fff;
+  animation: fadeIn 0.5s ease-out 0.8s both;
+}
+
+.sleep-timer-overlay-content .overlay-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.9;
+}
+
+.sleep-timer-overlay-content h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.sleep-timer-overlay-content p {
+  font-size: 15px;
+  opacity: 0.8;
+  margin: 0 0 24px;
+}
+
+.sleep-timer-overlay-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ─── Animations ─── */
+
+@keyframes slideUpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes dimIn {
+  from {
+    background: rgba(0, 0, 0, 0);
+  }
+  to {
+    background: rgba(0, 0, 0, 0.85);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .sleep-timer-custom-row input {
+    background: var(--ion-background-color, #1e1e1e);
+    border-color: var(--ion-color-dark-shade);
+  }
+}
