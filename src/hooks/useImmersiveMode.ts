@@ -26,16 +26,30 @@ export interface UseImmersiveModeReturn {
 }
 
 /**
- * Dynamically imports StatusBar to avoid breaking web builds.
+ * Dynamically imports StatusBar and Animation enum to avoid breaking web builds.
  * Returns null if unavailable.
  */
-async function getStatusBar() {
+async function getStatusBarModule() {
   if (!Capacitor.isNativePlatform()) return null;
   try {
     const mod = await import('@capacitor/status-bar');
-    return mod.StatusBar;
+    return { StatusBar: mod.StatusBar, Animation: mod.Animation };
   } catch {
     return null;
+  }
+}
+
+async function hideStatusBar() {
+  const mod = await getStatusBarModule();
+  if (mod) {
+    await mod.StatusBar.hide({ animation: mod.Animation.Fade });
+  }
+}
+
+async function showStatusBar() {
+  const mod = await getStatusBarModule();
+  if (mod) {
+    await mod.StatusBar.show({ animation: mod.Animation.Fade });
   }
 }
 
@@ -63,13 +77,10 @@ export const useImmersiveMode = ({
     }
 
     // Android: hide status bar
-    const StatusBar = await getStatusBar();
-    if (StatusBar) {
-      try {
-        await StatusBar.hide({ animation: 'SLIDE' as any });
-      } catch (e) {
-        console.warn('[ImmersiveMode] StatusBar.hide failed:', e);
-      }
+    try {
+      await hideStatusBar();
+    } catch (e) {
+      console.warn('[ImmersiveMode] StatusBar.hide failed:', e);
     }
 
     // Apply immersive CSS class to document
@@ -93,13 +104,10 @@ export const useImmersiveMode = ({
     }
 
     // Android: show status bar
-    const StatusBar = await getStatusBar();
-    if (StatusBar) {
-      try {
-        await StatusBar.show({ animation: 'SLIDE' as any });
-      } catch (e) {
-        console.warn('[ImmersiveMode] StatusBar.show failed:', e);
-      }
+    try {
+      await showStatusBar();
+    } catch (e) {
+      console.warn('[ImmersiveMode] StatusBar.show failed:', e);
     }
   }, []);
 
@@ -108,26 +116,14 @@ export const useImmersiveMode = ({
     if (!enabled) return;
 
     const toggleChrome = async () => {
-      if (toolbarVisible) {
-        // Toolbar showing: temporarily show OS chrome too
-        const StatusBar = await getStatusBar();
-        if (StatusBar) {
-          try {
-            await StatusBar.show({ animation: 'SLIDE' as any });
-          } catch {
-            // ignore
-          }
+      try {
+        if (toolbarVisible) {
+          await showStatusBar();
+        } else {
+          await hideStatusBar();
         }
-      } else {
-        // Toolbar hidden: hide OS chrome again
-        const StatusBar = await getStatusBar();
-        if (StatusBar) {
-          try {
-            await StatusBar.hide({ animation: 'SLIDE' as any });
-          } catch {
-            // ignore
-          }
-        }
+      } catch {
+        // ignore
       }
     };
 
@@ -167,13 +163,10 @@ export const useImmersiveMode = ({
             }
           }
 
-          const StatusBar = await getStatusBar();
-          if (StatusBar) {
-            try {
-              await StatusBar.show({ animation: 'SLIDE' as any });
-            } catch {
-              // ignore
-            }
+          try {
+            await showStatusBar();
+          } catch {
+            // ignore
           }
         })();
       }
