@@ -1,0 +1,513 @@
+/* ─── Reading Goals Page ─────────────────────────────── */
+
+.reading-goals-page {
+  --background: var(--ion-background-color, #f5f5f5);
+}
+
+.reading-goals-page ion-toolbar {
+  --background: var(--ion-toolbar-background, var(--ion-color-primary));
+  --color: var(--ion-toolbar-color, #fff);
+}
+
+/* ─── Section Cards ─────────────────────────────────── */
+.goals-section {
+  margin: 12px 16px;
+  background: var(--ion-card-background, #fff);
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.goals-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 6px;
+}
+
+.goals-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.goals-section-icon--flame {
+  background: linear-gradient(135deg, #ff6b35, #e53e3e);
+}
+
+.goals-section-icon--book {
+  background: linear-gradient(135deg, #4a90d9, #357abd);
+}
+
+.goals-section-icon--clock {
+  background: linear-gradient(135deg, #43a047, #2e7d32);
+}
+
+.goals-section-icon--calendar {
+  background: linear-gradient(135deg, #7e57c2, #5e35b1);
+}
+
+.goals-section-icon--trophy {
+  background: linear-gradient(135deg, #fb8c00, #ef6c00);
+}
+
+.goals-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ion-color-medium);
+}
+
+.goals-section-body {
+  padding: 8px 16px 16px;
+}
+
+/* ─── Streak Display ────────────────────────────────── */
+.streak-hero {
+  text-align: center;
+  padding: 20px 16px;
+}
+
+.streak-flame {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.streak-count {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--ion-color-primary);
+  line-height: 1.1;
+}
+
+.streak-label {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  margin-top: 2px;
+}
+
+.streak-best {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+/* ─── Progress Ring ─────────────────────────────────── */
+.progress-ring-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin: 8px auto;
+}
+
+.progress-ring-center {
+  position: absolute;
+  text-align: center;
+}
+
+.progress-ring-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ion-text-color);
+  line-height: 1.1;
+}
+
+.progress-ring-sublabel {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+}
+
+/* ─── Daily Goal Card ───────────────────────────────── */
+.daily-goal-stats {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  padding: 8px 0;
+  gap: 8px;
+}
+
+.daily-goal-stat {
+  flex: 1;
+}
+
+.daily-goal-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ion-color-primary);
+}
+
+.daily-goal-stat-label {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+  margin-top: 2px;
+}
+
+/* ─── Weekly Mini Bars ──────────────────────────────── */
+.weekly-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 12px 0 4px;
+  height: 100px;
+}
+
+.weekly-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.weekly-bar-track {
+  width: 100%;
+  max-width: 32px;
+  height: 60px;
+  background: var(--ion-color-light, #f0f0f0);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.weekly-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 4px;
+  transition: height 0.3s ease;
+}
+
+.weekly-bar-fill--met {
+  background: linear-gradient(to top, #43a047, #66bb6a);
+}
+
+.weekly-bar-fill--partial {
+  background: linear-gradient(to top, #fb8c00, #ffa726);
+}
+
+.weekly-bar-fill--none {
+  background: var(--ion-color-light-shade, #ddd);
+}
+
+.weekly-bar-day {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+}
+
+.weekly-bar-day--today {
+  color: var(--ion-color-primary);
+  font-weight: 700;
+}
+
+/* ─── Month Calendar ────────────────────────────────── */
+.streak-calendar {
+  padding: 8px 0;
+}
+
+.streak-calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0 8px;
+}
+
+.streak-calendar-month {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ion-text-color);
+}
+
+.streak-calendar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.streak-calendar-nav button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  padding: 4px 8px;
+  color: var(--ion-color-primary);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.streak-calendar-nav button:active {
+  background: var(--ion-color-light);
+}
+
+.streak-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.streak-calendar-weekday {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  padding: 2px 0;
+}
+
+.streak-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.streak-calendar-day {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ion-text-color);
+  position: relative;
+}
+
+.streak-calendar-day--empty {
+  visibility: hidden;
+}
+
+.streak-calendar-day--future {
+  opacity: 0.3;
+}
+
+.streak-calendar-day--met {
+  background: linear-gradient(135deg, #43a047, #66bb6a);
+  color: #fff;
+  font-weight: 700;
+}
+
+.streak-calendar-day--partial {
+  background: linear-gradient(135deg, #fb8c00, #ffa726);
+  color: #fff;
+}
+
+.streak-calendar-day--missed {
+  background: var(--ion-color-light, #f0f0f0);
+}
+
+.streak-calendar-day--today {
+  box-shadow: 0 0 0 2px var(--ion-color-primary);
+}
+
+/* ─── Milestones ────────────────────────────────────── */
+.milestones-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.milestone-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--ion-color-light, #f0f0f0);
+  position: relative;
+}
+
+.milestone-badge--achieved {
+  background: linear-gradient(135deg, #ffd54f, #ffb300);
+  box-shadow: 0 2px 8px rgba(255, 179, 0, 0.3);
+}
+
+.milestone-badge--active {
+  background: linear-gradient(135deg, #ff6b35, #e53e3e);
+  box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+}
+
+.milestone-badge-icon {
+  font-size: 22px;
+}
+
+.milestone-badge-label {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.milestone-badge--achieved .milestone-badge-label,
+.milestone-badge--active .milestone-badge-label {
+  color: #fff;
+}
+
+/* ─── Yearly Goal ───────────────────────────────────── */
+.yearly-goal-display {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.yearly-goal-fraction {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--ion-color-primary);
+}
+
+.yearly-goal-fraction span {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ion-color-medium);
+}
+
+.yearly-goal-label {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  margin-top: 4px;
+}
+
+.yearly-goal-progress-bar {
+  margin: 12px 0 8px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--ion-color-light, #f0f0f0);
+  overflow: hidden;
+}
+
+.yearly-goal-progress-fill {
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--ion-color-primary), var(--ion-color-primary-tint, #5a9fd4));
+  transition: width 0.5s ease;
+}
+
+.yearly-book-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+
+.yearly-book-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ion-color-light, #f0f0f0);
+  font-size: 13px;
+}
+
+.yearly-book-entry:last-child {
+  border-bottom: none;
+}
+
+.yearly-book-title {
+  font-weight: 600;
+  color: var(--ion-text-color);
+  flex: 1;
+  margin-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yearly-book-date {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
+}
+
+/* ─── Settings items within goals ────────────────────── */
+.goals-section ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 48px;
+  font-size: 15px;
+}
+
+.goals-section ion-item:last-child {
+  --border-style: none;
+}
+
+.goals-section ion-item ion-label h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.goals-section ion-item ion-note {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.goals-section ion-item ion-range {
+  --bar-height: 3px;
+  --knob-size: 20px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.goals-range-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.goals-range-row ion-range {
+  flex: 1;
+}
+
+.goals-range-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-primary);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── Dark Mode ─────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .reading-goals-page {
+    --background: #1a1a1a;
+  }
+
+  .goals-section {
+    background: #252525;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .weekly-bar-track {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .streak-calendar-day--missed {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .milestone-badge {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .yearly-goal-progress-bar {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .yearly-book-entry {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .streak-calendar-nav button {
+    color: var(--ion-color-primary-tint, #5a9fd4);
+  }
+}

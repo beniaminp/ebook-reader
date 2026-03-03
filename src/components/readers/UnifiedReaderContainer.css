@@ -72,6 +72,7 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100;
+  will-change: transform, opacity;
 }
 
 .reader-toolbar-header.toolbar-visible {
@@ -90,6 +91,7 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100;
+  will-change: transform, opacity;
 }
 
 .reader-toolbar-footer.toolbar-visible {
@@ -108,21 +110,23 @@
 
 /* When immersive, make toolbars overlay the content instead of pushing it */
 .unified-reader-page.immersive .reader-toolbar-header {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
   z-index: 200;
-  background: inherit;
+  background: var(--reader-bg, #ffffff);
 }
 
 .unified-reader-page.immersive .reader-toolbar-footer {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  width: 100%;
   z-index: 200;
-  background: inherit;
+  background: var(--reader-bg, #ffffff);
 }
 
 /* In immersive mode, content fills the whole screen */
