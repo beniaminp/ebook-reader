@@ -72,6 +72,7 @@ export interface ReadingSettings {
   focusModeSettings: FocusModeSettings;
   autoScroll: boolean;
   autoScrollSpeed: number;
+  immersiveMode: boolean;
 }
 
 export interface Theme {
@@ -223,6 +224,7 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   },
   autoScroll: false,
   autoScrollSpeed: 1,
+  immersiveMode: false,
 };
 
 class ThemeServiceClass {
