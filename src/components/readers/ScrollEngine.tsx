@@ -299,7 +299,7 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
                 el.insertAdjacentElement('afterend', div);
               }
             })
-            .catch(() => { /* skip failed translations */ });
+            .catch((err) => { console.error('[Interlinear] Translation failed:', err); });
         }
       },
     }),

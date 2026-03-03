@@ -235,8 +235,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           div.textContent = translated;
           el.insertAdjacentElement('afterend', div);
         }
-      } catch {
-        /* translation failed for this paragraph — skip */
+      } catch (err) {
+        console.error('[Interlinear] Translation failed for paragraph:', err);
       }
     }
   }, []);
