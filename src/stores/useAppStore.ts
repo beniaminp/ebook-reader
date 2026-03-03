@@ -119,6 +119,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   removeBook: async (bookId) => {
     set({ isLoading: true, error: null });
     try {
+      // Unshare the book if it was shared (fire-and-forget, don't block deletion)
+      try {
+        const { useSharingStore } = await import('./useSharingStore');
+        const sharingState = useSharingStore.getState();
+        await sharingState.loadMySharedBooks();
+        const sharedDoc = sharingState.mySharedBooks.find((d) => d.localBookId === bookId);
+        if (sharedDoc) {
+          await sharingState.unshareBook(sharedDoc);
+        }
+      } catch (err) {
+        console.warn('Failed to unshare book during deletion:', err);
+      }
+
       const success = await databaseService.deleteBook(bookId);
       if (success) {
         set((state) => ({

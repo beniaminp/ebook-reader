@@ -80,7 +80,7 @@ import './Library.css';
 
 const Library: React.FC = () => {
   const history = useHistory();
-  const { books, setBooks, setCurrentBook } = useAppStore();
+  const { books, setBooks, setCurrentBook, removeBook } = useAppStore();
   const { viewMode, setViewMode, sortBy, setSortBy, filters, setFilters } = useLibraryPrefsStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -1021,7 +1021,7 @@ const Library: React.FC = () => {
   const handleDeleteBook = async () => {
     if (selectedBook) {
       try {
-        await databaseService.deleteBook(selectedBook.id);
+        await removeBook(selectedBook.id);
         await loadBooks();
       } catch (error) {
         console.error('Error deleting book:', error);
