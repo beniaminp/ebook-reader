@@ -185,6 +185,7 @@ interface ThemeState extends ReadingSettings {
   setFocusModeOpacity: (opacity: number) => void;
   setAutoScroll: (enabled: boolean) => void;
   setAutoScrollSpeed: (speed: number) => void;
+  setImmersiveMode: (enabled: boolean) => void;
   setPageTransitionType: (type: PageTransitionType) => void;
 
   // Bulk actions
@@ -254,6 +255,7 @@ export const useThemeStore = create<ThemeState>()(
       focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
       autoScroll: DEFAULT_SETTINGS.autoScroll,
       autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
+      immersiveMode: DEFAULT_SETTINGS.immersiveMode,
       customThemes: [],
       customFonts: [],
       customBackgroundColor: undefined,
@@ -346,6 +348,8 @@ export const useThemeStore = create<ThemeState>()(
 
       setAutoScrollSpeed: (autoScrollSpeed) => set({ autoScrollSpeed }),
 
+      setImmersiveMode: (immersiveMode) => set({ immersiveMode }),
+
       setPageTransitionType: (pageTransitionType) => set({ pageTransitionType }),
 
       // Bulk actions
@@ -373,6 +377,7 @@ export const useThemeStore = create<ThemeState>()(
           focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
           autoScroll: DEFAULT_SETTINGS.autoScroll,
           autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
+          immersiveMode: DEFAULT_SETTINGS.immersiveMode,
         }),
 
       applyPreset: (preset) => set(presets[preset]),
@@ -448,6 +453,7 @@ export const useThemeStore = create<ThemeState>()(
         focusModeSettings: state.focusModeSettings,
         autoScroll: state.autoScroll,
         autoScrollSpeed: state.autoScrollSpeed,
+        immersiveMode: state.immersiveMode,
         customThemes: state.customThemes,
         customFonts: state.customFonts,
         customBackgroundColor: state.customBackgroundColor,
