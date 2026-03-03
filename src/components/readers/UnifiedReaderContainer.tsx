@@ -331,10 +331,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // ─── Progress from engine ─────────────────────────
 
+  // Use a ref for the reading speed callback to avoid cascading remounts
+  const readingSpeedOnProgressRef = useRef(readingSpeed.onProgressChange);
+  readingSpeedOnProgressRef.current = readingSpeed.onProgressChange;
+
   const handleRelocate = useCallback(
     async (p: ReaderProgress) => {
       setProgress(p);
-      readingSpeed.onProgressChange(p);
+      readingSpeedOnProgressRef.current(p);
       if (p.locationString) {
         onProgressChange?.(p.locationString, p.fraction * 100);
 
@@ -355,7 +359,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         currentBookmarkIdRef.current = null;
       }
     },
-    [onProgressChange, book.id, readingSpeed]
+    [onProgressChange, book.id]
   );
 
   // ─── Load complete from engine ─────────────────────────
