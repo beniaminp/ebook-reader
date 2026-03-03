@@ -8,6 +8,7 @@ export { ReadingToolbar } from './ReadingToolbar';
 export { ReaderContainer } from './ReaderContainer';
 export { ThemeToggleButton } from './ThemeToggleButton';
 export { PageTransition } from './PageTransition';
+export { TimeLeftDisplay } from './TimeLeftDisplay';
 
 export type { ReadingSettingsPanelProps } from './ReadingSettingsPanel';
 export type { PageTransitionProps, PageDirection } from './PageTransition';

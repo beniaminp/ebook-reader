@@ -1,0 +1,15 @@
+/**
+ * TimeLeftDisplay Styles
+ */
+
+.time-left-display {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+  line-height: 1.2;
+  padding: 0 4px;
+}

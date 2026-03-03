@@ -25,3 +25,10 @@ export type {
   UseBrightnessGestureOptions,
   UseBrightnessGestureReturn,
 } from './useBrightnessGesture';
+
+export { useReadingSpeed } from './useReadingSpeed';
+export type {
+  UseReadingSpeedOptions,
+  UseReadingSpeedReturn,
+  TimeLeftEstimate,
+} from './useReadingSpeed';
