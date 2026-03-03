@@ -347,8 +347,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // ─── Navigation handlers ─────────────────────────
 
-  const handleNext = useCallback(() => engineRef.current?.next(), []);
-  const handlePrev = useCallback(() => engineRef.current?.prev(), []);
+  const handleNext = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    engineRef.current?.next();
+  }, []);
+  const handlePrev = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    engineRef.current?.prev();
+  }, []);
   const handleToggleToolbar = useCallback(() => setToolbarVisible((v) => !v), []);
 
   // ─── Progress from engine ─────────────────────────

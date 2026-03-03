@@ -525,9 +525,12 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     ref,
     () => ({
       next: () => {
+        // Clear text selection inside iframe docs to prevent accidental selection during page turns
+        loadedDocsRef.current.forEach((doc) => doc.getSelection?.()?.removeAllRanges());
         viewRef.current?.next();
       },
       prev: () => {
+        loadedDocsRef.current.forEach((doc) => doc.getSelection?.()?.removeAllRanges());
         viewRef.current?.prev();
       },
       goToLocation: (location: string) => {

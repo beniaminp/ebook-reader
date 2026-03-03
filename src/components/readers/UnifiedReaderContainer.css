@@ -19,6 +19,9 @@
   height: 100%;
   position: relative;
   overflow: hidden;
+  /* Prevent accidental text selection during page-turn swipes/taps */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* (Tap overlay removed — navigation taps are now handled inside the iframe
