@@ -68,6 +68,8 @@ import { useSleepTimer } from '../../hooks/useSleepTimer';
 import { SleepTimerButton } from '../reader-ui/SleepTimerButton';
 import { SleepTimerWarning } from '../reader-ui/SleepTimerWarning';
 import { SleepTimerOverlay } from '../reader-ui/SleepTimerOverlay';
+import { useReadingSpeed } from '../../hooks/useReadingSpeed';
+import { TimeLeftDisplay } from '../reader-ui/TimeLeftDisplay';
 import { HighlightsPanel } from '../common/HighlightsPanel';
 import { BookmarksPanel } from '../common/BookmarksPanel';
 import type { EpubBookmark } from '../../services/annotationsService';
@@ -195,6 +197,12 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         window.speechSynthesis.cancel();
       }
     },
+  });
+
+  // Reading speed / time-left hook
+  const readingSpeed = useReadingSpeed({
+    active: !toolbarVisible && !searchOpen && !settingsOpen,
+    format,
   });
 
   // Track the active bookmark ID so we can remove it
@@ -340,6 +348,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const handleRelocate = useCallback(
     async (p: ReaderProgress) => {
       setProgress(p);
+      readingSpeed.onProgressChange(p);
       if (p.locationString) {
         onProgressChange?.(p.locationString, p.fraction * 100);
 
@@ -360,7 +369,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         currentBookmarkIdRef.current = null;
       }
     },
-    [onProgressChange, book.id]
+    [onProgressChange, book.id, readingSpeed]
   );
 
   // ─── Load complete from engine ─────────────────────────
@@ -960,9 +969,12 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                 </IonButton>
               )}
 
-              <span className="page-info" style={iconColor}>
-                {progress?.label || '...'}
-              </span>
+              <div className="page-info-wrapper">
+                <span className="page-info" style={iconColor}>
+                  {progress?.label || '...'}
+                </span>
+                <TimeLeftDisplay timeLeft={readingSpeed.timeLeft} style={iconColor} />
+              </div>
 
               <IonButton fill="clear" size="small" onClick={handleNext} style={iconColor}>
                 <IonIcon icon={chevronForward} />

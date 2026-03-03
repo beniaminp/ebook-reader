@@ -28,3 +28,10 @@ export type {
 
 export { useSleepTimer } from './useSleepTimer';
 export type { UseSleepTimerOptions, UseSleepTimerReturn } from './useSleepTimer';
+
+export { useReadingSpeed } from './useReadingSpeed';
+export type {
+  UseReadingSpeedOptions,
+  UseReadingSpeedReturn,
+  TimeLeftEstimate,
+} from './useReadingSpeed';

@@ -12,6 +12,7 @@ export { SleepTimerButton } from './SleepTimerButton';
 export { SleepTimerSheet } from './SleepTimerSheet';
 export { SleepTimerOverlay } from './SleepTimerOverlay';
 export { SleepTimerWarning } from './SleepTimerWarning';
+export { TimeLeftDisplay } from './TimeLeftDisplay';
 
 export type { ReadingSettingsPanelProps } from './ReadingSettingsPanel';
 export type { PageTransitionProps, PageDirection } from './PageTransition';

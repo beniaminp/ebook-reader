@@ -462,6 +462,12 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             label:
               total > 0 ? `${Math.max(1, current)} / ${total}` : `${Math.round(fraction * 100)}%`,
             locationString: cfi,
+            section: loc.section
+              ? { current: loc.section.current, total: loc.section.total }
+              : undefined,
+            chapterLabel: loc.tocItem?.label || undefined,
+            timeInSection: loc.time?.section,
+            timeInBook: loc.time?.total,
           });
         }) as EventListener);
 

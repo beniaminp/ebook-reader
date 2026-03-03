@@ -42,7 +42,7 @@ export const ReadingRuler: React.FC<ReadingRulerProps> = ({
 }) => {
   const { readingRuler: storeEnabled, readingRulerSettings } = useThemeStore();
 
-  const enabled = propsEnabled ?? (storeEnabled && readingRulerSettings.enabled);
+  const enabled = propsEnabled ?? (storeEnabled || readingRulerSettings.enabled);
 
   const [position, setPosition] = useState(0);
   const [visible, setVisible] = useState(false);

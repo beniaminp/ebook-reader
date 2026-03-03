@@ -53,6 +53,19 @@ export interface ReaderProgress {
   label: string;
   /** Format-specific location string for persistence. */
   locationString?: string;
+  /** Section/chapter progress (from foliate-js). */
+  section?: {
+    /** Current section index (0-based). */
+    current: number;
+    /** Total sections in the book. */
+    total: number;
+  };
+  /** Current TOC chapter label (from foliate-js). */
+  chapterLabel?: string;
+  /** Estimated remaining time (seconds) from foliate-js. */
+  timeInSection?: number;
+  /** Estimated total remaining time (seconds) from foliate-js. */
+  timeInBook?: number;
 }
 
 /**

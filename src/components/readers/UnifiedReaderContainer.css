@@ -39,9 +39,18 @@
   -webkit-touch-callout: none;
 }
 
+.unified-bottom-bar .page-info-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
 .unified-bottom-bar .page-info {
   font-size: 13px;
   color: var(--ion-color-medium);
   text-align: center;
-  flex: 1;
 }
