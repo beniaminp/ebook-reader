@@ -442,6 +442,10 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
       fields.push('series_index = ?');
       values.push((updates as any).seriesIndex ?? null);
     }
+    if ((updates as any).readStatus !== undefined) {
+      fields.push('read_status = ?');
+      values.push((updates as any).readStatus);
+    }
 
     if (fields.length > 0) {
       fields.push('updated_at = ?');
@@ -691,6 +695,7 @@ function mapRowToBook(row: any): Book | null {
     subgenres,
     series: row.series || undefined,
     seriesIndex: row.series_index != null ? row.series_index : undefined,
+    readStatus: row.read_status || 'unread',
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }
@@ -721,6 +726,7 @@ function webBookToBook(webBook: WebBook): Book {
     subgenres: (webBook as any).subgenres,
     series: (webBook as any).series,
     seriesIndex: (webBook as any).seriesIndex,
+    readStatus: (webBook as any).readStatus || 'unread',
     metadata: (webBook as any).metadata,
   };
 }

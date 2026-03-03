@@ -95,6 +95,9 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     focusModeSettings,
     customBackgroundColor,
     customBackgroundImage,
+    hyphenation,
+    paragraphSpacing,
+    letterSpacing,
   } = useThemeStore();
 
   // Bionic reading hook
@@ -170,7 +173,10 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     // Apply CSS custom properties for dynamic values
     root.style.setProperty('--reader-font-size', `${fontSize}px`);
     root.style.setProperty('--reader-line-height', lineHeight.toString());
-  }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize]);
+    root.style.setProperty('--reader-letter-spacing', `${letterSpacing}em`);
+    root.style.setProperty('--reader-paragraph-spacing', `${paragraphSpacing}em`);
+    root.style.setProperty('--reader-hyphens', hyphenation ? 'auto' : 'manual');
+  }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize, hyphenation, paragraphSpacing, letterSpacing]);
 
   // Apply bionic reading to text content
 
@@ -211,6 +217,9 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     lineHeight: lineHeight.toString(),
     textAlign,
     padding: `${customMargins.top}px ${customMargins.right}px ${customMargins.bottom}px ${customMargins.left}px`,
+    letterSpacing: letterSpacing ? `${letterSpacing}em` : undefined,
+    hyphens: hyphenation ? 'auto' : undefined,
+    WebkitHyphens: hyphenation ? 'auto' : undefined,
   };
 
   // Apply custom background if set

@@ -158,6 +158,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const wordWiseEnabledRef = useRef<boolean>(false);
   const wordWiseLevelRef = useRef<number>(3);
   const wordWiseTargetLangRef = useRef<string | undefined>(undefined);
+  const hyphenationRef = useRef<boolean>(false);
+  const paragraphSpacingRef = useRef<number>(1);
+  const letterSpacingRef = useRef<number>(0);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Track highlight annotations applied to the view
@@ -204,6 +207,15 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     rules.push(`body, p, div { text-align: ${textAlignRef.current} !important; }`);
     const cm = customMarginsRef.current;
     rules.push(`body { padding: ${cm.top}px ${cm.right}px ${cm.bottom}px ${cm.left}px !important; }`);
+    if (hyphenationRef.current) {
+      rules.push(`body, p { hyphens: auto !important; -webkit-hyphens: auto !important; }`);
+    }
+    if (paragraphSpacingRef.current !== 1) {
+      rules.push(`p { margin-bottom: ${paragraphSpacingRef.current}em !important; }`);
+    }
+    if (letterSpacingRef.current) {
+      rules.push(`body { letter-spacing: ${letterSpacingRef.current}em !important; }`);
+    }
     if (bionicReadingRef.current) {
       rules.push(`
         body { word-spacing: 0.1em !important; letter-spacing: 0.02em !important; }
@@ -634,6 +646,18 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setCustomMargins: (margins: { top: number; bottom: number; left: number; right: number }) => {
         customMarginsRef.current = margins;
+        reapplyStyles();
+      },
+      setHyphenation: (enabled: boolean) => {
+        hyphenationRef.current = enabled;
+        reapplyStyles();
+      },
+      setParagraphSpacing: (spacing: number) => {
+        paragraphSpacingRef.current = spacing;
+        reapplyStyles();
+      },
+      setLetterSpacing: (spacing: number) => {
+        letterSpacingRef.current = spacing;
         reapplyStyles();
       },
       setBionicReading: (enabled: boolean) => {

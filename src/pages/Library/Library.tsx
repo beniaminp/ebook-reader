@@ -199,7 +199,9 @@ const Library: React.FC = () => {
     // Apply read status filter
     if (filters.readStatus !== 'all') {
       result = result.filter((book) => {
+        if (filters.readStatus === 'dnf') return book.readStatus === 'dnf';
         const prog = book.progress ?? 0;
+        if (book.readStatus === 'dnf') return false; // DNF books don't show in other status filters
         switch (filters.readStatus) {
           case 'unread':
             return prog === 0;
@@ -1145,6 +1147,9 @@ const Library: React.FC = () => {
                   </div>
                 )}
                 {renderDownloadBadge(book)}
+                {book.readStatus === 'dnf' && (
+                  <IonBadge color="medium" className="book-dnf-badge">DNF</IonBadge>
+                )}
                 <IonChip
                   outline={true}
                   color={getFormatColor(book.format)}
@@ -1382,6 +1387,7 @@ const Library: React.FC = () => {
               <IonSelectOption value="unread">Unread</IonSelectOption>
               <IonSelectOption value="reading">In Progress</IonSelectOption>
               <IonSelectOption value="finished">Finished</IonSelectOption>
+              <IonSelectOption value="dnf">Did Not Finish</IonSelectOption>
             </IonSelect>
           </IonItem>
 
@@ -1540,7 +1546,9 @@ const Library: React.FC = () => {
                     ? 'Unread'
                     : filters.readStatus === 'reading'
                       ? 'In Progress'
-                      : 'Finished'}
+                      : filters.readStatus === 'dnf'
+                        ? 'DNF'
+                        : 'Finished'}
                   <IonIcon icon={closeOutline} />
                 </IonChip>
               )}
@@ -1771,6 +1779,20 @@ const Library: React.FC = () => {
                 }).catch(() => {
                   setToastColor('danger');
                   setToastMessage('Failed to share book');
+                });
+              }
+            },
+          },
+          {
+            text: selectedBook?.readStatus === 'dnf' ? 'Remove DNF Status' : 'Mark as DNF',
+            icon: closeOutline,
+            handler: () => {
+              if (selectedBook) {
+                const newStatus = selectedBook.readStatus === 'dnf' ? 'unread' : 'dnf';
+                databaseService.updateBook(selectedBook.id, { readStatus: newStatus } as any).then(() => {
+                  loadBooks();
+                  setToastColor('success');
+                  setToastMessage(newStatus === 'dnf' ? `"${selectedBook.title}" marked as DNF` : `DNF status removed from "${selectedBook.title}"`);
                 });
               }
             },

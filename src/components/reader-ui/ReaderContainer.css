@@ -18,6 +18,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Paragraph spacing */
+.reader-container p {
+  margin-bottom: var(--reader-paragraph-spacing, 1em);
+}
+
 /* Theme-specific styles */
 .theme-light {
   --reader-bg: #ffffff;

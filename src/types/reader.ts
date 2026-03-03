@@ -103,6 +103,12 @@ export interface ReaderEngineRef {
   setCustomMargins?(margins: { top: number; bottom: number; left: number; right: number }): void;
   /** Set custom background image (or undefined to clear). */
   setCustomBackgroundImage?(imageUri: string | undefined): void;
+  /** Enable/disable CSS hyphenation. */
+  setHyphenation?(enabled: boolean): void;
+  /** Set paragraph spacing multiplier (em units). */
+  setParagraphSpacing?(spacing: number): void;
+  /** Set letter spacing (em units). */
+  setLetterSpacing?(spacing: number): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
   /** Enable/disable interlinear translation mode. */

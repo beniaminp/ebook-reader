@@ -73,6 +73,9 @@ export interface ReadingSettings {
   autoScroll: boolean;
   autoScrollSpeed: number;
   immersiveMode: boolean;
+  hyphenation: boolean;
+  paragraphSpacing: number;
+  letterSpacing: number;
 }
 
 export interface Theme {
@@ -225,6 +228,9 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   autoScroll: false,
   autoScrollSpeed: 1,
   immersiveMode: false,
+  hyphenation: false,
+  paragraphSpacing: 1,
+  letterSpacing: 0,
 };
 
 class ThemeServiceClass {

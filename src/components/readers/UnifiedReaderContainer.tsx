@@ -639,6 +639,21 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   }, [themeStore.bionicReading, isFoliate]);
 
   useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setHyphenation?.(themeStore.hyphenation);
+  }, [themeStore.hyphenation, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setParagraphSpacing?.(themeStore.paragraphSpacing);
+  }, [themeStore.paragraphSpacing, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setLetterSpacing?.(themeStore.letterSpacing);
+  }, [themeStore.letterSpacing, isFoliate]);
+
+  useEffect(() => {
     if (isPdf) return;
     console.log(`[Interlinear] Effect fired: enabled=${themeStore.interlinearMode}, lang=${themeStore.interlinearLanguage}, hasEngine=${!!engineRef.current}`);
     engineRef.current?.setInterlinearMode?.(

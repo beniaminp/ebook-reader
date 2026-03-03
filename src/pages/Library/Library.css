@@ -352,6 +352,19 @@
   --border-width: 0;
 }
 
+/* DNF badge on cover */
+.book-dnf-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  margin: 0;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  opacity: 0.9;
+}
+
 /* Book info below cover */
 .book-card ion-card-header {
   padding: 6px 2px 8px;

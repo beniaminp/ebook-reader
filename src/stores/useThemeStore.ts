@@ -186,12 +186,15 @@ interface ThemeState extends ReadingSettings {
   setAutoScroll: (enabled: boolean) => void;
   setAutoScrollSpeed: (speed: number) => void;
   setImmersiveMode: (enabled: boolean) => void;
+  setHyphenation: (enabled: boolean) => void;
+  setParagraphSpacing: (spacing: number) => void;
+  setLetterSpacing: (spacing: number) => void;
   setPageTransitionType: (type: PageTransitionType) => void;
 
   // Bulk actions
   updateSettings: (settings: Partial<ReadingSettings>) => void;
   resetSettings: () => void;
-  applyPreset: (preset: 'comfortable' | 'compact' | 'large-print') => void;
+  applyPreset: (preset: 'comfortable' | 'compact' | 'large-print' | 'dyslexia') => void;
 
   // Custom theme management
   addCustomTheme: (theme: ReaderTheme) => void;
@@ -213,7 +216,7 @@ interface ThemeState extends ReadingSettings {
   closeSettingsPanel: () => void;
 }
 
-const presets: Record<'comfortable' | 'compact' | 'large-print', Partial<ReadingSettings>> = {
+const presets: Record<'comfortable' | 'compact' | 'large-print' | 'dyslexia', Partial<ReadingSettings>> = {
   comfortable: {
     fontSize: 18,
     lineHeight: 1.8,
@@ -228,6 +231,16 @@ const presets: Record<'comfortable' | 'compact' | 'large-print', Partial<Reading
     fontSize: 24,
     lineHeight: 2,
     marginSize: 'large',
+  },
+  dyslexia: {
+    fontFamily: 'open-dyslexic',
+    fontSize: 18,
+    lineHeight: 2,
+    textAlign: 'left',
+    marginSize: 'large',
+    hyphenation: false,
+    paragraphSpacing: 2,
+    letterSpacing: 0.05,
   },
 };
 
@@ -256,6 +269,9 @@ export const useThemeStore = create<ThemeState>()(
       autoScroll: DEFAULT_SETTINGS.autoScroll,
       autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
       immersiveMode: DEFAULT_SETTINGS.immersiveMode,
+      hyphenation: DEFAULT_SETTINGS.hyphenation,
+      paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
+      letterSpacing: DEFAULT_SETTINGS.letterSpacing,
       customThemes: [],
       customFonts: [],
       customBackgroundColor: undefined,
@@ -350,6 +366,12 @@ export const useThemeStore = create<ThemeState>()(
 
       setImmersiveMode: (immersiveMode) => set({ immersiveMode }),
 
+      setHyphenation: (hyphenation) => set({ hyphenation }),
+
+      setParagraphSpacing: (paragraphSpacing) => set({ paragraphSpacing }),
+
+      setLetterSpacing: (letterSpacing) => set({ letterSpacing }),
+
       setPageTransitionType: (pageTransitionType) => set({ pageTransitionType }),
 
       // Bulk actions
@@ -378,6 +400,9 @@ export const useThemeStore = create<ThemeState>()(
           autoScroll: DEFAULT_SETTINGS.autoScroll,
           autoScrollSpeed: DEFAULT_SETTINGS.autoScrollSpeed,
           immersiveMode: DEFAULT_SETTINGS.immersiveMode,
+          hyphenation: DEFAULT_SETTINGS.hyphenation,
+          paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
+          letterSpacing: DEFAULT_SETTINGS.letterSpacing,
         }),
 
       applyPreset: (preset) => set(presets[preset]),
@@ -454,6 +479,9 @@ export const useThemeStore = create<ThemeState>()(
         autoScroll: state.autoScroll,
         autoScrollSpeed: state.autoScrollSpeed,
         immersiveMode: state.immersiveMode,
+        hyphenation: state.hyphenation,
+        paragraphSpacing: state.paragraphSpacing,
+        letterSpacing: state.letterSpacing,
         customThemes: state.customThemes,
         customFonts: state.customFonts,
         customBackgroundColor: state.customBackgroundColor,

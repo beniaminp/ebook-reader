@@ -60,6 +60,7 @@ export const CREATE_TABLES = {
       tags TEXT,
       genre TEXT,
       subgenres TEXT,
+      read_status TEXT DEFAULT 'unread',
       added_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
       last_opened_at INTEGER,
       created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -533,6 +534,7 @@ export const MIGRATIONS: Record<number, string> = {
   1: 'Initial database schema',
   2: 'Add rects column to highlights table for PDF bounding rectangles',
   3: 'Add genre and subgenres columns to books table',
+  4: 'Add read_status column to books table',
 };
 
 // SQL statements for migrations
@@ -543,6 +545,9 @@ export const MIGRATION_SQL: Record<number, string> = {
   3: `
     ALTER TABLE ${TABLES.BOOKS} ADD COLUMN genre TEXT;
     ALTER TABLE ${TABLES.BOOKS} ADD COLUMN subgenres TEXT;
+  `,
+  4: `
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN read_status TEXT DEFAULT 'unread';
   `,
 };
 

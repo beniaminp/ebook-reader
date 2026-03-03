@@ -37,6 +37,7 @@ import {
   closeCircle,
   documentText,
   trash,
+  accessibility,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type {
@@ -105,6 +106,12 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setWordWiseLevel,
     immersiveMode,
     setImmersiveMode,
+    hyphenation,
+    setHyphenation,
+    paragraphSpacing,
+    setParagraphSpacing,
+    letterSpacing,
+    setLetterSpacing,
     setFocusMode,
     setFocusModeOpacity,
     setAutoScroll,
@@ -112,6 +119,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setCustomBackgroundColor,
     setCustomBackgroundImage,
     clearCustomBackground,
+    applyPreset,
     resetSettings,
   } = useThemeStore();
 
@@ -536,6 +544,46 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                   <IonLabel>Justify</IonLabel>
                 </IonSegmentButton>
               </IonSegment>
+            </IonItem>
+
+            <IonItem>
+              <IonLabel>Hyphenation</IonLabel>
+              <IonToggle
+                checked={hyphenation}
+                onIonChange={(e) => setHyphenation(e.detail.checked)}
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Paragraph Spacing: {paragraphSpacing}em</IonLabel>
+              <IonRange
+                min={0}
+                max={4}
+                step={0.25}
+                value={paragraphSpacing}
+                onIonChange={(e) => setParagraphSpacing(e.detail.value as number)}
+                snaps
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Letter Spacing: {letterSpacing}em</IonLabel>
+              <IonRange
+                min={0}
+                max={0.3}
+                step={0.01}
+                value={letterSpacing}
+                onIonChange={(e) => setLetterSpacing(e.detail.value as number)}
+                snaps
+              />
+            </IonItem>
+
+            <IonItem button onClick={() => applyPreset('dyslexia')}>
+              <IonIcon icon={accessibility} slot="start" />
+              <IonLabel>
+                <h2>Dyslexia-Friendly Preset</h2>
+                <p>OpenDyslexic, wider spacing, left-aligned</p>
+              </IonLabel>
             </IonItem>
 
             <IonItem>

@@ -6,6 +6,7 @@ export * from './reader';
 
 // Book types
 export type BookSource = 'local' | 'calibre-web' | 'opds' | 'dropbox' | 'webdav' | 'gdrive';
+export type ReadStatus = 'unread' | 'reading' | 'finished' | 'dnf';
 
 export interface Book {
   id: string;
@@ -42,6 +43,7 @@ export interface Book {
   subgenres?: string[]; // Sub-genres (e.g., ["Thriller", "Mystery", "Suspense"])
   series?: string; // Series name (e.g., "Harry Potter")
   seriesIndex?: number; // Position in series (e.g., 1, 2, 3)
+  readStatus?: ReadStatus; // Reading status (unread, reading, finished, dnf)
   metadata?: BookMetadata;
 }
 
