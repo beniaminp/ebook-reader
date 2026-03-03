@@ -70,6 +70,7 @@ import type { FoliateHighlight } from './FoliateEngine';
 
 import './UnifiedReaderContainer.css';
 import './EpubReader.css';
+import '../reader-ui/Interlinear.css';
 
 // ───────────────────────────── Props ─────────────────────────────
 
@@ -450,6 +451,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   useEffect(() => {
     if (isPdf) return;
+    console.log(`[Interlinear] Effect fired: enabled=${themeStore.interlinearMode}, lang=${themeStore.interlinearLanguage}, hasEngine=${!!engineRef.current}`);
     engineRef.current?.setInterlinearMode?.(
       themeStore.interlinearMode,
       themeStore.interlinearLanguage

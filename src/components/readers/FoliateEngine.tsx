@@ -221,24 +221,29 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
   const applyInterlinear = useCallback(async (doc: Document) => {
     if (!interlinearEnabledRef.current) return;
+    const targetLang = interlinearLanguageRef.current;
     const elements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+    console.log(`[Interlinear] Applying to ${elements.length} elements, target: ${targetLang}`);
+    let translated_count = 0;
     for (const el of elements) {
       if (el.getAttribute('data-interlinear-processed')) continue;
       const text = (el.textContent || '').trim();
       if (!text || text.length < 2) continue;
       el.setAttribute('data-interlinear-processed', 'true');
       try {
-        const translated = await translateParagraph(text, 'auto', interlinearLanguageRef.current);
+        const translated = await translateParagraph(text, 'auto', targetLang);
         if (translated && translated !== text) {
           const div = doc.createElement('div');
           div.className = 'interlinear-translation';
           div.textContent = translated;
           el.insertAdjacentElement('afterend', div);
+          translated_count++;
         }
       } catch (err) {
         console.error('[Interlinear] Translation failed for paragraph:', err);
       }
     }
+    console.log(`[Interlinear] Inserted ${translated_count} translations`);
   }, []);
 
   const removeInterlinear = useCallback((doc: Document) => {
@@ -533,27 +538,41 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         const langChanged = interlinearLanguageRef.current !== targetLanguage;
         interlinearEnabledRef.current = enabled;
         interlinearLanguageRef.current = targetLanguage;
+
+        // Get the currently visible document(s) from the foliate renderer
+        // instead of relying on loadedDocsRef which may contain stale/detached docs
+        const activeDocs: Document[] = [];
+        try {
+          const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
+          for (const c of contents) {
+            if (c.doc) activeDocs.push(c.doc);
+          }
+        } catch { /* renderer not ready */ }
+        // Fallback to loadedDocsRef if renderer isn't available
+        if (activeDocs.length === 0) {
+          for (const doc of loadedDocsRef.current) {
+            activeDocs.push(doc);
+          }
+        }
+
         if (enabled) {
           if (langChanged) {
             clearInterlinearCache();
-            // Remove old translations and re-apply
-            for (const doc of loadedDocsRef.current) {
-              try {
-                removeInterlinear(doc);
-              } catch { /* detached doc */ }
+            for (const doc of activeDocs) {
+              try { removeInterlinear(doc); } catch { /* detached doc */ }
             }
           }
           reapplyStyles();
-          for (const doc of loadedDocsRef.current) {
+          for (const doc of activeDocs) {
             try {
-              applyInterlinear(doc);
+              applyInterlinear(doc).catch((err) =>
+                console.error('[Interlinear] Failed to apply translations:', err)
+              );
             } catch { /* detached doc */ }
           }
         } else {
-          for (const doc of loadedDocsRef.current) {
-            try {
-              removeInterlinear(doc);
-            } catch { /* detached doc */ }
+          for (const doc of activeDocs) {
+            try { removeInterlinear(doc); } catch { /* detached doc */ }
           }
           reapplyStyles();
         }
