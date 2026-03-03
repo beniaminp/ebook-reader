@@ -186,28 +186,14 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Track the active bookmark ID so we can remove it
   const currentBookmarkIdRef = useRef<string | null>(null);
 
-  // Overlay tap zone state (for foliate engine with iframe)
-  const overlayTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [overlayPassthrough, setOverlayPassthrough] = useState(false);
-
-  // Track whether a touch event already handled the tap (prevents double-toggle on mobile)
-  const touchHandledRef = useRef(false);
-
-  // Text selection state
-  const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // (Overlay removed — tap zones are now handled inside the foliate iframe directly,
+  // so text selection works without being blocked by a transparent overlay.)
 
   const isFoliate = FOLIATE_FORMATS.has(format);
   const isPdf = format === 'pdf';
   const isScroll = SCROLL_FORMATS.has(format);
 
-  // Clean up timers on unmount to prevent setState on dead components
-  useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-      if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
-    };
-  }, []);
+  // (Timer cleanup removed — overlay and selection timers no longer exist.)
 
   // ─── Keep screen awake while reading ─────────────────────────
   useEffect(() => {
@@ -470,92 +456,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     );
   }, [themeStore.wordWiseEnabled, themeStore.wordWiseLevel, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
 
-  // ─── Overlay tap zones (for foliate iframe) ─────────────────────────
-
-  const handleOverlayTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      // First handle brightness gesture
-      brightnessGesture.onTouchStart(e);
-
-      const touch = e.touches[0];
-      overlayTouchRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-      longPressTimerRef.current = setTimeout(() => {
-        setOverlayPassthrough(true);
-      }, 500);
-    },
-    [brightnessGesture]
-  );
-
-  const handleOverlayTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      // Handle brightness gesture movement
-      brightnessGesture.onTouchMove(e);
-
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-    },
-    [brightnessGesture]
-  );
-
-  const handleOverlayTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      // Handle brightness gesture end
-      brightnessGesture.onTouchEnd(e);
-
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-
-      if (overlayPassthrough) {
-        setTimeout(() => setOverlayPassthrough(false), 3000);
-        return;
-      }
-
-      // Skip tap handling if brightness gesture was active
-      if (brightnessGesture.wasBrightnessDrag) {
-        brightnessGesture.resetBrightnessDragFlag();
-        return;
-      }
-
-      if (!overlayTouchRef.current) return;
-      const touch = e.changedTouches[0];
-      const dx = Math.abs(touch.clientX - overlayTouchRef.current.x);
-      const dy = Math.abs(touch.clientY - overlayTouchRef.current.y);
-      const elapsed = Date.now() - overlayTouchRef.current.time;
-      overlayTouchRef.current = null;
-
-      if (dx > 10 || dy > 10 || elapsed > 500) return;
-
-      // Mark that touch handled this tap so onClick doesn't double-fire
-      touchHandledRef.current = true;
-
-      const relX = touch.clientX / window.innerWidth;
-      if (relX < 0.25) handlePrev();
-      else if (relX > 0.75) handleNext();
-      else handleToggleToolbar();
-    },
-    [overlayPassthrough, handlePrev, handleNext, handleToggleToolbar, brightnessGesture]
-  );
-
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
-      // On mobile, touch events already handled the tap — skip the synthetic click
-      if (touchHandledRef.current) {
-        touchHandledRef.current = false;
-        return;
-      }
-      const relX = e.clientX / window.innerWidth;
-      if (relX < 0.25) handlePrev();
-      else if (relX > 0.75) handleNext();
-      else handleToggleToolbar();
-    },
-    [handlePrev, handleNext, handleToggleToolbar]
-  );
-
   // ─── Content tap zones (for non-foliate formats: PDF, scroll) ─────────────────────────
+  // (Foliate tap zones are now handled inside the iframe via FoliateEngine.onContentTap)
 
   const contentTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const contentTouchHandledRef = useRef(false);
@@ -591,6 +493,10 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         return;
       }
 
+      // Skip if user has selected text (let TextSelectionMenu handle it)
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+
       const relX = touch.clientX / window.innerWidth;
       // Only handle center tap to toggle toolbar for non-foliate formats
       // (left/right navigation is handled by scrolling or PDF engine)
@@ -609,6 +515,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         contentTouchHandledRef.current = false;
         return;
       }
+      // Skip if user has selected text (let TextSelectionMenu handle it)
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
       const relX = e.clientX / window.innerWidth;
       if (relX >= 0.25 && relX <= 0.75) {
         handleToggleToolbar();
@@ -738,109 +647,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     setTocOpen(false);
   }, []);
 
-  // ─── Dictionary / Text selection ─────────────────────────
-
-  const handleTextSelection = useCallback(() => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return;
-
-    const text = selection.toString().trim();
-    if (!text) return;
-
-    // Check if it looks like a single word (allow apostrophes and hyphens)
-    if (/^[\w'-]+$/.test(text)) {
-      setSelectedWord(text);
-      setDictionaryOpen(true);
-    }
-
-    // Clear selection after a delay
-    if (selectionTimerRef.current) {
-      clearTimeout(selectionTimerRef.current);
-    }
-    selectionTimerRef.current = setTimeout(() => {
-      selection?.removeAllRanges();
-    }, 500);
-  }, []);
-
-  useEffect(() => {
-    // Add text selection listener for scroll and PDF engines
-    if (isScroll || isPdf) {
-      document.addEventListener('selectionchange', handleTextSelection);
-      return () => {
-        document.removeEventListener('selectionchange', handleTextSelection);
-        if (selectionTimerRef.current) {
-          clearTimeout(selectionTimerRef.current);
-        }
-      };
-    }
-  }, [isScroll, isPdf, handleTextSelection]);
-
-  // Handle text selection for foliate (EPUB) via iframe
-  const handleFoliateTextSelection = useCallback(() => {
-    if (!isFoliate) return;
-
-    // Try to get selection from foliate iframe
-    const foliateView = document.querySelector('foliate-view');
-    if (!foliateView) return;
-
-    const iframe = foliateView.shadowRoot?.querySelector('iframe');
-    if (!iframe?.contentWindow) return;
-
-    const iframeSelection = iframe.contentWindow.getSelection();
-    if (!iframeSelection || iframeSelection.isCollapsed) return;
-
-    const text = iframeSelection.toString().trim();
-    if (!text) return;
-
-    // Check if it looks like a single word
-    if (/^[\w'-]+$/.test(text)) {
-      setSelectedWord(text);
-      setDictionaryOpen(true);
-    }
-
-    // Clear selection after a delay
-    if (selectionTimerRef.current) {
-      clearTimeout(selectionTimerRef.current);
-    }
-    selectionTimerRef.current = setTimeout(() => {
-      iframeSelection?.removeAllRanges();
-    }, 500);
-  }, [isFoliate]);
-
-  // Listen for foliate (EPUB iframe) text selection when in passthrough mode.
-  // Use mouseup + touchend events instead of polling so detection is immediate.
-  useEffect(() => {
-    if (!isFoliate || !overlayPassthrough) return;
-
-    // Attach to the document first; if the foliate iframe is available, also
-    // attach inside it so selection events bubble regardless of focus.
-    const attachIframeListeners = () => {
-      const foliateView = document.querySelector('foliate-view');
-      const iframe = foliateView?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
-      return iframe?.contentDocument ?? null;
-    };
-
-    const onSelectionEnd = () => handleFoliateTextSelection();
-
-    document.addEventListener('mouseup', onSelectionEnd);
-    document.addEventListener('touchend', onSelectionEnd);
-
-    // Also attach inside the iframe document if accessible
-    const iframeDoc = attachIframeListeners();
-    if (iframeDoc) {
-      iframeDoc.addEventListener('mouseup', onSelectionEnd);
-      iframeDoc.addEventListener('touchend', onSelectionEnd);
-    }
-
-    return () => {
-      document.removeEventListener('mouseup', onSelectionEnd);
-      document.removeEventListener('touchend', onSelectionEnd);
-      if (iframeDoc) {
-        iframeDoc.removeEventListener('mouseup', onSelectionEnd);
-        iframeDoc.removeEventListener('touchend', onSelectionEnd);
-      }
-    };
-  }, [isFoliate, overlayPassthrough, handleFoliateTextSelection]);
+  // ─── Text selection ─────────────────────────
+  // Text selection detection and actions (highlight, copy, translate, define)
+  // are fully handled by the TextSelectionMenu component, which attaches its
+  // own selectionchange/mouseup/touchend listeners on both the main document
+  // and the foliate iframe.
 
   // ─── Render engine ─────────────────────────
   // Stable wrapper callbacks forward to refs so the useMemo only depends on
@@ -883,6 +694,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     }
   }, []);
 
+  // Handle taps inside the foliate iframe for tap-zone navigation.
+  // Uses a ref so FoliateEngine doesn't re-render when handlers change.
+  const handleFoliateContentTapRef = useRef((_relX: number) => {});
+  handleFoliateContentTapRef.current = (relX: number) => {
+    if (relX < 0.25) handlePrev();
+    else if (relX > 0.75) handleNext();
+    else handleToggleToolbar();
+  };
+  const stableOnContentTap = useCallback((relX: number) => handleFoliateContentTapRef.current(relX), []);
+
   const renderEngine = useMemo(() => {
     if (isFoliate && fileData) {
       return (
@@ -897,6 +718,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           onLoadComplete={stableOnFoliateLoadComplete}
           onError={stableOnError}
           onHighlightTap={stableOnHighlightTap}
+          onContentTap={stableOnContentTap}
         />
       );
     }
@@ -1078,13 +900,6 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                 }}
               />
             )}
-            <div
-              className={`unified-tap-overlay${overlayPassthrough ? ' passthrough' : ''}`}
-              onTouchStart={handleOverlayTouchStart}
-              onTouchMove={handleOverlayTouchMove}
-              onTouchEnd={handleOverlayTouchEnd}
-              onClick={handleOverlayClick}
-            />
           </div>
         ) : (
           renderEngine

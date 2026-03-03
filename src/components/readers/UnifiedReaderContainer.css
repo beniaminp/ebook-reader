@@ -21,20 +21,8 @@
   overflow: hidden;
 }
 
-/* Transparent tap overlay — captures taps above the foliate-view iframe */
-.unified-tap-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  background: transparent;
-}
-
-.unified-tap-overlay.passthrough {
-  pointer-events: none;
-}
+/* (Tap overlay removed — navigation taps are now handled inside the iframe
+   via FoliateEngine.onContentTap so text selection works without obstruction.) */
 
 /* Bottom controls bar */
 .unified-bottom-bar {

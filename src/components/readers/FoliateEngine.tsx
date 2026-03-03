@@ -52,6 +52,8 @@ export interface FoliateEngineProps {
   onError?: (error: string) => void;
   /** Called when user taps an existing highlight. */
   onHighlightTap?: (value: string) => void;
+  /** Called when user taps content (for tap-zone navigation). relX is 0–1 horizontal position. */
+  onContentTap?: (relX: number) => void;
 }
 
 /** Map format string to MIME type for foliate-js. */
@@ -121,6 +123,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     onLoadComplete,
     onError,
     onHighlightTap,
+    onContentTap,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -166,10 +169,12 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const onLoadCompleteRef = useRef(onLoadComplete);
   const onErrorRef = useRef(onError);
   const onHighlightTapRef = useRef(onHighlightTap);
+  const onContentTapRef = useRef(onContentTap);
   onRelocateRef.current = onRelocate;
   onLoadCompleteRef.current = onLoadComplete;
   onErrorRef.current = onError;
   onHighlightTapRef.current = onHighlightTap;
+  onContentTapRef.current = onContentTap;
 
   const injectStyles = useCallback((doc: Document) => {
     const existingStyle = doc.getElementById('foliate-reader-style');
@@ -349,6 +354,41 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           injectStyles(e.detail.doc);
           applyInterlinear(e.detail.doc);
           applyWordWiseToDoc(e.detail.doc);
+
+          // Inject tap-zone handler so user can tap to navigate without a
+          // blocking overlay — text selection stays fully functional.
+          const doc = e.detail.doc;
+          let touchStart: { x: number; y: number; time: number } | null = null;
+          let touchHandledTap = false;
+          doc.addEventListener('touchstart', (ev: TouchEvent) => {
+            const t = ev.touches[0];
+            touchStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+          }, { passive: true });
+          doc.addEventListener('touchend', (ev: TouchEvent) => {
+            if (!touchStart) return;
+            const t = ev.changedTouches[0];
+            const dx = Math.abs(t.clientX - touchStart.x);
+            const dy = Math.abs(t.clientY - touchStart.y);
+            const elapsed = Date.now() - touchStart.time;
+            touchStart = null;
+            // Only treat as tap if short duration and no significant movement
+            if (dx > 10 || dy > 10 || elapsed > 300) return;
+            // Skip if user has selected text
+            const sel = doc.getSelection?.();
+            if (sel && !sel.isCollapsed) return;
+            touchHandledTap = true;
+            const relX = t.clientX / window.innerWidth;
+            onContentTapRef.current?.(relX);
+          }, { passive: true });
+          doc.addEventListener('click', (ev: MouseEvent) => {
+            // On touch devices, touchend already handled the tap
+            if (touchHandledTap) { touchHandledTap = false; return; }
+            // Skip if user has selected text
+            const sel = doc.getSelection?.();
+            if (sel && !sel.isCollapsed) return;
+            const relX = ev.clientX / window.innerWidth;
+            onContentTapRef.current?.(relX);
+          });
         }) as EventListener);
 
         // Annotation support: draw highlights when foliate creates overlayers
