@@ -42,6 +42,7 @@ import {
   colorPaletteOutline,
 } from 'ionicons/icons';
 
+import { Capacitor } from '@capacitor/core';
 import { FoliateEngine } from './FoliateEngine';
 import { PdfEngineWithHighlights } from './PdfEngineWithHighlights';
 import { ScrollEngine } from './ScrollEngine';
@@ -71,6 +72,7 @@ import type { FoliateHighlight } from './FoliateEngine';
 import './UnifiedReaderContainer.css';
 import './EpubReader.css';
 import '../reader-ui/Interlinear.css';
+import '../reader-ui/WordWise.css';
 
 // ───────────────────────────── Props ─────────────────────────────
 
@@ -457,6 +459,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       themeStore.interlinearLanguage
     );
   }, [themeStore.interlinearMode, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
+
+  useEffect(() => {
+    if (isPdf) return;
+    const targetLang = Capacitor.isNativePlatform() ? themeStore.interlinearLanguage : undefined;
+    engineRef.current?.setWordWise?.(
+      themeStore.wordWiseEnabled,
+      themeStore.wordWiseLevel,
+      targetLang
+    );
+  }, [themeStore.wordWiseEnabled, themeStore.wordWiseLevel, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
 
   // ─── Overlay tap zones (for foliate iframe) ─────────────────────────
 

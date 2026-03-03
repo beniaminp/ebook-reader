@@ -98,6 +98,10 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setBionicReading,
     setInterlinearMode,
     setInterlinearLanguage,
+    wordWiseEnabled,
+    wordWiseLevel,
+    setWordWiseEnabled,
+    setWordWiseLevel,
     setFocusMode,
     setFocusModeOpacity,
     setAutoScroll,
@@ -638,6 +642,30 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                     </IonSelectOption>
                   ))}
                 </IonSelect>
+              </IonItem>
+            )}
+
+            <IonItem>
+              <IonLabel>Word Wise</IonLabel>
+              <IonToggle
+                checked={wordWiseEnabled}
+                onIonChange={(e) => setWordWiseEnabled(e.detail.checked)}
+              />
+            </IonItem>
+
+            {wordWiseEnabled && (
+              <IonItem>
+                <IonLabel position="stacked">
+                  Hint Level: {wordWiseLevel} — {wordWiseLevel <= 2 ? 'Fewer Hints' : wordWiseLevel >= 4 ? 'More Hints' : 'Medium'}
+                </IonLabel>
+                <IonRange
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={wordWiseLevel}
+                  onIonChange={(e) => setWordWiseLevel(e.detail.value as number)}
+                  snaps
+                />
               </IonItem>
             )}
 

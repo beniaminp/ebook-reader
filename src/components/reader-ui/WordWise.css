@@ -1,0 +1,17 @@
+/* Word Wise — ruby annotation styles */
+
+ruby.word-wise-annotation {
+  ruby-position: over;
+}
+
+ruby.word-wise-annotation rt {
+  font-size: 0.55em;
+  font-weight: normal;
+  font-style: normal;
+  opacity: 0.65;
+  color: inherit;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  user-select: none;
+}

@@ -21,6 +21,7 @@ import type { ReaderEngineRef, Chapter, SearchResult, ReaderProgress } from '../
 import { comicService } from '../../services/comicService';
 
 import { translateParagraph, clearInterlinearCache } from '../../services/interlinearTranslationService';
+import { applyWordWise, removeWordWise, clearWordWiseCache } from '../../services/wordWiseService';
 import './EpubReader.css';
 
 export interface FoliateHighlight {
@@ -151,6 +152,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const bionicReadingRef = useRef<boolean>(false);
   const interlinearEnabledRef = useRef<boolean>(false);
   const interlinearLanguageRef = useRef<string>('en');
+  const wordWiseEnabledRef = useRef<boolean>(false);
+  const wordWiseLevelRef = useRef<number>(3);
+  const wordWiseTargetLangRef = useRef<string | undefined>(undefined);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Track highlight annotations applied to the view
@@ -214,6 +218,24 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         }
       `);
     }
+    if (wordWiseEnabledRef.current) {
+      rules.push(`
+        ruby.word-wise-annotation {
+          ruby-position: over;
+        }
+        ruby.word-wise-annotation rt {
+          font-size: 0.55em;
+          font-weight: normal;
+          font-style: normal;
+          opacity: 0.65;
+          color: inherit;
+          letter-spacing: 0;
+          line-height: 1;
+          text-align: center;
+          user-select: none;
+        }
+      `);
+    }
 
     style.textContent = rules.join('\n');
     doc.head.appendChild(style);
@@ -251,6 +273,18 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     doc.querySelectorAll('[data-interlinear-processed]').forEach((el) =>
       el.removeAttribute('data-interlinear-processed')
     );
+  }, []);
+
+  const applyWordWiseToDoc = useCallback(async (doc: Document) => {
+    if (!wordWiseEnabledRef.current) return;
+    const level = wordWiseLevelRef.current;
+    const targetLang = wordWiseTargetLangRef.current;
+    console.log(`[WordWise] Applying to doc, level: ${level}, targetLang: ${targetLang}`);
+    await applyWordWise(doc, level, targetLang);
+  }, []);
+
+  const removeWordWiseFromDoc = useCallback((doc: Document) => {
+    removeWordWise(doc);
   }, []);
 
   const reapplyStyles = useCallback(() => {
@@ -314,6 +348,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           loadedDocsRef.current.add(e.detail.doc);
           injectStyles(e.detail.doc);
           applyInterlinear(e.detail.doc);
+          applyWordWiseToDoc(e.detail.doc);
         }) as EventListener);
 
         // Annotation support: draw highlights when foliate creates overlayers
@@ -577,6 +612,48 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           reapplyStyles();
         }
       },
+      setWordWise: (enabled: boolean, level: number, targetLang?: string) => {
+        const changed = wordWiseEnabledRef.current !== enabled
+          || wordWiseLevelRef.current !== level
+          || wordWiseTargetLangRef.current !== targetLang;
+        wordWiseEnabledRef.current = enabled;
+        wordWiseLevelRef.current = level;
+        wordWiseTargetLangRef.current = targetLang;
+
+        if (!changed) return;
+
+        // Get active docs
+        const activeDocs: Document[] = [];
+        try {
+          const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
+          for (const c of contents) {
+            if (c.doc) activeDocs.push(c.doc);
+          }
+        } catch { /* renderer not ready */ }
+        if (activeDocs.length === 0) {
+          for (const doc of loadedDocsRef.current) {
+            activeDocs.push(doc);
+          }
+        }
+
+        // Always remove existing annotations first
+        clearWordWiseCache();
+        for (const doc of activeDocs) {
+          try { removeWordWiseFromDoc(doc); } catch { /* detached doc */ }
+        }
+
+        reapplyStyles();
+
+        if (enabled) {
+          for (const doc of activeDocs) {
+            try {
+              applyWordWiseToDoc(doc).catch((err) =>
+                console.error('[WordWise] Failed to apply annotations:', err)
+              );
+            } catch { /* detached doc */ }
+          }
+        }
+      },
       getSelectionInfo: () => {
         const view = viewRef.current;
         if (!view) return null;
@@ -603,7 +680,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         viewRef.current?.deleteAnnotation?.({ value: cfi });
       },
     }),
-    [chapters, reapplyStyles, applyInterlinear, removeInterlinear]
+    [chapters, reapplyStyles, applyInterlinear, removeInterlinear, applyWordWiseToDoc, removeWordWiseFromDoc]
   );
 
   // Sync highlights when prop changes

@@ -92,6 +92,8 @@ export interface ReaderEngineRef {
   setBionicReading?(enabled: boolean): void;
   /** Enable/disable interlinear translation mode. */
   setInterlinearMode?(enabled: boolean, targetLanguage: string): void;
+  /** Enable/disable Word Wise mode with difficulty level and optional target language. */
+  setWordWise?(enabled: boolean, level: number, targetLang?: string): void;
   /** Get current text selection info (CFI + text for EPUB, offsets for scroll). */
   getSelectionInfo?(): { cfi?: string; text: string; startOffset?: number; endOffset?: number } | null;
   /** Add a visual highlight annotation (EPUB). */

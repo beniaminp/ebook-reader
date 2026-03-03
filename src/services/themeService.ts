@@ -66,6 +66,8 @@ export interface ReadingSettings {
   bionicReading: boolean;
   interlinearMode: boolean;
   interlinearLanguage: string;
+  wordWiseEnabled: boolean;
+  wordWiseLevel: number;
   focusMode: boolean;
   focusModeSettings: FocusModeSettings;
   autoScroll: boolean;
@@ -212,6 +214,8 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   bionicReading: false,
   interlinearMode: false,
   interlinearLanguage: 'en',
+  wordWiseEnabled: false,
+  wordWiseLevel: 3,
   focusMode: false,
   focusModeSettings: {
     enabled: false,

@@ -18,6 +18,7 @@ import DOMPurify from 'dompurify';
 import { ReaderContainer } from '../reader-ui/ReaderContainer';
 import type { ReaderEngineRef, SearchResult, ReaderProgress, Chapter } from '../../types/reader';
 import { translateParagraph, clearInterlinearCache } from '../../services/interlinearTranslationService';
+import { applyWordWise, removeWordWise, clearWordWiseCache } from '../../services/wordWiseService';
 import type { Highlight } from '../../types/index';
 
 export interface ScrollEngineProps {
@@ -301,6 +302,20 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
             })
             .catch((err) => { console.error('[Interlinear] Translation failed:', err); });
         }
+      },
+      setWordWise: (enabled: boolean, level: number, targetLang?: string) => {
+        const container = innerRef.current;
+        if (!container) return;
+
+        // Remove existing word wise annotations
+        removeWordWise(container.ownerDocument);
+        clearWordWiseCache();
+
+        if (!enabled) return;
+
+        applyWordWise(container.ownerDocument, level, targetLang).catch((err) => {
+          console.error('[WordWise] Failed to apply annotations:', err);
+        });
       },
     }),
     [scrollByViewport, scrollToCharIndex, ionContentRef, plainText]

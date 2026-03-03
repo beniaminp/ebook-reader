@@ -179,6 +179,8 @@ interface ThemeState extends ReadingSettings {
   setBionicReading: (enabled: boolean) => void;
   setInterlinearMode: (enabled: boolean) => void;
   setInterlinearLanguage: (language: string) => void;
+  setWordWiseEnabled: (enabled: boolean) => void;
+  setWordWiseLevel: (level: number) => void;
   setFocusMode: (enabled: boolean) => void;
   setFocusModeOpacity: (opacity: number) => void;
   setAutoScroll: (enabled: boolean) => void;
@@ -246,6 +248,8 @@ export const useThemeStore = create<ThemeState>()(
       bionicReading: DEFAULT_SETTINGS.bionicReading,
       interlinearMode: DEFAULT_SETTINGS.interlinearMode,
       interlinearLanguage: DEFAULT_SETTINGS.interlinearLanguage,
+      wordWiseEnabled: DEFAULT_SETTINGS.wordWiseEnabled,
+      wordWiseLevel: DEFAULT_SETTINGS.wordWiseLevel,
       focusMode: DEFAULT_SETTINGS.focusMode,
       focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
       autoScroll: DEFAULT_SETTINGS.autoScroll,
@@ -327,6 +331,10 @@ export const useThemeStore = create<ThemeState>()(
 
       setInterlinearLanguage: (interlinearLanguage) => set({ interlinearLanguage }),
 
+      setWordWiseEnabled: (wordWiseEnabled) => set({ wordWiseEnabled }),
+
+      setWordWiseLevel: (wordWiseLevel) => set({ wordWiseLevel }),
+
       setFocusMode: (focusMode) => set({ focusMode }),
 
       setFocusModeOpacity: (opacity) =>
@@ -359,6 +367,8 @@ export const useThemeStore = create<ThemeState>()(
           bionicReading: DEFAULT_SETTINGS.bionicReading,
           interlinearMode: DEFAULT_SETTINGS.interlinearMode,
           interlinearLanguage: DEFAULT_SETTINGS.interlinearLanguage,
+          wordWiseEnabled: DEFAULT_SETTINGS.wordWiseEnabled,
+          wordWiseLevel: DEFAULT_SETTINGS.wordWiseLevel,
           focusMode: DEFAULT_SETTINGS.focusMode,
           focusModeSettings: DEFAULT_SETTINGS.focusModeSettings,
           autoScroll: DEFAULT_SETTINGS.autoScroll,
@@ -432,6 +442,8 @@ export const useThemeStore = create<ThemeState>()(
         bionicReading: state.bionicReading,
         interlinearMode: state.interlinearMode,
         interlinearLanguage: state.interlinearLanguage,
+        wordWiseEnabled: state.wordWiseEnabled,
+        wordWiseLevel: state.wordWiseLevel,
         focusMode: state.focusMode,
         focusModeSettings: state.focusModeSettings,
         autoScroll: state.autoScroll,
