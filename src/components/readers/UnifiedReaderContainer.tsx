@@ -554,14 +554,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       if (sel && !sel.isCollapsed) return;
 
       const relX = touch.clientX / window.innerWidth;
-      // Only handle center tap to toggle toolbar for non-foliate formats
-      // (left/right navigation is handled by scrolling or PDF engine)
-      if (relX >= 0.25 && relX <= 0.75) {
+      // Handle tap zones for non-foliate formats
+      if (relX < 0.33) {
+        contentTouchHandledRef.current = true;
+        handlePrev();
+      } else if (relX > 0.67) {
+        contentTouchHandledRef.current = true;
+        handleNext();
+      } else {
         contentTouchHandledRef.current = true;
         handleToggleToolbar();
       }
     },
-    [isFoliate, handleToggleToolbar, brightnessGesture]
+    [isFoliate, handlePrev, handleNext, handleToggleToolbar, brightnessGesture]
   );
 
   const handleContentClick = useCallback(
@@ -575,11 +580,15 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed) return;
       const relX = e.clientX / window.innerWidth;
-      if (relX >= 0.25 && relX <= 0.75) {
+      if (relX < 0.33) {
+        handlePrev();
+      } else if (relX > 0.67) {
+        handleNext();
+      } else {
         handleToggleToolbar();
       }
     },
-    [isFoliate, handleToggleToolbar]
+    [isFoliate, handlePrev, handleNext, handleToggleToolbar]
   );
 
   // ─── Keyboard navigation ─────────────────────────
@@ -754,8 +763,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Uses a ref so FoliateEngine doesn't re-render when handlers change.
   const handleFoliateContentTapRef = useRef((_relX: number) => {});
   handleFoliateContentTapRef.current = (relX: number) => {
-    if (relX < 0.25) handlePrev();
-    else if (relX > 0.75) handleNext();
+    if (relX < 0.33) handlePrev();
+    else if (relX > 0.67) handleNext();
     else handleToggleToolbar();
   };
   const stableOnContentTap = useCallback((relX: number) => handleFoliateContentTapRef.current(relX), []);
@@ -827,6 +836,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     stableOnError,
     stableOnPdfHighlightsChange,
     stableOnHighlightTap,
+    stableOnContentTap,
   ]);
 
   // ─── Toolbar theme styling ─────────────────────────

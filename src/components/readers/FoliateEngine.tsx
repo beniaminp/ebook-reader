@@ -360,6 +360,25 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           const doc = e.detail.doc;
           let touchStart: { x: number; y: number; time: number } | null = null;
           let touchHandledTap = false;
+
+          // Helper: convert an X coordinate from the iframe document space
+          // to a 0–1 relative position across the full screen width.
+          // clientX inside the iframe is relative to the iframe viewport.
+          // We need to account for any offset the iframe has from the
+          // left edge of the screen.
+          const toRelativeX = (clientX: number): number => {
+            const iframeWin = doc.defaultView;
+            // Try to get the iframe element from the parent window to
+            // determine its screen offset
+            if (iframeWin && iframeWin.frameElement) {
+              const rect = iframeWin.frameElement.getBoundingClientRect();
+              return (rect.left + clientX) / window.innerWidth;
+            }
+            // Fallback: use the iframe's own viewport width
+            const viewportWidth = iframeWin?.innerWidth || window.innerWidth;
+            return clientX / viewportWidth;
+          };
+
           doc.addEventListener('touchstart', (ev: TouchEvent) => {
             const t = ev.touches[0];
             touchStart = { x: t.clientX, y: t.clientY, time: Date.now() };
@@ -377,7 +396,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             const sel = doc.getSelection?.();
             if (sel && !sel.isCollapsed) return;
             touchHandledTap = true;
-            const relX = t.clientX / window.innerWidth;
+            const relX = toRelativeX(t.clientX);
             onContentTapRef.current?.(relX);
           }, { passive: true });
           doc.addEventListener('click', (ev: MouseEvent) => {
@@ -386,7 +405,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             // Skip if user has selected text
             const sel = doc.getSelection?.();
             if (sel && !sel.isCollapsed) return;
-            const relX = ev.clientX / window.innerWidth;
+            const relX = toRelativeX(ev.clientX);
             onContentTapRef.current?.(relX);
           });
         }) as EventListener);
