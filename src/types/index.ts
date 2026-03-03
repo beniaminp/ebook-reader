@@ -40,6 +40,8 @@ export interface Book {
   downloaded: boolean; // Whether the book file is downloaded locally
   genre?: string; // Main genre (e.g., "Fiction", "Science")
   subgenres?: string[]; // Sub-genres (e.g., ["Thriller", "Mystery", "Suspense"])
+  series?: string; // Series name (e.g., "Harry Potter")
+  seriesIndex?: number; // Position in series (e.g., 1, 2, 3)
   metadata?: BookMetadata;
 }
 

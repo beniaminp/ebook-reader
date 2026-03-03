@@ -248,6 +248,19 @@
   }
 }
 
+/* ─── End of Chapter indicator ─── */
+
+.sleep-timer-button .timer-countdown.timer-eoc {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.end-of-chapter-btn {
+  --border-color: var(--ion-color-primary);
+  font-weight: 600;
+}
+
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .sleep-timer-custom-row input {

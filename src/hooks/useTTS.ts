@@ -2,6 +2,9 @@
  * useTTS Hook
  * Text-to-Speech using Web Speech API (SpeechSynthesis)
  * Works in Android WebView with system voices
+ *
+ * Supports word-level boundary events for highlighting the currently
+ * spoken word in the rendered text.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -15,11 +18,29 @@ export interface TTSVoice {
   localService: boolean;
 }
 
+/** Word boundary info emitted during speech */
+export interface TTSWordBoundary {
+  /** Character index within the current sentence */
+  charIndex: number;
+  /** Length of the spoken word */
+  charLength: number;
+  /** The word being spoken */
+  word: string;
+  /** Index of the sentence containing the word */
+  sentenceIndex: number;
+}
+
 export interface UseTTSOptions {
   rate?: number;
   pitch?: number;
   volume?: number;
   voiceURI?: string;
+  /** Called when a word boundary event fires during speech */
+  onWordBoundary?: (boundary: TTSWordBoundary) => void;
+  /** Called when speech of a sentence starts */
+  onSentenceStart?: (sentenceIndex: number, sentenceText: string) => void;
+  /** Called when all speech completes */
+  onComplete?: () => void;
 }
 
 export interface UseTTSReturn {
@@ -32,6 +53,8 @@ export interface UseTTSReturn {
   selectedVoiceURI: string;
   availableVoices: TTSVoice[];
   isSupported: boolean;
+  /** The current word boundary (updated on each word event) */
+  currentWord: TTSWordBoundary | null;
   speak: (text: string) => void;
   pause: () => void;
   resume: () => void;
@@ -42,12 +65,42 @@ export interface UseTTSReturn {
   setPitch: (pitch: number) => void;
   setVolume: (volume: number) => void;
   setVoice: (voiceURI: string) => void;
+  /** Get all sentences and their character offsets within the original text */
+  getSentences: () => { text: string; startOffset: number; endOffset: number }[];
 }
 
 function splitIntoSentences(text: string): string[] {
   // Split on sentence-ending punctuation followed by whitespace or end of string
   const sentences = text.match(/[^.!?…]+[.!?…]+(?:\s|$)|[^.!?…]+$/g) || [];
   return sentences.map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+/**
+ * Compute character offsets for each sentence within the full text.
+ * Returns array of { text, startOffset, endOffset }.
+ */
+function computeSentenceOffsets(
+  fullText: string,
+  sentences: string[]
+): { text: string; startOffset: number; endOffset: number }[] {
+  const result: { text: string; startOffset: number; endOffset: number }[] = [];
+  let searchStart = 0;
+  for (const sentence of sentences) {
+    const idx = fullText.indexOf(sentence, searchStart);
+    if (idx >= 0) {
+      result.push({ text: sentence, startOffset: idx, endOffset: idx + sentence.length });
+      searchStart = idx + sentence.length;
+    } else {
+      // Fallback: approximate offset
+      result.push({
+        text: sentence,
+        startOffset: searchStart,
+        endOffset: searchStart + sentence.length,
+      });
+      searchStart += sentence.length;
+    }
+  }
+  return result;
 }
 
 export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
@@ -60,8 +113,13 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   const [pitch, setPitchState] = useState(options.pitch ?? 1.0);
   const [volume, setVolumeState] = useState(options.volume ?? 1.0);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(options.voiceURI ?? '');
+  const [currentWord, setCurrentWord] = useState<TTSWordBoundary | null>(null);
 
   const sentencesRef = useRef<string[]>([]);
+  const fullTextRef = useRef<string>('');
+  const sentenceOffsetsRef = useRef<
+    { text: string; startOffset: number; endOffset: number }[]
+  >([]);
   const currentIndexRef = useRef(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isStoppingRef = useRef(false);
@@ -77,6 +135,14 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   pitchRef.current = pitch;
   volumeRef.current = volume;
   selectedVoiceURIRef.current = selectedVoiceURI;
+
+  // Keep callback refs up to date
+  const onWordBoundaryRef = useRef(options.onWordBoundary);
+  const onSentenceStartRef = useRef(options.onSentenceStart);
+  const onCompleteRef = useRef(options.onComplete);
+  onWordBoundaryRef.current = options.onWordBoundary;
+  onSentenceStartRef.current = options.onSentenceStart;
+  onCompleteRef.current = options.onComplete;
 
   // Load available voices
   useEffect(() => {
@@ -134,10 +200,13 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
         setState('idle');
         setCurrentSentenceIndex(0);
         currentIndexRef.current = 0;
+        setCurrentWord(null);
+        onCompleteRef.current?.();
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(sentencesRef.current[index]);
+      const sentenceText = sentencesRef.current[index];
+      const utterance = new SpeechSynthesisUtterance(sentenceText);
       // Read from refs so that settings changed after speak() was called are
       // picked up by subsequent sentences without re-creating this callback.
       utterance.rate = rateRef.current;
@@ -153,6 +222,34 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
       utterance.onstart = () => {
         setCurrentSentenceIndex(index);
         currentIndexRef.current = index;
+        onSentenceStartRef.current?.(index, sentenceText);
+      };
+
+      // Word boundary event for highlighting
+      utterance.onboundary = (event: SpeechSynthesisEvent) => {
+        if (event.name === 'word') {
+          const charIndex = event.charIndex;
+          const charLength = event.charLength || 0;
+          // Extract the word from the sentence text
+          let word: string;
+          if (charLength > 0) {
+            word = sentenceText.substring(charIndex, charIndex + charLength);
+          } else {
+            // charLength may be 0 on some browsers; extract word manually
+            const remaining = sentenceText.substring(charIndex);
+            const match = remaining.match(/^[\S]+/);
+            word = match ? match[0] : '';
+          }
+
+          const boundary: TTSWordBoundary = {
+            charIndex,
+            charLength: charLength || word.length,
+            word,
+            sentenceIndex: index,
+          };
+          setCurrentWord(boundary);
+          onWordBoundaryRef.current?.(boundary);
+        }
       };
 
       utterance.onend = () => {
@@ -164,6 +261,8 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
           setState('idle');
           setCurrentSentenceIndex(0);
           currentIndexRef.current = 0;
+          setCurrentWord(null);
+          onCompleteRef.current?.();
         }
       };
 
@@ -171,6 +270,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
         if (event.error !== 'interrupted' && event.error !== 'canceled') {
           console.error('TTS error:', event.error);
           setState('idle');
+          setCurrentWord(null);
         }
       };
 
@@ -188,10 +288,13 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
       isStoppingRef.current = false;
       window.speechSynthesis.cancel();
 
+      fullTextRef.current = text;
       const sentences = splitIntoSentences(text);
       sentencesRef.current = sentences;
+      sentenceOffsetsRef.current = computeSentenceOffsets(text, sentences);
       currentIndexRef.current = 0;
       setCurrentSentenceIndex(0);
+      setCurrentWord(null);
       setState('playing');
 
       speakSentence(0);
@@ -218,6 +321,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     setState('idle');
     setCurrentSentenceIndex(0);
     currentIndexRef.current = 0;
+    setCurrentWord(null);
   }, [isSupported]);
 
   const skipForward = useCallback(() => {
@@ -258,6 +362,10 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     setSelectedVoiceURI(voiceURI);
   }, []);
 
+  const getSentences = useCallback(() => {
+    return sentenceOffsetsRef.current;
+  }, []);
+
   return {
     state,
     currentSentenceIndex,
@@ -268,6 +376,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     selectedVoiceURI,
     availableVoices,
     isSupported,
+    currentWord,
     speak,
     pause,
     resume,
@@ -278,6 +387,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     setPitch,
     setVolume,
     setVoice,
+    getSentences,
   };
 }
 

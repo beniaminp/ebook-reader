@@ -18,13 +18,16 @@ export { useSwipeGesture } from './useSwipeGesture';
 export type { UseSwipeGestureOptions, UseSwipeGestureReturn } from './useSwipeGesture';
 
 export { useTTS } from './useTTS';
-export type { UseTTSReturn, UseTTSOptions, TTSState, TTSVoice } from './useTTS';
+export type { UseTTSReturn, UseTTSOptions, TTSState, TTSVoice, TTSWordBoundary } from './useTTS';
 
 export { useBrightnessGesture } from './useBrightnessGesture';
 export type {
   UseBrightnessGestureOptions,
   UseBrightnessGestureReturn,
 } from './useBrightnessGesture';
+
+export { useTTSHighlighter } from './useTTSHighlighter';
+export type { UseTTSHighlighterOptions, UseTTSHighlighterReturn } from './useTTSHighlighter';
 
 export { useSleepTimer } from './useSleepTimer';
 export type { UseSleepTimerOptions, UseSleepTimerReturn } from './useSleepTimer';

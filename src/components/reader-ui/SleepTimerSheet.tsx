@@ -1,11 +1,18 @@
 /**
  * SleepTimerSheet Component
- * Popover/sheet with timer presets, custom input, and active timer display.
+ * Popover/sheet with timer presets, "End of Chapter" option, custom input,
+ * and active timer display.
  */
 
 import React, { useState } from 'react';
 import { IonButton, IonIcon } from '@ionic/react';
-import { timerOutline, stopCircleOutline, addCircleOutline } from 'ionicons/icons';
+import {
+  timerOutline,
+  stopCircleOutline,
+  addCircleOutline,
+  bookOutline,
+} from 'ionicons/icons';
+import type { SleepTimerMode } from '../../stores/useSleepTimerStore';
 import './SleepTimer.css';
 
 /** Preset durations in minutes */
@@ -13,9 +20,11 @@ const PRESETS = [15, 30, 45, 60, 90, 120] as const;
 
 interface SleepTimerSheetProps {
   isActive: boolean;
+  mode: SleepTimerMode;
   formattedTime: string;
   progressFraction: number;
   onStart: (minutes: number) => void;
+  onStartEndOfChapter: () => void;
   onStop: () => void;
   onExtend: (minutes: number) => void;
   onDismiss: () => void;
@@ -23,9 +32,11 @@ interface SleepTimerSheetProps {
 
 export const SleepTimerSheet: React.FC<SleepTimerSheetProps> = ({
   isActive,
+  mode,
   formattedTime,
   progressFraction,
   onStart,
+  onStartEndOfChapter,
   onStop,
   onExtend,
   onDismiss,
@@ -46,8 +57,9 @@ export const SleepTimerSheet: React.FC<SleepTimerSheetProps> = ({
     onDismiss();
   };
 
-  const handleExtend = (minutes: number) => {
-    onExtend(minutes);
+  const handleEndOfChapter = () => {
+    onStartEndOfChapter();
+    onDismiss();
   };
 
   const formatPresetLabel = (minutes: number): string => {
@@ -69,31 +81,44 @@ export const SleepTimerSheet: React.FC<SleepTimerSheetProps> = ({
         <>
           {/* Active timer display */}
           <div className="sleep-timer-status">
-            <div className="remaining-display">{formattedTime}</div>
-            <div className="remaining-label">remaining</div>
-            <div className="sleep-timer-progress">
-              <div
-                className="sleep-timer-progress-bar"
-                style={{ width: `${progressFraction * 100}%` }}
-              />
+            <div className="remaining-display">
+              {mode === 'end-of-chapter' ? (
+                <IonIcon icon={bookOutline} style={{ fontSize: '28px', marginBottom: '4px' }} />
+              ) : null}
+              {formattedTime}
             </div>
+            <div className="remaining-label">
+              {mode === 'end-of-chapter' ? 'Stops at end of chapter' : 'remaining'}
+            </div>
+            {mode === 'time' && (
+              <div className="sleep-timer-progress">
+                <div
+                  className="sleep-timer-progress-bar"
+                  style={{ width: `${progressFraction * 100}%` }}
+                />
+              </div>
+            )}
             <div className="sleep-timer-actions">
-              <IonButton
-                fill="outline"
-                size="small"
-                onClick={() => handleExtend(5)}
-              >
-                <IonIcon icon={addCircleOutline} slot="start" />
-                +5 min
-              </IonButton>
-              <IonButton
-                fill="outline"
-                size="small"
-                onClick={() => handleExtend(15)}
-              >
-                <IonIcon icon={addCircleOutline} slot="start" />
-                +15 min
-              </IonButton>
+              {mode === 'time' && (
+                <>
+                  <IonButton
+                    fill="outline"
+                    size="small"
+                    onClick={() => onExtend(5)}
+                  >
+                    <IonIcon icon={addCircleOutline} slot="start" />
+                    +5 min
+                  </IonButton>
+                  <IonButton
+                    fill="outline"
+                    size="small"
+                    onClick={() => onExtend(15)}
+                  >
+                    <IonIcon icon={addCircleOutline} slot="start" />
+                    +15 min
+                  </IonButton>
+                </>
+              )}
               <IonButton
                 fill="outline"
                 color="danger"
@@ -111,8 +136,19 @@ export const SleepTimerSheet: React.FC<SleepTimerSheetProps> = ({
         </>
       ) : (
         <>
-          {/* Preset options */}
+          {/* End of chapter option */}
           <div className="sleep-timer-presets">
+            <IonButton
+              fill="outline"
+              expand="block"
+              onClick={handleEndOfChapter}
+              className="end-of-chapter-btn"
+            >
+              <IonIcon icon={bookOutline} slot="start" />
+              End of chapter
+            </IonButton>
+
+            {/* Preset options */}
             {PRESETS.map((mins) => (
               <IonButton
                 key={mins}

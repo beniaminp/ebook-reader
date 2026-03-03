@@ -77,6 +77,7 @@ import {
   type ReadStatus,
 } from '../../stores/useLibraryPrefsStore';
 import ReadingStreakCard from '../../components/ReadingStreakCard';
+import WelcomeBackCard from '../../components/WelcomeBackCard';
 import './Library.css';
 
 const Library: React.FC = () => {
@@ -115,6 +116,11 @@ const Library: React.FC = () => {
   // "Add to Shelf" state
   const [showShelfAssign, setShowShelfAssign] = useState(false);
   const [bookShelfIds, setBookShelfIds] = useState<string[]>([]);
+
+  // Series editing state (in Book Details modal)
+  const [detailSeriesName, setDetailSeriesName] = useState('');
+  const [detailSeriesIndex, setDetailSeriesIndex] = useState('');
+  const [seriesSaving, setSeriesSaving] = useState(false);
 
   // Cover search state
   const [showCoverSearch, setShowCoverSearch] = useState(false);
@@ -1609,6 +1615,7 @@ const Library: React.FC = () => {
         ) : (
           <>
             <ReadingStreakCard />
+            <WelcomeBackCard books={books} />
             {renderContinueReading()}
 
             {filteredBooks.length === 0 ? (
@@ -1700,6 +1707,12 @@ const Library: React.FC = () => {
             text: 'Book Details',
             icon: informationCircleOutline,
             handler: () => {
+              if (selectedBook) {
+                setDetailSeriesName(selectedBook.series || selectedBook.metadata?.series || '');
+                setDetailSeriesIndex(
+                  String(selectedBook.seriesIndex ?? selectedBook.metadata?.seriesIndex ?? '')
+                );
+              }
               setShowBookDetails(true);
             },
           },
@@ -1875,6 +1888,68 @@ const Library: React.FC = () => {
                   </IonLabel>
                 </IonItem>
               </IonList>
+
+              {/* Series editing */}
+              <div style={{ marginTop: '16px' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Series</h3>
+                <IonList>
+                  <IonItem>
+                    <IonLabel position="stacked">Series Name</IonLabel>
+                    <IonInput
+                      value={detailSeriesName}
+                      onIonInput={(e) => setDetailSeriesName(e.detail.value || '')}
+                      placeholder="e.g. Harry Potter"
+                      clearInput
+                    />
+                  </IonItem>
+                  <IonItem>
+                    <IonLabel position="stacked">Position in Series</IonLabel>
+                    <IonInput
+                      type="number"
+                      value={detailSeriesIndex}
+                      onIonInput={(e) => setDetailSeriesIndex(e.detail.value || '')}
+                      placeholder="e.g. 1, 2, 3"
+                      clearInput
+                    />
+                  </IonItem>
+                </IonList>
+                <IonButton
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  disabled={seriesSaving}
+                  style={{ margin: '8px 0' }}
+                  onClick={async () => {
+                    if (!selectedBook) return;
+                    setSeriesSaving(true);
+                    try {
+                      const seriesVal = detailSeriesName.trim() || undefined;
+                      const indexVal = detailSeriesIndex ? parseFloat(detailSeriesIndex) : undefined;
+                      await databaseService.updateBook(selectedBook.id, {
+                        series: seriesVal,
+                        seriesIndex: indexVal,
+                      } as any);
+                      await databaseService.updateBookMetadata(selectedBook.id, {
+                        series: seriesVal,
+                        seriesIndex: indexVal,
+                      });
+                      // Reload books
+                      const loadedBooks = await databaseService.getAllBooks();
+                      setBooks(loadedBooks);
+                      setToastColor('success');
+                      setToastMessage('Series info updated');
+                    } catch (err) {
+                      console.error('Failed to save series info:', err);
+                      setToastColor('danger');
+                      setToastMessage('Failed to update series info');
+                    } finally {
+                      setSeriesSaving(false);
+                    }
+                  }}
+                >
+                  {seriesSaving ? 'Saving...' : 'Save Series Info'}
+                </IonButton>
+              </div>
             </div>
           )}
         </IonContent>

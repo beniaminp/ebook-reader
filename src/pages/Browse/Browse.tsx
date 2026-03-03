@@ -17,6 +17,9 @@ import {
   IonButtons,
   IonBackButton,
   IonButton,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
 } from '@ionic/react';
 import {
   personOutline,
@@ -33,6 +36,7 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
 import { databaseService } from '../../services/database';
 import type { Book, Collection } from '../../types/index';
+import SeriesView from '../../components/SeriesView';
 import './Browse.css';
 
 type FilterType =
@@ -50,11 +54,14 @@ interface TagItem {
   color?: string;
 }
 
+type BrowseTab = 'categories' | 'series';
+
 const Browse: React.FC = () => {
   const history = useHistory();
   const books = useAppStore((s) => s.books);
   const loadBooks = useAppStore((s) => s.loadBooks);
 
+  const [browseTab, setBrowseTab] = useState<BrowseTab>('categories');
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionBookMap, setCollectionBookMap] = useState<Record<string, Book[]>>({});
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -298,6 +305,11 @@ const Browse: React.FC = () => {
     );
   }
 
+  // Count books that have series metadata
+  const seriesBookCount = useMemo(() => {
+    return books.filter((b) => b.series || b.metadata?.series).length;
+  }, [books]);
+
   // Main browse view
   return (
     <IonPage className="browse-page">
@@ -305,8 +317,29 @@ const Browse: React.FC = () => {
         <IonToolbar>
           <IonTitle>Browse</IonTitle>
         </IonToolbar>
+        <IonToolbar>
+          <IonSegment
+            value={browseTab}
+            onIonChange={(e) =>
+              setBrowseTab(e.detail.value as BrowseTab)
+            }
+          >
+            <IonSegmentButton value="categories">
+              <IonLabel>Categories</IonLabel>
+            </IonSegmentButton>
+            <IonSegmentButton value="series">
+              <IonLabel>
+                Series{seriesBookCount > 0 ? ` (${series.length})` : ''}
+              </IonLabel>
+            </IonSegmentButton>
+          </IonSegment>
+        </IonToolbar>
       </IonHeader>
       <IonContent>
+        {browseTab === 'series' ? (
+          <SeriesView books={books} />
+        ) : (
+        <>
         {/* Recently Added */}
         {recentlyAdded.length > 0 && (
           <div className="browse-recent-section">
@@ -531,6 +564,8 @@ const Browse: React.FC = () => {
 
         {/* Bottom spacer */}
         <div style={{ height: 24 }} />
+        </>
+        )}
       </IonContent>
     </IonPage>
   );

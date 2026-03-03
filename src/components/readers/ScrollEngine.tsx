@@ -203,6 +203,12 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
         const target = (pct / 100) * (innerRef.current.scrollHeight || 0);
         ionContent.scrollToPoint(0, target, 300);
       },
+      goToFraction: (fraction: number) => {
+        const ionContent = ionContentRef?.current;
+        if (!ionContent || !innerRef.current) return;
+        const target = fraction * (innerRef.current.scrollHeight || 0);
+        ionContent.scrollToPoint(0, target, 300);
+      },
       goToChapter: () => {
         /* scroll content has no chapters */
       },
@@ -302,6 +308,15 @@ export const ScrollEngine = forwardRef<ReaderEngineRef, ScrollEngineProps>((prop
             })
             .catch((err) => { console.error('[Interlinear] Translation failed:', err); });
         }
+      },
+      getVisibleText: (): string => {
+        const container = innerRef.current;
+        if (!container) return '';
+        return container.innerText || container.textContent || '';
+      },
+      getContentDocuments: (): Document[] => {
+        // ScrollEngine renders in the main document
+        return [document];
       },
       setWordWise: (enabled: boolean, level: number, targetLang?: string) => {
         const container = innerRef.current;

@@ -11,5 +11,23 @@
   text-overflow: ellipsis;
   opacity: 0.85;
   line-height: 1.2;
-  padding: 0 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.time-left-display:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.time-left-display:active {
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+.time-left-hidden {
+  opacity: 0.4;
+  letter-spacing: 2px;
 }

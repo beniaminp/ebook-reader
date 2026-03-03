@@ -171,6 +171,10 @@ export const PdfEngine = forwardRef<ReaderEngineRef, PdfEngineProps>((props, ref
         const page = parseInt(location, 10);
         if (!isNaN(page)) goToPage(page);
       },
+      goToFraction: (fraction: number) => {
+        const page = Math.max(1, Math.min(totalPagesRef.current, Math.round(fraction * totalPagesRef.current) + 1));
+        goToPage(page);
+      },
       goToChapter: () => {
         /* PDF has no chapters */
       },

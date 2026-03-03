@@ -411,6 +411,10 @@ export const PdfEngineWithHighlights = forwardRef<ReaderEngineRef, PdfEngineWith
           const page = parseInt(location, 10);
           if (!isNaN(page)) goToPage(page);
         },
+        goToFraction: (fraction: number) => {
+          const page = Math.max(1, Math.min(totalPagesRef.current, Math.round(fraction * totalPagesRef.current) + 1));
+          goToPage(page);
+        },
         goToChapter: () => {
           /* PDF has no chapters */
         },
@@ -464,6 +468,13 @@ export const PdfEngineWithHighlights = forwardRef<ReaderEngineRef, PdfEngineWith
           }
 
           return results;
+        },
+        getVisibleText: (): string => {
+          // Get text from the rendered text layer in the DOM
+          if (textLayerRef.current) {
+            return textLayerRef.current.innerText || textLayerRef.current.textContent || '';
+          }
+          return '';
         },
       }),
       [goToPage]

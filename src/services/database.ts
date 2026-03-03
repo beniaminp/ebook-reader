@@ -434,6 +434,14 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
       fields.push('source_url = ?');
       values.push(updates.sourceUrl);
     }
+    if ((updates as any).series !== undefined) {
+      fields.push('series = ?');
+      values.push((updates as any).series || null);
+    }
+    if ((updates as any).seriesIndex !== undefined) {
+      fields.push('series_index = ?');
+      values.push((updates as any).seriesIndex ?? null);
+    }
 
     if (fields.length > 0) {
       fields.push('updated_at = ?');
@@ -681,6 +689,8 @@ function mapRowToBook(row: any): Book | null {
     downloaded: row.downloaded === 1,
     genre,
     subgenres,
+    series: row.series || undefined,
+    seriesIndex: row.series_index != null ? row.series_index : undefined,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }
@@ -709,6 +719,8 @@ function webBookToBook(webBook: WebBook): Book {
     downloaded: webBook.downloaded,
     genre: (webBook as any).genre,
     subgenres: (webBook as any).subgenres,
+    series: (webBook as any).series,
+    seriesIndex: (webBook as any).seriesIndex,
     metadata: (webBook as any).metadata,
   };
 }

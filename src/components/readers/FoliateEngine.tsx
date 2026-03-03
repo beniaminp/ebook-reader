@@ -536,6 +536,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       goToLocation: (location: string) => {
         viewRef.current?.goTo(location);
       },
+      goToFraction: (fraction: number) => {
+        viewRef.current?.goToFraction(fraction);
+      },
       goToChapter: (index: number) => {
         if (chapters[index]) {
           viewRef.current?.goTo(chapters[index].href);
@@ -727,6 +730,46 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       removeHighlightAnnotation: (cfi: string) => {
         viewRef.current?.deleteAnnotation?.({ value: cfi });
+      },
+      getVisibleText: (): string => {
+        // Extract text from currently visible iframe document(s)
+        const activeDocs: Document[] = [];
+        try {
+          const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
+          for (const c of contents) {
+            if (c.doc) activeDocs.push(c.doc);
+          }
+        } catch { /* renderer not ready */ }
+        if (activeDocs.length === 0) {
+          for (const doc of loadedDocsRef.current) {
+            activeDocs.push(doc);
+          }
+        }
+        const texts: string[] = [];
+        for (const doc of activeDocs) {
+          try {
+            const body = doc.body;
+            if (body) {
+              texts.push(body.innerText || body.textContent || '');
+            }
+          } catch { /* detached doc */ }
+        }
+        return texts.join('\n').trim();
+      },
+      getContentDocuments: (): Document[] => {
+        const activeDocs: Document[] = [];
+        try {
+          const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
+          for (const c of contents) {
+            if (c.doc) activeDocs.push(c.doc);
+          }
+        } catch { /* renderer not ready */ }
+        if (activeDocs.length === 0) {
+          for (const doc of loadedDocsRef.current) {
+            activeDocs.push(doc);
+          }
+        }
+        return activeDocs;
       },
     }),
     [chapters, reapplyStyles, applyInterlinear, removeInterlinear, applyWordWiseToDoc, removeWordWiseFromDoc]

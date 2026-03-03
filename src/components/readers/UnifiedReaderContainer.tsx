@@ -40,6 +40,7 @@ import {
   chevronForward,
   list,
   colorPaletteOutline,
+  volumeHighOutline,
 } from 'ionicons/icons';
 
 import { Capacitor } from '@capacitor/core';
@@ -65,11 +66,15 @@ import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { useAppStore } from '../../stores/useAppStore';
 import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
 import { useSleepTimer } from '../../hooks/useSleepTimer';
+import { useTTS } from '../../hooks/useTTS';
+import { useTTSHighlighter } from '../../hooks/useTTSHighlighter';
 import { SleepTimerButton } from '../reader-ui/SleepTimerButton';
 import { SleepTimerWarning } from '../reader-ui/SleepTimerWarning';
 import { SleepTimerOverlay } from '../reader-ui/SleepTimerOverlay';
+import { TTSControls } from '../reader-ui/TTSControls';
 import { useReadingSpeed } from '../../hooks/useReadingSpeed';
 import { TimeLeftDisplay } from '../reader-ui/TimeLeftDisplay';
+import { ChapterScrubber } from '../reader-ui/ChapterScrubber';
 import { useImmersiveMode } from '../../hooks/useImmersiveMode';
 import { HighlightsPanel } from '../common/HighlightsPanel';
 import { BookmarksPanel } from '../common/BookmarksPanel';
@@ -190,11 +195,32 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     enabled: true,
   });
 
-  // Sleep timer hook — stop TTS via Web Speech API on expiry
+  // TTS state
+  const [ttsActive, setTtsActive] = useState(false);
+
+  // TTS word-level highlighter
+  const ttsHighlighter = useTTSHighlighter({
+    getContentDocuments: () => engineRef.current?.getContentDocuments?.() || [],
+  });
+
+  // TTS hook with word boundary events for highlighting
+  const tts = useTTS({
+    onWordBoundary: ttsHighlighter.onWordBoundary,
+    onSentenceStart: ttsHighlighter.onSentenceStart,
+    onComplete: () => {
+      ttsHighlighter.clearHighlight();
+    },
+  });
+
+  // Sleep timer hook — stop TTS on expiry
   const sleepTimer = useSleepTimer({
     onExpire: () => {
-      // Stop any active TTS playback
-      if ('speechSynthesis' in window) {
+      // Stop active TTS playback
+      if (tts.state === 'playing' || tts.state === 'paused') {
+        tts.stop();
+        ttsHighlighter.clearHighlight();
+        setTtsActive(false);
+      } else if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
     },
@@ -215,6 +241,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // Track the active bookmark ID so we can remove it
   const currentBookmarkIdRef = useRef<string | null>(null);
+
+  // Track the current chapter label for "end of chapter" sleep timer
+  const prevChapterLabelRef = useRef<string | undefined>(undefined);
 
   // (Overlay removed — tap zones are now handled inside the foliate iframe directly,
   // so text selection works without being blocked by a transparent overlay.)
@@ -363,6 +392,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     async (p: ReaderProgress) => {
       setProgress(p);
       readingSpeed.onProgressChange(p);
+
+      // Detect chapter changes for "end of chapter" sleep timer
+      const newChapterLabel = p.chapterLabel;
+      if (
+        prevChapterLabelRef.current !== undefined &&
+        newChapterLabel !== undefined &&
+        prevChapterLabelRef.current !== newChapterLabel
+      ) {
+        // Chapter changed — trigger end-of-chapter timer if active
+        sleepTimer.triggerEndOfChapter();
+      }
+      prevChapterLabelRef.current = newChapterLabel;
+
       if (p.locationString) {
         onProgressChange?.(p.locationString, p.fraction * 100);
 
@@ -383,7 +425,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         currentBookmarkIdRef.current = null;
       }
     },
-    [onProgressChange, book.id, readingSpeed]
+    [onProgressChange, book.id, readingSpeed, sleepTimer]
   );
 
   // ─── Load complete from engine ─────────────────────────
@@ -660,6 +702,39 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     await loadBookmarks();
   }, [book.id, progress, isBookmarked, onBookmark, loadBookmarks]);
 
+  // ─── TTS ─────────────────────────
+
+  const handleToggleTTS = useCallback(() => {
+    if (ttsActive) {
+      // Stop TTS
+      tts.stop();
+      ttsHighlighter.clearHighlight();
+      setTtsActive(false);
+    } else {
+      // Start TTS with visible text
+      const text = engineRef.current?.getVisibleText?.();
+      if (text && text.trim().length > 0) {
+        tts.speak(text);
+        setTtsActive(true);
+      } else {
+        setToastMessage('No text available for TTS');
+      }
+    }
+  }, [ttsActive, tts, ttsHighlighter]);
+
+  const handleTTSClose = useCallback(() => {
+    tts.stop();
+    ttsHighlighter.clearHighlight();
+    setTtsActive(false);
+  }, [tts, ttsHighlighter]);
+
+  // Clean up highlighter on unmount
+  useEffect(() => {
+    return () => {
+      ttsHighlighter.clearHighlight();
+    };
+  }, [ttsHighlighter]);
+
   // ─── Search ─────────────────────────
 
   const handleSearch = useCallback(async () => {
@@ -701,6 +776,24 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const handleGoToChapter = useCallback((index: number) => {
     engineRef.current?.goToChapter(index);
     setTocOpen(false);
+  }, []);
+
+  // ─── Scrubber ─────────────────────────
+
+  const handleScrub = useCallback((fraction: number) => {
+    if (engineRef.current?.goToFraction) {
+      engineRef.current.goToFraction(fraction);
+    } else {
+      // Fallback: convert fraction to a location string
+      if (progress?.total) {
+        const page = Math.max(1, Math.round(fraction * progress.total));
+        engineRef.current?.goToLocation(String(page));
+      }
+    }
+  }, [progress?.total]);
+
+  const handleScrubChapterTap = useCallback((chapterIndex: number) => {
+    engineRef.current?.goToChapter(chapterIndex);
   }, []);
 
   // ─── Text selection ─────────────────────────
@@ -891,6 +984,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                 <IonIcon icon={colorPaletteOutline} />
               </IonButton>
             )}
+            {tts.isSupported && (
+              <IonButton
+                onClick={handleToggleTTS}
+                style={iconColor}
+                aria-label={ttsActive ? 'Stop text-to-speech' : 'Start text-to-speech'}
+                color={ttsActive ? 'primary' : undefined}
+              >
+                <IonIcon icon={volumeHighOutline} />
+              </IonButton>
+            )}
             <SleepTimerButton sleepTimer={sleepTimer} iconStyle={iconColor} />
             <IonButton onClick={() => setSettingsOpen(true)} style={iconColor}>
               <IonIcon icon={settingsOutline} />
@@ -981,10 +1084,20 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             )}
 
             <div className="page-info-wrapper">
-              <span className="page-info" style={iconColor}>
-                {progress?.label || '...'}
-              </span>
-              <TimeLeftDisplay timeLeft={readingSpeed.timeLeft} style={iconColor} />
+              <ChapterScrubber
+                progress={progress}
+                chapters={chapters}
+                onScrub={handleScrub}
+                onChapterTap={handleScrubChapterTap}
+                textColor={isFoliate ? currentTheme.textColor : undefined}
+                accentColor={isFoliate ? currentTheme.textColor : undefined}
+              />
+              <div className="page-info-row">
+                <span className="page-info" style={iconColor}>
+                  {progress?.label || '...'}
+                </span>
+                <TimeLeftDisplay timeLeft={readingSpeed.timeLeft} style={iconColor} />
+              </div>
             </div>
 
             <IonButton fill="clear" size="small" onClick={handleNext} style={iconColor}>
@@ -1299,6 +1412,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           setToastMessage('Note saved');
         }}
       />
+
+      {/* ─── TTS Mini-Player Controls ─── */}
+      {ttsActive && tts.state !== 'idle' && (
+        <TTSControls tts={tts} onClose={handleTTSClose} />
+      )}
 
       {/* ─── Brightness Gesture Overlay ─── */}
       {brightnessGesture.brightnessOverlay}

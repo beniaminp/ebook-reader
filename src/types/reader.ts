@@ -77,6 +77,8 @@ export interface ReaderEngineRef {
   prev(): void;
   /** Navigate to a format-specific location (CFI, page number string, scroll %). */
   goToLocation(location: string): void;
+  /** Navigate to a fractional position (0-1) through the book. */
+  goToFraction?(fraction: number): void;
   /** Full-text search; returns matches. */
   search(query: string): Promise<SearchResult[]>;
   /** Get current reading progress. */
@@ -113,4 +115,8 @@ export interface ReaderEngineRef {
   addHighlightAnnotation?(cfi: string, color: string): void;
   /** Remove a visual highlight annotation (EPUB). */
   removeHighlightAnnotation?(cfi: string): void;
+  /** Get the visible text content for TTS. Returns the text of the current page/section. */
+  getVisibleText?(): string;
+  /** Get the iframe document(s) for the currently visible content (EPUB). */
+  getContentDocuments?(): Document[];
 }

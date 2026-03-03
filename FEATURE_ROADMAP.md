@@ -30,7 +30,7 @@
 | **Drop Caps** | Render decorative enlarged first letter of chapters from EPUB metadata | Kindle Enhanced Typesetting, Apple Books |
 | **Font Weight / Bold Intensity** | Slider to increase/decrease font weight without switching font families | Moon+ Reader Pro, Kobo TypeGenius |
 | **Typography Presets / Profiles** | Named, saveable profiles (e.g., "Night Comfort", "Speed Reading", "Dyslexia Friendly") that bundle font, spacing, and color settings | Kobo, Apple Books (page themes) |
-| **Custom CSS Injection** | Allow advanced users to inject custom CSS to override EPUB rendering | KOReader, Moon+ Reader Pro |
+| **Custom CSS Injection** ✅ | Allow advanced users to inject custom CSS to override EPUB rendering | KOReader, Moon+ Reader Pro |
 
 ### 1.2 Reading Modes
 
@@ -38,8 +38,8 @@
 |---------|-------------|----------------|
 | **Page Curl Animation** | Realistic 3D page-curl effect as a transition option | Apple Books, Kindle Paperwhite 5, Moon+ Reader Pro |
 | **Scroll with Snap-to-Paragraph** | In scroll mode, snap to the nearest paragraph boundary when the user lifts their finger | Readest, Google Play Books |
-| **Immersive Full-Screen Mode** | Hide all OS chrome (status bar, nav bar, header/footer), leaving only text. Single tap to reveal UI | Moon+ Reader Pro, Google Play Books, Apple Books |
-| **Sleep Timer** | Auto-stop reading session and TTS after a set duration (15/30/45/60 min) | Kindle (2024), Libby, Moon+ Reader Pro |
+| **Immersive Full-Screen Mode** ✅ | Hide all OS chrome (status bar, nav bar, header/footer), leaving only text. Single tap to reveal UI | Moon+ Reader Pro, Google Play Books, Apple Books |
+| **Sleep Timer** ✅ | Auto-stop reading session and TTS after a set duration (15/30/45/60 min) | Kindle (2024), Libby, Moon+ Reader Pro |
 | **Scheduled Blue Light Shift** | Auto-adjust blue-light filter intensity based on time of day (cool→warm), like f.lux | Kobo ComfortLight PRO, Apple Night Shift, Google Play Books |
 | **RSVP Speed Reading Mode** | Display one word at a time at configurable WPM for rapid reading without eye movement | Reedy, Outread, Glance, Librera |
 
@@ -47,7 +47,7 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Time Left in Chapter/Book** | Display estimated reading time remaining, calculated from user's measured reading speed | Kindle, Kobo, Apple Books |
+| **Time Left in Chapter/Book** ✅ | Display estimated reading time remaining, calculated from user's measured reading speed | Kindle, Kobo, Apple Books |
 | **Reading Speed Calibration** | Explicit calibration step or auto-calibrate over first pages to measure user's WPM | Kindle, Kobo |
 | **Chapter Thumbnail Navigation** | Visual grid/strip of chapter thumbnails for quick visual scanning | Apple Books, Google Play Books |
 | **Smart Return-to-Reading** | "Welcome back" prompt with context snippet after an extended break, showing last paragraph read | Kindle |
@@ -63,7 +63,7 @@
 | **TTS Word-Level Highlighting** | Highlight the current word being spoken in the rendered text, synchronized with TTS audio | Kindle Assistive Reader (2025), Apple Books, Libby |
 | **TTS Auto-Scroll** | Automatically scroll the page to keep the currently spoken sentence visible | Apple Books, Kindle Assistive Reader |
 | **Dyslexia Layout Preset** | One-tap preset: OpenDyslexic + increased letter/word/line spacing + left-align + short column | Libby, Kobo |
-| **Line Focus / Active Line Highlight** | Highlight the current line being read while dimming adjacent content, moving as user reads | Microsoft Immersive Reader, Readest |
+| **Line Focus / Active Line Highlight** ✅ | Highlight the current line being read while dimming adjacent content, moving as user reads | Microsoft Immersive Reader, Readest |
 | **Color Vision Deficiency Filters** | Protanopia, deuteranopia, tritanopia color filters for the reading surface | Apple Books, KOReader |
 | **Global Bold Toggle** | Apply `font-weight: bold` globally independent of font family for low-vision users | Kindle, Kobo TypeGenius, Moon+ Reader |
 | **AI Voices for TTS** | Supplement Web Speech API with AI neural voices (ElevenLabs/OpenAI TTS) for natural narration | Speechify (200+ voices, 60+ languages) |
@@ -91,7 +91,7 @@
 |---------|-------------|----------------|
 | **Wikipedia Inline Lookup** | Long-press proper nouns to show Wikipedia summary panel alongside dictionary definition | Kindle, Kobo, Moon+ Reader Pro |
 | **X-Ray Character/Entity Index** | Auto-generated index of all characters, places, and terms with all occurrences and descriptions | Kindle X-Ray |
-| **Bilingual / Interlinear Mode** | Side-by-side or interleaved original + translated text for language learners | Google Play Books, Beelinguapp, LingQ |
+| **Bilingual / Interlinear Mode** ✅ | Side-by-side or interleaved original + translated text for language learners | Google Play Books, Beelinguapp, LingQ |
 | **Offline Dictionary Bundles** | Downloadable StarDict/Wiktionary packs for offline word lookup without internet | Moon+ Reader Pro, Kobo, KOReader |
 | **Context-Aware Vocabulary Quizzes** | Quiz with the original book sentence as context: fill-in-the-blank with the looked-up word | LingQ, Kindle Vocabulary Builder, Readwise |
 
@@ -114,7 +114,7 @@
 | **Readwise Integration** | Export highlights/bookmarks directly to Readwise via API for automated review pipeline | Kobo (official), Kindle (via scraper) |
 | **Obsidian Export** | Markdown files formatted for Obsidian vault (book title heading, highlights as bullets, tags) | Readwise Obsidian plugin, BookFusion |
 | **Notion Database Export** | Push book metadata, progress, highlights to a Notion database via API | Readwise |
-| **Annotation Export to Markdown/CSV** | Per-book or whole-library export in Markdown, CSV, or Anki format | KOReader, Kobo (2025), Kindle |
+| **Annotation Export to Markdown/CSV** ✅ | Per-book or whole-library export in Markdown, CSV, or Anki format | KOReader, Kobo (2025), Kindle |
 
 ---
 
@@ -194,9 +194,9 @@
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
 | **Pomodoro / Focus Timer** | Built-in 25-min focus blocks with break reminders; reading session timer | BookTrack |
-| **Reading Goals & Annual Challenge** | Yearly book goal (e.g., "30 books in 2026") and daily minute goal with progress tracking | Apple Books, Goodreads Challenge, StoryGraph |
-| **Reading Streaks** | Consecutive-day reading tracker with streak shields, milestones, and notifications | Apple Books, Kobo Reading Life, Bookly |
-| **Reading Speed Calculator** | Real-time WPM measurement by tracking time elapsed vs. words scrolled | Speechify, Outread |
+| **Reading Goals & Annual Challenge** ✅ | Yearly book goal (e.g., "30 books in 2026") and daily minute goal with progress tracking | Apple Books, Goodreads Challenge, StoryGraph |
+| **Reading Streaks** ✅ | Consecutive-day reading tracker with streak shields, milestones, and notifications | Apple Books, Kobo Reading Life, Bookly |
+| **Reading Speed Calculator** ✅ | Real-time WPM measurement by tracking time elapsed vs. words scrolled | Speechify, Outread |
 | **Comprehension Breaks / Quizzes** | Post-chapter comprehension questions (AI-generated or manual) | StreamRead |
 | **Reading Badges / Achievements** | Visual badges for milestones ("First book", "100 hours", "Night Owl") | Kobo Reading Life Awards, Bookly |
 
@@ -240,10 +240,10 @@
 ## Priority Recommendations
 
 ### High Impact, Moderate Effort
-1. **Time Left in Chapter/Book** — baseline user expectation from Kindle/Kobo
-2. **Reading Goals & Streaks** — strong retention/engagement driver
-3. **Immersive Full-Screen Mode** — key for focused reading
-4. **Sleep Timer** — essential for bedtime reading with TTS
+1. ~~**Time Left in Chapter/Book**~~ ✅ — baseline user expectation from Kindle/Kobo
+2. ~~**Reading Goals & Streaks**~~ ✅ — strong retention/engagement driver
+3. ~~**Immersive Full-Screen Mode**~~ ✅ — key for focused reading
+4. ~~**Sleep Timer**~~ ✅ — essential for bedtime reading with TTS
 5. **TTS Word-Level Highlighting** — major accessibility improvement
 6. **Series Grouping** — metadata fields already exist, just needs UI
 7. **Smart Return-to-Reading** — reduces friction for casual readers
@@ -263,7 +263,7 @@
 17. **Dyslexia Layout Preset** — bundle existing settings
 18. **DNF Status** — minor DB/UI addition
 19. **Duplicate Detection** — check on import
-20. **Star Ratings in Library View** — metadata field already exists
+20. **Star Ratings in Library View** — metadata field already exists (DB field ✅, UI widget pending)
 
 ---
 

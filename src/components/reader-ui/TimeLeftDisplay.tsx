@@ -2,13 +2,37 @@
  * TimeLeftDisplay
  *
  * Shows estimated reading time remaining for the current chapter and book.
- * Displays in the reader footer area as "X min left in chapter . X hr left in book".
- * Updates reactively when progress changes.
+ * Tap to cycle through display modes:
+ *   1. Chapter time + Book time (default)
+ *   2. Chapter time only
+ *   3. Book time only
+ *   4. Reading speed (WPM)
+ *   5. Hidden
+ *
+ * The selected mode is persisted in localStorage.
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import type { TimeLeftEstimate } from '../../hooks/useReadingSpeed';
 import './TimeLeftDisplay.css';
+
+/** Display modes the user can cycle through by tapping. */
+type TimeLeftMode = 'both' | 'chapter' | 'book' | 'speed' | 'hidden';
+
+const MODES: TimeLeftMode[] = ['both', 'chapter', 'book', 'speed', 'hidden'];
+const STORAGE_KEY = 'ebook_time_left_mode';
+
+function loadMode(): TimeLeftMode {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && MODES.includes(stored as TimeLeftMode)) {
+      return stored as TimeLeftMode;
+    }
+  } catch {
+    // ignore
+  }
+  return 'both';
+}
 
 export interface TimeLeftDisplayProps {
   /** The current time-left estimate from useReadingSpeed. */
@@ -37,23 +61,80 @@ function formatTime(minutes: number | null): string | null {
 }
 
 export const TimeLeftDisplay: React.FC<TimeLeftDisplayProps> = ({ timeLeft, style }) => {
+  const [mode, setMode] = useState<TimeLeftMode>(loadMode);
+
+  const handleTap = useCallback(() => {
+    setMode((prev) => {
+      const idx = MODES.indexOf(prev);
+      const next = MODES[(idx + 1) % MODES.length];
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
   const chapterTime = formatTime(timeLeft.chapterMinutes);
   const bookTime = formatTime(timeLeft.bookMinutes);
 
-  // Don't render if we have no estimates at all
-  if (!chapterTime && !bookTime) return null;
+  // Don't render anything if we have no data at all, regardless of mode
+  if (!chapterTime && !bookTime && timeLeft.averageWpm <= 0) return null;
 
-  const parts: string[] = [];
-  if (chapterTime) {
-    parts.push(`${chapterTime} left in chapter`);
+  // Hidden mode: render a minimal tap target to cycle back
+  if (mode === 'hidden') {
+    return (
+      <span
+        className="time-left-display time-left-hidden"
+        style={style}
+        onClick={handleTap}
+        role="button"
+        tabIndex={0}
+        title="Tap to show reading time"
+      >
+        {'\u00B7\u00B7\u00B7'}
+      </span>
+    );
   }
-  if (bookTime) {
-    parts.push(`${bookTime} left`);
+
+  let displayText = '';
+
+  if (mode === 'both') {
+    const parts: string[] = [];
+    if (chapterTime) parts.push(`${chapterTime} left in chapter`);
+    if (bookTime) parts.push(`${bookTime} left`);
+    displayText = parts.join(' \u00B7 ');
+  } else if (mode === 'chapter') {
+    if (chapterTime) {
+      displayText = `${chapterTime} left in chapter`;
+    } else if (bookTime) {
+      displayText = `${bookTime} left`;
+    }
+  } else if (mode === 'book') {
+    if (bookTime) {
+      displayText = `${bookTime} left in book`;
+    } else if (chapterTime) {
+      displayText = `${chapterTime} left in chapter`;
+    }
+  } else if (mode === 'speed') {
+    const wpm = timeLeft.averageWpm;
+    const reliability = timeLeft.isReliable ? '' : ' (calibrating)';
+    displayText = `${wpm} WPM${reliability}`;
   }
+
+  if (!displayText) return null;
 
   return (
-    <span className="time-left-display" style={style}>
-      {parts.join(' \u00B7 ')}
+    <span
+      className="time-left-display"
+      style={style}
+      onClick={handleTap}
+      role="button"
+      tabIndex={0}
+      title="Tap to change display mode"
+    >
+      {displayText}
     </span>
   );
 };
