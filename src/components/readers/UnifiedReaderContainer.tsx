@@ -70,6 +70,7 @@ import { SleepTimerWarning } from '../reader-ui/SleepTimerWarning';
 import { SleepTimerOverlay } from '../reader-ui/SleepTimerOverlay';
 import { useReadingSpeed } from '../../hooks/useReadingSpeed';
 import { TimeLeftDisplay } from '../reader-ui/TimeLeftDisplay';
+import { useImmersiveMode } from '../../hooks/useImmersiveMode';
 import { HighlightsPanel } from '../common/HighlightsPanel';
 import { BookmarksPanel } from '../common/BookmarksPanel';
 import type { EpubBookmark } from '../../services/annotationsService';
@@ -203,6 +204,13 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const readingSpeed = useReadingSpeed({
     active: !toolbarVisible && !searchOpen && !settingsOpen,
     format,
+  });
+
+  // Immersive mode hook
+  const { isImmersive } = useImmersiveMode({
+    enabled: themeStore.immersiveMode,
+    toolbarVisible,
+    setToolbarVisible,
   });
 
   // Track the active bookmark ID so we can remove it
@@ -850,44 +858,42 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   return (
     <IonPage
-      className={`unified-reader-page${toolbarVisible ? '' : ' fullscreen'}`}
+      className={`unified-reader-page${toolbarVisible ? '' : ' fullscreen'}${isImmersive ? ' immersive' : ''}`}
       style={pageStyle}
     >
       {/* ─── Top toolbar ─── */}
-      {toolbarVisible && (
-        <IonHeader>
-          <IonToolbar style={toolbarStyle}>
-            <IonButtons slot="start">
-              <IonButton onClick={onBack} style={iconColor}>
-                <IonIcon icon={arrowBack} />
+      <IonHeader className={`reader-toolbar-header${toolbarVisible ? ' toolbar-visible' : ' toolbar-hidden'}`}>
+        <IonToolbar style={toolbarStyle}>
+          <IonButtons slot="start">
+            <IonButton onClick={onBack} style={iconColor}>
+              <IonIcon icon={arrowBack} />
+            </IonButton>
+          </IonButtons>
+          <IonTitle style={iconColor}>{title}</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => setSearchOpen(true)} style={iconColor}>
+              <IonIcon icon={searchOutline} />
+            </IonButton>
+            <IonButton onClick={handleToggleBookmark} style={iconColor}>
+              <IonIcon icon={isBookmarked ? bookmark : bookmarkOutline} />
+            </IonButton>
+            <IonButton onClick={() => setBookmarksPanelOpen(true)} style={iconColor}>
+              <IonIcon icon={bookmarksOutline} />
+            </IonButton>
+            {!isPdf && (
+              <IonButton onClick={() => setHighlightsPanelOpen(true)} style={iconColor}>
+                <IonIcon icon={colorPaletteOutline} />
               </IonButton>
-            </IonButtons>
-            <IonTitle style={iconColor}>{title}</IonTitle>
-            <IonButtons slot="end">
-              <IonButton onClick={() => setSearchOpen(true)} style={iconColor}>
-                <IonIcon icon={searchOutline} />
-              </IonButton>
-              <IonButton onClick={handleToggleBookmark} style={iconColor}>
-                <IonIcon icon={isBookmarked ? bookmark : bookmarkOutline} />
-              </IonButton>
-              <IonButton onClick={() => setBookmarksPanelOpen(true)} style={iconColor}>
-                <IonIcon icon={bookmarksOutline} />
-              </IonButton>
-              {!isPdf && (
-                <IonButton onClick={() => setHighlightsPanelOpen(true)} style={iconColor}>
-                  <IonIcon icon={colorPaletteOutline} />
-                </IonButton>
-              )}
-              <SleepTimerButton sleepTimer={sleepTimer} iconStyle={iconColor} />
-              <IonButton onClick={() => setSettingsOpen(true)} style={iconColor}>
-                <IonIcon icon={settingsOutline} />
-              </IonButton>
-            </IonButtons>
-          </IonToolbar>
-          {/* Progress bar for scroll/pdf formats */}
-          {!isFoliate && progress && <IonProgressBar value={progress.fraction} />}
-        </IonHeader>
-      )}
+            )}
+            <SleepTimerButton sleepTimer={sleepTimer} iconStyle={iconColor} />
+            <IonButton onClick={() => setSettingsOpen(true)} style={iconColor}>
+              <IonIcon icon={settingsOutline} />
+            </IonButton>
+          </IonButtons>
+        </IonToolbar>
+        {/* Progress bar for scroll/pdf formats */}
+        {!isFoliate && progress && <IonProgressBar value={progress.fraction} />}
+      </IonHeader>
 
       {/* ─── Content area ─── */}
       <IonContent
@@ -950,39 +956,37 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       </IonContent>
 
       {/* ─── Bottom toolbar ─── */}
-      {toolbarVisible && (
-        <IonFooter>
-          <IonToolbar style={toolbarStyle}>
-            <div className="unified-bottom-bar">
-              <IonButton fill="clear" size="small" onClick={handlePrev} style={iconColor}>
-                <IonIcon icon={chevronBack} />
+      <IonFooter className={`reader-toolbar-footer${toolbarVisible ? ' toolbar-visible' : ' toolbar-hidden'}`}>
+        <IonToolbar style={toolbarStyle}>
+          <div className="unified-bottom-bar">
+            <IonButton fill="clear" size="small" onClick={handlePrev} style={iconColor}>
+              <IonIcon icon={chevronBack} />
+            </IonButton>
+
+            {chapters.length > 0 && (
+              <IonButton
+                fill="clear"
+                size="small"
+                onClick={() => setTocOpen(true)}
+                style={iconColor}
+              >
+                <IonIcon icon={list} />
               </IonButton>
+            )}
 
-              {chapters.length > 0 && (
-                <IonButton
-                  fill="clear"
-                  size="small"
-                  onClick={() => setTocOpen(true)}
-                  style={iconColor}
-                >
-                  <IonIcon icon={list} />
-                </IonButton>
-              )}
-
-              <div className="page-info-wrapper">
-                <span className="page-info" style={iconColor}>
-                  {progress?.label || '...'}
-                </span>
-                <TimeLeftDisplay timeLeft={readingSpeed.timeLeft} style={iconColor} />
-              </div>
-
-              <IonButton fill="clear" size="small" onClick={handleNext} style={iconColor}>
-                <IonIcon icon={chevronForward} />
-              </IonButton>
+            <div className="page-info-wrapper">
+              <span className="page-info" style={iconColor}>
+                {progress?.label || '...'}
+              </span>
+              <TimeLeftDisplay timeLeft={readingSpeed.timeLeft} style={iconColor} />
             </div>
-          </IonToolbar>
-        </IonFooter>
-      )}
+
+            <IonButton fill="clear" size="small" onClick={handleNext} style={iconColor}>
+              <IonIcon icon={chevronForward} />
+            </IonButton>
+          </div>
+        </IonToolbar>
+      </IonFooter>
 
       {/* ─── Search modal ─── */}
       <IonModal isOpen={searchOpen} onDidDismiss={() => setSearchOpen(false)}>

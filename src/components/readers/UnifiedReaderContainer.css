@@ -54,3 +54,94 @@
   color: var(--ion-color-medium);
   text-align: center;
 }
+
+/* ─── Toolbar slide transitions ─── */
+
+.reader-toolbar-header {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.reader-toolbar-header.toolbar-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reader-toolbar-header.toolbar-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reader-toolbar-footer {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.reader-toolbar-footer.toolbar-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reader-toolbar-footer.toolbar-hidden {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ─── Immersive mode ─── */
+
+/* When immersive, make toolbars overlay the content instead of pushing it */
+.unified-reader-page.immersive .reader-toolbar-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: inherit;
+}
+
+.unified-reader-page.immersive .reader-toolbar-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: inherit;
+}
+
+/* In immersive mode, content fills the whole screen */
+.unified-reader-page.immersive ion-content {
+  --padding-top: 0;
+  --padding-bottom: 0;
+}
+
+/* Remove safe-area padding in immersive mode for true edge-to-edge */
+.unified-reader-page.immersive .unified-bottom-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Global immersive mode class (applied to <html>) */
+html.immersive-mode {
+  /* Override safe area insets to extend content to screen edges */
+  --ion-safe-area-top: 0px;
+  --ion-safe-area-bottom: 0px;
+}
+
+html.immersive-mode body {
+  /* Ensure no gaps from system bars */
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* When toolbar is visible in immersive mode, add semi-transparent background */
+.unified-reader-page.immersive .reader-toolbar-header.toolbar-visible ion-toolbar,
+.unified-reader-page.immersive .reader-toolbar-footer.toolbar-visible ion-toolbar {
+  --background: var(--reader-bg, rgba(0, 0, 0, 0.85));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}

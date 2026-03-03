@@ -30,6 +30,7 @@ import {
   contrast,
   text,
   eye,
+  expand,
   ribbon,
   colorPalette,
   image,
@@ -102,6 +103,8 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     wordWiseLevel,
     setWordWiseEnabled,
     setWordWiseLevel,
+    immersiveMode,
+    setImmersiveMode,
     setFocusMode,
     setFocusModeOpacity,
     setAutoScroll,
@@ -690,6 +693,18 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                 />
               </IonItem>
             )}
+
+            <IonItem>
+              <IonIcon icon={expand} slot="start" />
+              <IonLabel>
+                <h2>Immersive Mode</h2>
+                <p>Hide all chrome for distraction-free reading</p>
+              </IonLabel>
+              <IonToggle
+                checked={immersiveMode}
+                onIonChange={(e) => setImmersiveMode(e.detail.checked)}
+              />
+            </IonItem>
 
             <IonItem button onClick={resetSettings}>
               <IonLabel color="danger">Reset to Defaults</IonLabel>
