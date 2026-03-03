@@ -119,6 +119,13 @@ function findSentenceInDocument(
 export interface UseTTSHighlighterOptions {
   /** Function that returns the content documents (iframe docs for EPUB) */
   getContentDocuments: () => Document[];
+  /**
+   * Optional callback to scroll a highlighted element into view.
+   * For EPUB (paginated iframes) the default scrollIntoView won't work,
+   * so the caller can provide a custom implementation that, e.g., calls
+   * IonContent.scrollToPoint or does nothing for paginated layouts.
+   */
+  onScrollToHighlight?: (element: HTMLElement, doc: Document) => void;
 }
 
 export interface UseTTSHighlighterReturn {
@@ -135,6 +142,9 @@ export function useTTSHighlighter(
 ): UseTTSHighlighterReturn {
   const getContentDocumentsRef = useRef(options.getContentDocuments);
   getContentDocumentsRef.current = options.getContentDocuments;
+
+  const onScrollToHighlightRef = useRef(options.onScrollToHighlight);
+  onScrollToHighlightRef.current = options.onScrollToHighlight;
 
   // Track the current highlight state
   const highlightSpanRef = useRef<HTMLSpanElement | null>(null);
@@ -270,7 +280,11 @@ export function useTTSHighlighter(
           highlightSpanRef.current = span;
 
           // Auto-scroll to keep the word visible
-          scrollIntoViewIfNeeded(span, doc);
+          if (onScrollToHighlightRef.current) {
+            onScrollToHighlightRef.current(span, doc);
+          } else {
+            scrollIntoViewIfNeeded(span, doc);
+          }
 
           // We found the word; rebuild the text node map for next boundary
           // (since we just modified the DOM by inserting a span)
@@ -319,36 +333,92 @@ export function useTTSHighlighter(
   };
 }
 
-/** Scroll an element into view if it's not currently visible */
+/** Scroll an element into view if it's not currently visible.
+ * Works for both main-document content and iframe-embedded content.
+ * For iframe content, we check visibility relative to the parent window
+ * and try scrollIntoView on the iframe element itself if the word is
+ * outside the parent viewport.
+ */
 function scrollIntoViewIfNeeded(element: HTMLElement, doc: Document): void {
   try {
     const win = doc.defaultView;
     if (!win) return;
 
-    const rect = element.getBoundingClientRect();
-    const viewHeight = win.innerHeight || doc.documentElement.clientHeight;
-    const viewWidth = win.innerWidth || doc.documentElement.clientWidth;
+    // Determine if this document is inside an iframe
+    const isInIframe = win !== win.parent;
 
-    // Check if the element is outside the visible viewport
-    const isOutOfView =
-      rect.bottom < 0 ||
-      rect.top > viewHeight ||
-      rect.right < 0 ||
-      rect.left > viewWidth;
+    if (isInIframe) {
+      // For iframe content (e.g. EPUB), the element's getBoundingClientRect
+      // is relative to the iframe's viewport. We need to also account for
+      // the iframe's position within the parent window.
+      const iframeEl = win.frameElement as HTMLElement | null;
+      if (!iframeEl) return;
 
-    if (isOutOfView) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      });
-    } else if (rect.top < 50 || rect.bottom > viewHeight - 50) {
-      // Near the edge of viewport, scroll to center
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      });
+      const elementRect = element.getBoundingClientRect();
+      const iframeRect = iframeEl.getBoundingClientRect();
+
+      // Compute element position relative to parent window
+      const absTop = iframeRect.top + elementRect.top;
+      const absBottom = iframeRect.top + elementRect.bottom;
+
+      const parentHeight = win.parent.innerHeight || 0;
+
+      // Check if the element is outside the parent viewport
+      const isOutOfParentView =
+        absBottom < 0 || absTop > parentHeight;
+
+      if (isOutOfParentView) {
+        // The word is off-screen in the parent viewport.
+        // For paginated EPUB, scrollIntoView inside the iframe won't help
+        // because content is laid out in CSS columns. We still attempt
+        // a scroll on the iframe container level which may help in some
+        // scroll-mode EPUBs.
+        try {
+          iframeEl.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        } catch {
+          // ignore
+        }
+      } else if (absTop < 60 || absBottom > parentHeight - 60) {
+        // Near the edge — try to scroll the iframe into better view
+        try {
+          iframeEl.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        } catch {
+          // ignore
+        }
+      }
+    } else {
+      // Main document (ScrollEngine) — standard scrollIntoView
+      const rect = element.getBoundingClientRect();
+      const viewHeight = win.innerHeight || doc.documentElement.clientHeight;
+      const viewWidth = win.innerWidth || doc.documentElement.clientWidth;
+
+      const isOutOfView =
+        rect.bottom < 0 ||
+        rect.top > viewHeight ||
+        rect.right < 0 ||
+        rect.left > viewWidth;
+
+      if (isOutOfView) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+      } else if (rect.top < 50 || rect.bottom > viewHeight - 50) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+      }
     }
   } catch {
     // ignore scroll errors

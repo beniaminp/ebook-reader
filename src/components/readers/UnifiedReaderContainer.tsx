@@ -197,20 +197,121 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // TTS state
   const [ttsActive, setTtsActive] = useState(false);
+  // Ref to track whether TTS is active (avoids stale closures)
+  const ttsActiveRef = useRef(false);
+  // Ref to track whether we are auto-advancing TTS to the next page
+  const ttsAutoAdvancingRef = useRef(false);
+  // Ref to hold the tts.speak function so onComplete can call it without circular dep
+  const ttsSpeakRef = useRef<((text: string) => void) | null>(null);
+  // Ref to track the last text read by TTS (to detect end-of-book)
+  const ttsLastTextRef = useRef<string>('');
 
   // TTS word-level highlighter
   const ttsHighlighter = useTTSHighlighter({
     getContentDocuments: () => engineRef.current?.getContentDocuments?.() || [],
+    onScrollToHighlight: useCallback((element: HTMLElement, doc: Document) => {
+      try {
+        const win = doc.defaultView;
+        if (!win) return;
+
+        // For iframe content (EPUB/foliate), scrollIntoView on the element
+        // inside the iframe won't help because content is paginated via CSS
+        // columns. The page turn will be handled by auto-advance when TTS
+        // finishes the current page's text. However, for scroll-mode content
+        // (ScrollEngine), we do want to scroll.
+        const isInIframe = win !== win.parent;
+        if (isInIframe) {
+          // Paginated EPUB: no scroll needed within the iframe.
+          // Auto-advance handles page turns when text runs out.
+          return;
+        }
+
+        // ScrollEngine: scroll to the highlighted word within IonContent
+        const ionContent = ionContentRef?.current;
+        if (ionContent) {
+          const rect = element.getBoundingClientRect();
+          const viewHeight = win.innerHeight || doc.documentElement.clientHeight;
+          const isOutOfView =
+            rect.bottom < 0 ||
+            rect.top > viewHeight ||
+            rect.top < 60 ||
+            rect.bottom > viewHeight - 60;
+
+          if (isOutOfView) {
+            // Scroll the IonContent so the element is centered
+            ionContent.getScrollElement().then((scrollEl) => {
+              const scrollTop = scrollEl.scrollTop;
+              const targetTop = scrollTop + rect.top - viewHeight / 2;
+              ionContent.scrollToPoint(0, Math.max(0, targetTop), 200);
+            });
+          }
+        } else {
+          // Fallback: standard scrollIntoView
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        }
+      } catch {
+        // ignore scroll errors
+      }
+    }, []),
   });
 
   // TTS hook with word boundary events for highlighting
   const tts = useTTS({
     onWordBoundary: ttsHighlighter.onWordBoundary,
     onSentenceStart: ttsHighlighter.onSentenceStart,
-    onComplete: () => {
+    onComplete: useCallback(() => {
       ttsHighlighter.clearHighlight();
-    },
+
+      // Auto-advance to next page and continue reading
+      if (ttsAutoAdvancingRef.current || !ttsActiveRef.current) {
+        return;
+      }
+
+      const engine = engineRef.current;
+      if (!engine) return;
+
+      ttsAutoAdvancingRef.current = true;
+
+      // Navigate to the next page
+      engine.next();
+
+      // Wait a moment for the new page content to render, then get text and continue
+      setTimeout(() => {
+        ttsAutoAdvancingRef.current = false;
+
+        // Double-check TTS is still active (user may have stopped it)
+        if (!ttsActiveRef.current) return;
+
+        const newText = engine.getVisibleText?.();
+        if (newText && newText.trim().length > 0) {
+          // Check if this is the same text we just read (end of book)
+          const trimmedNew = newText.trim();
+          if (trimmedNew === ttsLastTextRef.current) {
+            // We've reached the end of the book — same page text returned
+            ttsActiveRef.current = false;
+            ttsLastTextRef.current = '';
+            setTtsActive(false);
+            return;
+          }
+          // Continue reading the next page
+          ttsLastTextRef.current = trimmedNew;
+          ttsSpeakRef.current?.(newText);
+        } else {
+          // No more text — end of book or no content
+          ttsActiveRef.current = false;
+          ttsLastTextRef.current = '';
+          setTtsActive(false);
+        }
+      }, 600);
+    }, [ttsHighlighter]),
   });
+
+  // Keep the speak ref in sync
+  ttsSpeakRef.current = tts.speak;
 
   // Sleep timer hook — stop TTS on expiry
   const sleepTimer = useSleepTimer({
@@ -219,6 +320,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       if (tts.state === 'playing' || tts.state === 'paused') {
         tts.stop();
         ttsHighlighter.clearHighlight();
+        ttsActiveRef.current = false;
+        ttsAutoAdvancingRef.current = false;
         setTtsActive(false);
       } else if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -718,11 +821,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       // Stop TTS
       tts.stop();
       ttsHighlighter.clearHighlight();
+      ttsActiveRef.current = false;
+      ttsAutoAdvancingRef.current = false;
+      ttsLastTextRef.current = '';
       setTtsActive(false);
     } else {
       // Start TTS with visible text
       const text = engineRef.current?.getVisibleText?.();
       if (text && text.trim().length > 0) {
+        ttsActiveRef.current = true;
+        ttsLastTextRef.current = text.trim();
         tts.speak(text);
         setTtsActive(true);
       } else {
@@ -734,6 +842,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   const handleTTSClose = useCallback(() => {
     tts.stop();
     ttsHighlighter.clearHighlight();
+    ttsActiveRef.current = false;
+    ttsAutoAdvancingRef.current = false;
+    ttsLastTextRef.current = '';
     setTtsActive(false);
   }, [tts, ttsHighlighter]);
 
@@ -741,6 +852,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   useEffect(() => {
     return () => {
       ttsHighlighter.clearHighlight();
+      ttsActiveRef.current = false;
+      ttsAutoAdvancingRef.current = false;
     };
   }, [ttsHighlighter]);
 
