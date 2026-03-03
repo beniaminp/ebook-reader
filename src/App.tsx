@@ -30,6 +30,7 @@ import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
 import { useAppStore } from './stores/useAppStore';
 import { useAutoRestore } from './hooks/useAutoRestore';
+import { initDatabase } from './services/database';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -67,6 +68,17 @@ const AppTabs: React.FC = () => {
   const location = useLocation();
   const isReaderRoute = location.pathname.startsWith('/reader/');
   const loadCustomFonts = useThemeStore((state) => state.loadCustomFonts);
+
+  useEffect(() => {
+    // Initialize database eagerly on app startup, then pre-load books into the store.
+    // This avoids a race condition on Android where the Library component mounts
+    // and tries to load books before the SQLite database is ready.
+    initDatabase().then(() => {
+      useAppStore.getState().loadBooks();
+    }).catch((err) => {
+      console.error('Failed to initialize database:', err);
+    });
+  }, []);
 
   useEffect(() => {
     // Load custom fonts on app startup

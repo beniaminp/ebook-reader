@@ -19,6 +19,7 @@ import { webFileStorage } from './webFileStorage';
 // Initialize SQLite connection
 const sqliteConnection = new SQLiteConnection(CapacitorSQLite);
 let db: SQLiteDBConnection | null = null;
+let initPromise: Promise<boolean> | null = null;
 
 // ============================================================================
 // INTERNAL TYPES
@@ -120,7 +121,17 @@ function ensureWebInit() {
 // DATABASE INITIALIZATION
 // ============================================================================
 
-export async function initDatabase(): Promise<boolean> {
+export function initDatabase(): Promise<boolean> {
+  // Deduplicate concurrent calls — if initialization is already in progress, return the same promise
+  if (initPromise) return initPromise;
+  initPromise = initDatabaseInternal().finally(() => {
+    // Clear the promise so future calls can re-init if the DB was closed
+    if (!db) initPromise = null;
+  });
+  return initPromise;
+}
+
+async function initDatabaseInternal(): Promise<boolean> {
   try {
     if (!Capacitor.isNativePlatform()) {
       console.log('Running on web - using localStorage fallback');
