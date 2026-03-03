@@ -3,7 +3,7 @@
  *
  * Platform-aware paragraph translation with caching.
  * - Android: Uses @capacitor-mlkit/translation for offline on-device translation.
- * - Web: Uses MyMemory Translation API (free, no key required).
+ * - Web: Uses Google Translate free endpoint with MyMemory fallback.
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -30,8 +30,47 @@ function cacheKey(sourceLang: string, targetLang: string, text: string): string 
 }
 
 /**
- * Translate text using MyMemory API (web fallback).
- * Free tier: 5000 chars/day without key, suitable for interlinear use.
+ * Translate text using Google Translate free endpoint (primary web backend).
+ * No API key required, generous rate limits.
+ */
+async function translateWithGoogle(
+  text: string,
+  sourceLang: string,
+  targetLang: string
+): Promise<string> {
+  const sl = sourceLang === 'auto' ? 'auto' : sourceLang;
+  const params = new URLSearchParams({
+    client: 'gtx',
+    sl,
+    tl: targetLang,
+    dt: 't',
+    q: text,
+  });
+
+  const response = await fetch(
+    `https://translate.googleapis.com/translate_a/single?${params.toString()}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Google Translate API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  // Response format: [[["translated","original",...],...],...]
+  if (Array.isArray(data) && Array.isArray(data[0])) {
+    const translated = data[0]
+      .filter((segment: unknown) => Array.isArray(segment) && segment[0])
+      .map((segment: unknown[]) => segment[0])
+      .join('');
+    if (translated) return translated;
+  }
+
+  throw new Error('Unexpected Google Translate response format');
+}
+
+/**
+ * Translate text using MyMemory API (fallback).
  */
 async function translateWithMyMemory(
   text: string,
@@ -65,8 +104,24 @@ async function translateWithMyMemory(
 }
 
 /**
+ * Translate text on web with fallback chain: Google → MyMemory.
+ */
+async function translateOnWeb(
+  text: string,
+  sourceLang: string,
+  targetLang: string
+): Promise<string> {
+  try {
+    return await translateWithGoogle(text, sourceLang, targetLang);
+  } catch (googleErr) {
+    console.warn('[Interlinear] Google Translate failed, trying MyMemory:', googleErr);
+    return await translateWithMyMemory(text, sourceLang, targetLang);
+  }
+}
+
+/**
  * Translate a paragraph of text.
- * Uses MLKit on native platforms, MyMemory API on web.
+ * Uses MLKit on native platforms, Google Translate (with MyMemory fallback) on web.
  */
 export async function translateParagraph(
   text: string,
@@ -106,7 +161,7 @@ export async function translateParagraph(
     });
     translated = result.text;
   } else {
-    translated = await translateWithMyMemory(text, sourceLang, targetLang);
+    translated = await translateOnWeb(text, sourceLang, targetLang);
   }
 
   cache.set(key, translated);
