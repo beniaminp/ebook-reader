@@ -359,6 +359,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       const ch = engineRef.current?.getChapters() || [];
       setChapters(ch);
     }, 100);
+    // Sync interlinear / word-wise state that may have been missed if the
+    // settings useEffect fired before the engine was ready.
+    const ts = useThemeStore.getState();
+    if (ts.interlinearMode) {
+      engineRef.current?.setInterlinearMode?.(ts.interlinearMode, ts.interlinearLanguage);
+    }
+    if (ts.wordWiseEnabled) {
+      const targetLang = Capacitor.isNativePlatform() ? ts.interlinearLanguage : undefined;
+      engineRef.current?.setWordWise?.(ts.wordWiseEnabled, ts.wordWiseLevel, targetLang);
+    }
   }, []);
 
   const handlePdfLoadComplete = useCallback(
@@ -371,6 +381,15 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   const handleScrollLoadComplete = useCallback(() => {
     setLoading(false);
+    // Sync interlinear / word-wise state (effect may have fired before engine was ready)
+    const ts = useThemeStore.getState();
+    if (ts.interlinearMode) {
+      engineRef.current?.setInterlinearMode?.(ts.interlinearMode, ts.interlinearLanguage);
+    }
+    if (ts.wordWiseEnabled) {
+      const targetLang = Capacitor.isNativePlatform() ? ts.interlinearLanguage : undefined;
+      engineRef.current?.setWordWise?.(ts.wordWiseEnabled, ts.wordWiseLevel, targetLang);
+    }
   }, []);
 
   const handleError = useCallback((error: string) => {
