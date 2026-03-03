@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { databaseService } from '../services/database';
 import { markDirty } from '../services/firebaseAutoBackupManager';
+import { useReadingGoalsStore } from './useReadingGoalsStore';
 import type { Book, Bookmark, Highlight } from '../types/index';
 
 interface AppState {
@@ -194,6 +195,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         lastReadAt: Math.floor(Date.now() / 1000),
       });
 
+      // Check if book just reached completion (>= 95%) for yearly book goal
+      const previousBook = get().books.find((b) => b.id === bookId);
+      const wasFinished = previousBook && previousBook.progress >= 0.95;
+      const isNowFinished = progressPercentage >= 0.95;
+
       set((state) => ({
         books: state.books.map((b) =>
           b.id === bookId
@@ -218,6 +224,19 @@ export const useAppStore = create<AppState>((set, get) => ({
               }
             : state.currentBook,
       }));
+
+      // Auto-track book completion for yearly reading goal
+      if (isNowFinished && !wasFinished) {
+        const goalsStore = useReadingGoalsStore.getState();
+        if (goalsStore.yearlyGoalEnabled && previousBook) {
+          goalsStore.markBookFinished(
+            bookId,
+            previousBook.title || 'Unknown Title',
+            previousBook.author || 'Unknown Author'
+          );
+        }
+      }
+
       markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update progress' });

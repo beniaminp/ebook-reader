@@ -25,6 +25,7 @@ import OpdsCatalog from './pages/OpdsCatalog/OpdsCatalog';
 import CloudSyncSettings from './pages/CloudSyncSettings/CloudSyncSettings';
 import CommunityBooks from './pages/CommunityBooks/CommunityBooks';
 import MySharedBooks from './pages/MySharedBooks/MySharedBooks';
+import ReadingGoals from './pages/ReadingGoals/ReadingGoals';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
@@ -165,6 +166,9 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/my-shared-books">
           <MySharedBooks />
+        </Route>
+        <Route exact path="/reading-goals">
+          <ReadingGoals />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

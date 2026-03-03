@@ -18,9 +18,15 @@ import {
   IonSegment,
   IonSegmentButton,
   IonLabel,
+  IonProgressBar,
+  IonButton,
+  IonIcon,
 } from '@ionic/react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { flameOutline, chevronForwardOutline } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 import { databaseService } from '../../services/database';
+import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
 
 interface DailyStats {
   date: number;
@@ -47,12 +53,21 @@ const formatMinutes = (seconds: number): string => {
   return remaining > 0 ? `${hours}h ${remaining}m` : `${hours}h`;
 };
 
+const formatGoalMinutes = (minutes: number): string => {
+  if (minutes < 1) return '0m';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
+
 const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp * 1000);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
 const Statistics: React.FC = () => {
+  const history = useHistory();
   const [period, setPeriod] = useState<Period>('30');
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [summary, setSummary] = useState<Summary>({
@@ -62,6 +77,19 @@ const Statistics: React.FC = () => {
     averageSessionTime: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  const {
+    enabled: streakEnabled,
+    currentStreak,
+    longestStreak,
+    dailyGoalMinutes,
+    yearlyGoalEnabled,
+    getTodayMinutes,
+    getTodayProgress,
+    isTodayGoalMet,
+    getYearlyGoalData,
+    getYearlyProgress,
+  } = useReadingGoalsStore();
 
   useEffect(() => {
     loadStats();
@@ -90,6 +118,13 @@ const Statistics: React.FC = () => {
     minutes: Math.round(row.time_spent / 60),
   }));
 
+  const todayMinutes = getTodayMinutes();
+  const todayProgress = getTodayProgress();
+  const todayGoalMet = isTodayGoalMet();
+  const thisYear = new Date().getFullYear();
+  const yearlyData = getYearlyGoalData(thisYear);
+  const yearlyProgress = getYearlyProgress(thisYear);
+
   return (
     <IonPage>
       <IonHeader>
@@ -102,6 +137,96 @@ const Statistics: React.FC = () => {
       </IonHeader>
 
       <IonContent>
+        {/* ─── Goals & Streak Summary Card ─────────────── */}
+        {streakEnabled && (
+          <IonCard
+            style={{ margin: '12px 16px 8px', cursor: 'pointer' }}
+            onClick={() => history.push('/reading-goals')}
+          >
+            <IonCardContent style={{ padding: '14px 16px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <IonIcon
+                    icon={flameOutline}
+                    style={{ fontSize: '20px', color: currentStreak > 0 ? '#ff6b35' : 'var(--ion-color-medium)' }}
+                  />
+                  <span style={{ fontWeight: 700, fontSize: '15px' }}>
+                    {currentStreak > 0
+                      ? `${currentStreak}-day streak`
+                      : 'No active streak'}
+                  </span>
+                  {longestStreak > 0 && currentStreak < longestStreak && (
+                    <span style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                      (best: {longestStreak})
+                    </span>
+                  )}
+                </div>
+                <IonIcon
+                  icon={chevronForwardOutline}
+                  style={{ fontSize: '18px', color: 'var(--ion-color-medium)' }}
+                />
+              </div>
+
+              {/* Today's daily progress */}
+              <div style={{ marginBottom: '8px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '12px',
+                    color: 'var(--ion-color-medium)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  <span>Today: {formatGoalMinutes(todayMinutes)} of {dailyGoalMinutes}m</span>
+                  <span>
+                    {todayGoalMet
+                      ? 'Goal met!'
+                      : `${Math.max(0, Math.round(dailyGoalMinutes - todayMinutes))}m left`}
+                  </span>
+                </div>
+                <IonProgressBar
+                  value={todayProgress}
+                  color={todayGoalMet ? 'success' : 'primary'}
+                  style={{ height: '6px', borderRadius: '3px' }}
+                />
+              </div>
+
+              {/* Yearly book goal progress */}
+              {yearlyGoalEnabled && (
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '12px',
+                      color: 'var(--ion-color-medium)',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <span>
+                      {thisYear} Challenge: {yearlyData.booksFinished.length} of {yearlyData.targetBooks} books
+                    </span>
+                    <span>{Math.round(yearlyProgress * 100)}%</span>
+                  </div>
+                  <IonProgressBar
+                    value={yearlyProgress}
+                    color={yearlyProgress >= 1 ? 'success' : 'tertiary'}
+                    style={{ height: '6px', borderRadius: '3px' }}
+                  />
+                </div>
+              )}
+            </IonCardContent>
+          </IonCard>
+        )}
+
         {isLoading ? (
           <div
             style={{

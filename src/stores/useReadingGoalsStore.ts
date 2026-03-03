@@ -1,8 +1,8 @@
 /**
  * Reading Goals & Streaks Store
  *
- * Tracks daily reading goals, reading minutes per day,
- * and consecutive-day reading streaks.
+ * Tracks daily reading goals, yearly book goals, reading minutes per day,
+ * books finished per year, and consecutive-day reading streaks.
  *
  * Persists to localStorage via Zustand persist middleware
  * with `ebook_reading_goals` key.
@@ -17,11 +17,32 @@ function toDateStr(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-interface DailyRecord {
+/** Get the current year as a number. */
+function currentYear(): number {
+  return new Date().getFullYear();
+}
+
+export interface DailyRecord {
   /** Reading minutes logged for the day */
   minutes: number;
   /** Whether the goal was met for the day */
   goalMet: boolean;
+}
+
+/** Record of a book finished in a given year. */
+export interface FinishedBook {
+  bookId: string;
+  title: string;
+  author: string;
+  finishedDate: string; // YYYY-MM-DD
+}
+
+/** Per-year book goal and completion data. */
+export interface YearlyGoalData {
+  /** Target number of books to read this year */
+  targetBooks: number;
+  /** Books finished this year */
+  booksFinished: FinishedBook[];
 }
 
 interface ReadingGoalsState {
@@ -40,7 +61,12 @@ interface ReadingGoalsState {
   /** Timestamp of the last milestone celebration shown */
   lastMilestoneCelebrated: number;
 
-  // Actions
+  /** Whether yearly book goal is enabled */
+  yearlyGoalEnabled: boolean;
+  /** Map of year (e.g. "2026") to yearly goal data */
+  yearlyGoals: Record<string, YearlyGoalData>;
+
+  // Daily goal / streak actions
   addReadingTime: (minutes: number) => void;
   setDailyGoal: (minutes: number) => void;
   setEnabled: (enabled: boolean) => void;
@@ -51,6 +77,20 @@ interface ReadingGoalsState {
   isTodayGoalMet: () => boolean;
   getNewMilestone: () => number | null;
   acknowledgeMilestone: (streak: number) => void;
+
+  // Yearly book goal actions
+  setYearlyGoalEnabled: (enabled: boolean) => void;
+  setYearlyBookTarget: (year: number, target: number) => void;
+  markBookFinished: (bookId: string, title: string, author: string) => void;
+  removeFinishedBook: (bookId: string, year: number) => void;
+  getYearlyGoalData: (year?: number) => YearlyGoalData;
+  getYearlyProgress: (year?: number) => number;
+
+  // Utility getters
+  getWeekRecords: () => { date: string; record: DailyRecord | null }[];
+  getMonthRecords: (year: number, month: number) => { date: string; record: DailyRecord | null }[];
+  getDaysWithGoalMet: (days: number) => number;
+  getTotalMinutesThisWeek: () => number;
 }
 
 /** Milestone streak counts that trigger celebration */
@@ -66,6 +106,8 @@ export const useReadingGoalsStore = create<ReadingGoalsState>()(
       longestStreak: 0,
       lastGoalMetDate: null,
       lastMilestoneCelebrated: 0,
+      yearlyGoalEnabled: false,
+      yearlyGoals: {},
 
       addReadingTime: (minutes: number) => {
         if (!get().enabled || minutes <= 0) return;
@@ -143,9 +185,6 @@ export const useReadingGoalsStore = create<ReadingGoalsState>()(
           }
         }
 
-        // If today's goal IS met, include today in the streak
-        // (already handled by starting from today above)
-
         const lastGoalMetDate = todayRecord?.goalMet
           ? today
           : state.lastGoalMetDate;
@@ -200,6 +239,162 @@ export const useReadingGoalsStore = create<ReadingGoalsState>()(
       acknowledgeMilestone: (streak: number) => {
         set({ lastMilestoneCelebrated: streak });
       },
+
+      // ─── Yearly Book Goal Actions ─────────────────────────
+
+      setYearlyGoalEnabled: (enabled: boolean) => {
+        set({ yearlyGoalEnabled: enabled });
+        // Ensure current year has a goal entry
+        if (enabled) {
+          const year = String(currentYear());
+          const state = get();
+          if (!state.yearlyGoals[year]) {
+            set({
+              yearlyGoals: {
+                ...state.yearlyGoals,
+                [year]: { targetBooks: 12, booksFinished: [] },
+              },
+            });
+          }
+        }
+      },
+
+      setYearlyBookTarget: (year: number, target: number) => {
+        const clampedTarget = Math.max(1, Math.min(500, target));
+        const yearStr = String(year);
+        const state = get();
+        const existing = state.yearlyGoals[yearStr] || { targetBooks: 12, booksFinished: [] };
+        set({
+          yearlyGoals: {
+            ...state.yearlyGoals,
+            [yearStr]: { ...existing, targetBooks: clampedTarget },
+          },
+        });
+      },
+
+      markBookFinished: (bookId: string, title: string, author: string) => {
+        const year = String(currentYear());
+        const today = toDateStr(Date.now());
+        const state = get();
+        const existing = state.yearlyGoals[year] || { targetBooks: 12, booksFinished: [] };
+
+        // Prevent duplicates
+        if (existing.booksFinished.some((b) => b.bookId === bookId)) return;
+
+        set({
+          yearlyGoals: {
+            ...state.yearlyGoals,
+            [year]: {
+              ...existing,
+              booksFinished: [
+                ...existing.booksFinished,
+                { bookId, title, author, finishedDate: today },
+              ],
+            },
+          },
+        });
+      },
+
+      removeFinishedBook: (bookId: string, year: number) => {
+        const yearStr = String(year);
+        const state = get();
+        const existing = state.yearlyGoals[yearStr];
+        if (!existing) return;
+
+        set({
+          yearlyGoals: {
+            ...state.yearlyGoals,
+            [yearStr]: {
+              ...existing,
+              booksFinished: existing.booksFinished.filter((b) => b.bookId !== bookId),
+            },
+          },
+        });
+      },
+
+      getYearlyGoalData: (year?: number) => {
+        const yearStr = String(year ?? currentYear());
+        const state = get();
+        return state.yearlyGoals[yearStr] || { targetBooks: 12, booksFinished: [] };
+      },
+
+      getYearlyProgress: (year?: number) => {
+        const data = get().getYearlyGoalData(year);
+        if (data.targetBooks <= 0) return 0;
+        return Math.min(1, data.booksFinished.length / data.targetBooks);
+      },
+
+      // ─── Utility Getters ──────────────────────────────────
+
+      getWeekRecords: () => {
+        const state = get();
+        const result: { date: string; record: DailyRecord | null }[] = [];
+        const today = new Date();
+        // Start from Monday of current week
+        const dayOfWeek = today.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + mondayOffset);
+
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          const dateStr = toDateStr(d.getTime());
+          result.push({
+            date: dateStr,
+            record: state.dailyRecords[dateStr] || null,
+          });
+        }
+        return result;
+      },
+
+      getMonthRecords: (year: number, month: number) => {
+        const state = get();
+        const result: { date: string; record: DailyRecord | null }[] = [];
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const d = new Date(year, month - 1, day);
+          const dateStr = toDateStr(d.getTime());
+          result.push({
+            date: dateStr,
+            record: state.dailyRecords[dateStr] || null,
+          });
+        }
+        return result;
+      },
+
+      getDaysWithGoalMet: (days: number) => {
+        const state = get();
+        let count = 0;
+        const checkDate = new Date();
+        for (let i = 0; i < days; i++) {
+          const dateStr = toDateStr(checkDate.getTime());
+          if (state.dailyRecords[dateStr]?.goalMet) {
+            count++;
+          }
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+        return count;
+      },
+
+      getTotalMinutesThisWeek: () => {
+        const state = get();
+        let total = 0;
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + mondayOffset);
+
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          const dateStr = toDateStr(d.getTime());
+          total += state.dailyRecords[dateStr]?.minutes || 0;
+        }
+        return total;
+      },
     }),
     {
       name: 'ebook_reading_goals',
@@ -211,12 +406,14 @@ export const useReadingGoalsStore = create<ReadingGoalsState>()(
         longestStreak: state.longestStreak,
         lastGoalMetDate: state.lastGoalMetDate,
         lastMilestoneCelebrated: state.lastMilestoneCelebrated,
+        yearlyGoalEnabled: state.yearlyGoalEnabled,
+        yearlyGoals: state.yearlyGoals,
       }),
-      // Clean up old daily records (keep last 90 days) on rehydration
+      // Clean up old daily records (keep last 400 days for yearly view) on rehydration
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - 90);
+        cutoff.setDate(cutoff.getDate() - 400);
         const cutoffStr = toDateStr(cutoff.getTime());
         const cleaned: Record<string, DailyRecord> = {};
         for (const [date, record] of Object.entries(state.dailyRecords)) {
