@@ -16,6 +16,7 @@ import {
   IonIcon,
   IonSpinner,
   IonToast,
+  IonAlert,
 } from '@ionic/react';
 import {
   cloudOutline,
@@ -34,10 +35,12 @@ import {
   refreshOutline,
   chevronForwardOutline,
   speedometerOutline,
+  flameOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
 import { downloadExport, importAllData } from '../../services/localExportService';
 import './Settings.css';
 
@@ -93,9 +96,20 @@ const Settings: React.FC = () => {
     triggerRestore,
   } = useAuthStore();
 
+  const {
+    enabled: streakEnabled,
+    dailyGoalMinutes,
+    currentStreak,
+    longestStreak,
+    setEnabled: setStreakEnabled,
+    setDailyGoal,
+    resetStreak,
+  } = useReadingGoalsStore();
+
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [showResetStreakConfirm, setShowResetStreakConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
@@ -310,6 +324,69 @@ const Settings: React.FC = () => {
           )}
         </div>
 
+        {/* ─── Reading Goals & Streaks ─────────────────── */}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--orange">
+              <IonIcon icon={flameOutline} />
+            </div>
+            <span className="settings-section-title">Reading Goals</span>
+          </div>
+
+          <IonItem>
+            <IonLabel>
+              <h3>Reading Streaks</h3>
+              <IonNote>Track consecutive days of reading</IonNote>
+            </IonLabel>
+            <IonToggle
+              checked={streakEnabled}
+              onIonChange={(e) => setStreakEnabled(e.detail.checked)}
+            />
+          </IonItem>
+
+          {streakEnabled && (
+            <>
+              <IonItem>
+                <IonLabel>Daily Goal</IonLabel>
+                <div className="settings-range-row" slot="end" style={{ width: '55%' }}>
+                  <IonRange
+                    min={5}
+                    max={120}
+                    step={5}
+                    value={dailyGoalMinutes}
+                    onIonChange={(e) => setDailyGoal(e.detail.value as number)}
+                  />
+                  <span className="settings-range-value">{dailyGoalMinutes}m</span>
+                </div>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>
+                  <h3>Current Streak</h3>
+                  <IonNote>
+                    {currentStreak} day{currentStreak !== 1 ? 's' : ''}
+                    {longestStreak > 0 && ` (best: ${longestStreak})`}
+                  </IonNote>
+                </IonLabel>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>
+                  <IonButton
+                    fill="outline"
+                    size="small"
+                    color="danger"
+                    onClick={() => setShowResetStreakConfirm(true)}
+                    style={{ '--border-radius': '8px' }}
+                  >
+                    Reset Streak
+                  </IonButton>
+                </IonLabel>
+              </IonItem>
+            </>
+          )}
+        </div>
+
         {/* ─── Library & Sync ──────────────────────────── */}
         <div className="settings-section">
           <div className="settings-section-header">
@@ -510,6 +587,24 @@ const Settings: React.FC = () => {
           message={toastMessage}
           duration={4000}
           onDidDismiss={() => setToastMessage('')}
+        />
+
+        <IonAlert
+          isOpen={showResetStreakConfirm}
+          onDidDismiss={() => setShowResetStreakConfirm(false)}
+          header="Reset Streak"
+          message="This will reset your current streak, longest streak, and all daily reading records. This cannot be undone."
+          buttons={[
+            { text: 'Cancel', role: 'cancel' },
+            {
+              text: 'Reset',
+              role: 'destructive',
+              handler: () => {
+                resetStreak();
+                setToastMessage('Reading streak has been reset');
+              },
+            },
+          ]}
         />
       </IonContent>
     </IonPage>

@@ -13,6 +13,7 @@ import {
 import { arrowBack } from 'ionicons/icons';
 
 import { useAppStore } from '../../stores/useAppStore';
+import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
 import { databaseService } from '../../services/database';
 import { calibreWebService } from '../../services/calibreWebService';
 import { useCalibreWebStore } from '../../stores/calibreWebStore';
@@ -96,10 +97,33 @@ const Reader: React.FC = () => {
   // Reading session tracking — reset on bookId change
   const sessionStartRef = React.useRef<number>(Date.now());
   const sessionPagesRef = React.useRef<number>(0);
+  const bookIdRef = React.useRef<string | undefined>(bookId);
+  const sessionRecordedRef = React.useRef<boolean>(false);
   useEffect(() => {
     sessionStartRef.current = Date.now();
     sessionPagesRef.current = 0;
+    bookIdRef.current = bookId;
+    sessionRecordedRef.current = false;
   }, [bookId]);
+
+  // Record reading time on unmount (ensures streak tracking even if back button not used)
+  useEffect(() => {
+    return () => {
+      if (bookIdRef.current && !sessionRecordedRef.current) {
+        const timeSpent = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+        if (timeSpent > 5) {
+          const minutesRead = timeSpent / 60;
+          if (minutesRead > 0) {
+            useReadingGoalsStore.getState().addReadingTime(minutesRead);
+          }
+          // Fire-and-forget: record the DB session too
+          databaseService
+            .recordReadingSession(bookIdRef.current, sessionPagesRef.current, timeSpent)
+            .catch(() => {});
+        }
+      }
+    };
+  }, []);
 
   const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
   const [textContent, setTextContent] = useState<string>('');
@@ -310,12 +334,19 @@ const Reader: React.FC = () => {
   }, [bookId]);
 
   const recordSession = useCallback(async (bookId: string) => {
+    if (sessionRecordedRef.current) return;
+    sessionRecordedRef.current = true;
     const timeSpent = Math.floor((Date.now() - sessionStartRef.current) / 1000);
     if (timeSpent > 5) {
       try {
         await databaseService.recordReadingSession(bookId, sessionPagesRef.current, timeSpent);
       } catch {
         // Non-critical; ignore errors
+      }
+      // Track reading time for daily goals / streaks
+      const minutesRead = timeSpent / 60;
+      if (minutesRead > 0) {
+        useReadingGoalsStore.getState().addReadingTime(minutesRead);
       }
     }
   }, []);

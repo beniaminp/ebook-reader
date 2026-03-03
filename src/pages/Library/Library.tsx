@@ -76,6 +76,7 @@ import {
   type SortOption,
   type ReadStatus,
 } from '../../stores/useLibraryPrefsStore';
+import ReadingStreakCard from '../../components/ReadingStreakCard';
 import './Library.css';
 
 const Library: React.FC = () => {
@@ -1607,6 +1608,7 @@ const Library: React.FC = () => {
           </div>
         ) : (
           <>
+            <ReadingStreakCard />
             {renderContinueReading()}
 
             {filteredBooks.length === 0 ? (
