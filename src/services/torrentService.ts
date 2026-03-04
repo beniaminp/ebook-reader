@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import type { PluginListenerHandle } from '@capacitor/core';
 
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
@@ -32,16 +33,20 @@ class TorrentService {
   // Prevent concurrent initialization creating multiple clients
   private clientPromise: Promise<any> | null = null;
 
+  private isNative(): boolean {
+    return Capacitor.isNativePlatform();
+  }
+
   /**
-   * Returns true if WebTorrent is supported on the current platform.
-   * Native (Android/iOS) platforms cannot run WebTorrent.
+   * Returns true if torrent downloads are supported on the current platform.
+   * Now supported on both web (WebTorrent) and native (jlibtorrent).
    */
   isSupported(): boolean {
-    return !Capacitor.isNativePlatform();
+    return true;
   }
 
   private async getClient() {
-    if (!this.isSupported()) {
+    if (this.isNative()) {
       throw new Error('WebTorrent is not supported on native platforms');
     }
     if (this.client) return this.client;
@@ -94,6 +99,69 @@ class TorrentService {
   }
 
   async download(
+    magnetURI: string,
+    onProgress?: (stats: TorrentStats) => void
+  ): Promise<{ data: ArrayBuffer; fileName: string }> {
+    if (this.isNative()) {
+      return this.downloadNative(magnetURI, onProgress);
+    }
+    return this.downloadWeb(magnetURI, onProgress);
+  }
+
+  private async downloadNative(
+    magnetURI: string,
+    onProgress?: (stats: TorrentStats) => void
+  ): Promise<{ data: ArrayBuffer; fileName: string }> {
+    const { TorrentDownloader } = await import('../plugins/torrentDownloader');
+
+    let listenerHandle: PluginListenerHandle | null = null;
+
+    if (onProgress) {
+      listenerHandle = await TorrentDownloader.addListener('downloadProgress', (event) => {
+        onProgress({
+          progress: event.progress,
+          downloadSpeed: event.downloadSpeed,
+          uploadSpeed: 0,
+          numPeers: event.numPeers,
+          downloaded: event.downloaded,
+          totalSize: event.totalSize,
+          timeRemaining: event.timeRemaining,
+        });
+      });
+    }
+
+    try {
+      const result = await TorrentDownloader.download({ magnetURI });
+
+      // Emit final progress
+      if (onProgress) {
+        onProgress({
+          progress: 1,
+          downloadSpeed: 0,
+          uploadSpeed: 0,
+          numPeers: 0,
+          downloaded: 0,
+          totalSize: 0,
+          timeRemaining: 0,
+        });
+      }
+
+      // Decode base64 to ArrayBuffer
+      const binaryString = atob(result.fileData);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      return { data: bytes.buffer, fileName: result.fileName };
+    } finally {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    }
+  }
+
+  private async downloadWeb(
     magnetURI: string,
     onProgress?: (stats: TorrentStats) => void
   ): Promise<{ data: ArrayBuffer; fileName: string }> {
