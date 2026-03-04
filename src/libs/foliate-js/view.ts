@@ -337,7 +337,7 @@ const languageInfo = (lang: string | string[] | undefined): LanguageInfo => {
 }
 
 export class View extends HTMLElement {
-    #root: ShadowRoot = this.attachShadow({ mode: 'closed' })
+    #root: ShadowRoot = this.attachShadow({ mode: 'open' })
     #sectionProgress: SectionProgress | null = null
     #tocProgress: TOCProgress | null = null
     #pageProgress: TOCProgress | null = null
@@ -514,8 +514,12 @@ export class View extends HTMLElement {
                     overlayer!.remove(value)
                     return
                 }
-                const range = doc ? (anchor as (doc: Document) => Range)(doc) : anchor as Range
-                overlayer!.add(value, range, Overlayer.outline)
+                try {
+                    const range = doc ? (anchor as (doc: Document) => Range)(doc) : anchor as Range
+                    overlayer!.add(value, range, Overlayer.outline)
+                } catch (e) {
+                    console.warn(`Could not resolve annotation range for search: ${value}`, e)
+                }
             }
             return
         }
@@ -527,9 +531,13 @@ export class View extends HTMLElement {
             const { overlayer, doc } = obj
             overlayer!.remove(value)
             if (!remove) {
-                const range = doc ? (anchor as (doc: Document) => Range)(doc) : anchor as Range
-                const draw = (func: any, opts: any) => overlayer!.add(value, range, func, opts)
-                this.#emit('draw-annotation', { draw, annotation, doc, range })
+                try {
+                    const range = doc ? (anchor as (doc: Document) => Range)(doc) : anchor as Range
+                    const draw = (func: any, opts: any) => overlayer!.add(value, range, func, opts)
+                    this.#emit('draw-annotation', { draw, annotation, doc, range })
+                } catch (e) {
+                    console.warn(`Could not resolve annotation range: ${value}`, e)
+                }
             }
         }
         const label = (this.#tocProgress?.getProgress(index, undefined) as any)?.label ?? ''

@@ -640,7 +640,7 @@ export class Paginator extends HTMLElement {
         'max-column-count',
     ]
 
-    #root: ShadowRoot = this.attachShadow({ mode: 'closed' })
+    #root: ShadowRoot = this.attachShadow({ mode: 'open' })
     #observer: ResizeObserver = new ResizeObserver(() => {
         try {
             this.render()

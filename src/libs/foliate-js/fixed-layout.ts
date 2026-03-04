@@ -92,7 +92,7 @@ const getViewport = (
 export class FixedLayout extends HTMLElement {
     static observedAttributes = ['zoom']
 
-    #root: ShadowRoot = this.attachShadow({ mode: 'closed' })
+    #root: ShadowRoot = this.attachShadow({ mode: 'open' })
     #observer: ResizeObserver = new ResizeObserver(() =>
         this.#render(),
     )
