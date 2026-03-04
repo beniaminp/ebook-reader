@@ -346,7 +346,7 @@ export const fromElements = (elements: Element[]): string[] => {
 }
 
 export const toElement = (doc: Document, parts: string | CFIParsed): Node =>
-    partsToNode(doc.documentElement, (collapse(parts) as CFIParsedParts)[0]).node
+    partsToNode(doc.documentElement, collapse(parts) as unknown as CFIPart[]).node
 
 export const fake = {
     fromIndex: (index: number): string => wrap(`/6/${(index + 1) * 2}`),

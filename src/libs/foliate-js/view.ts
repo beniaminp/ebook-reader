@@ -470,13 +470,16 @@ export class View extends HTMLElement {
         this.#emit('relocate', this.lastLocation)
     }
     #onLoad({ doc, index }: { doc: Document; index: number }): void {
-        doc.documentElement.lang ||= this.language.canonical ?? ''
-        if (!this.language.isCJK)
-            doc.documentElement.dir ||= this.language.direction ?? ''
+        try {
+            doc.documentElement.lang ||= this.language.canonical ?? ''
+            if (!this.language.isCJK)
+                doc.documentElement.dir ||= this.language.direction ?? ''
 
-        this.#handleLinks(doc, index)
-        this.#cursorAutohider.cloneFor(doc.documentElement)
-
+            this.#handleLinks(doc, index)
+            this.#cursorAutohider.cloneFor(doc.documentElement)
+        } catch (e) {
+            console.error(e)
+        }
         this.#emit('load', { doc, index })
     }
     #handleLinks(doc: Document, index: number): void {

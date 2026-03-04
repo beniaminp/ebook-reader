@@ -1503,7 +1503,7 @@ export class Paginator extends HTMLElement {
     async goTo(target: GoToTarget | Promise<GoToTarget>): Promise<void> {
         if (this.#locked) return
         const resolved = await target
-        if (this.#canGoToIndex(resolved.index))
+        if (resolved && this.#canGoToIndex(resolved.index))
             return this.#goTo(resolved)
     }
 
