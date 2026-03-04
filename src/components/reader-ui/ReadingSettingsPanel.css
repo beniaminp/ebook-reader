@@ -181,3 +181,322 @@ ion-item {
   position: absolute;
   z-index: -1;
 }
+
+/* ===== Type Settings Tab ===== */
+
+.type-settings {
+  padding: 4px 16px 24px;
+}
+
+.type-section {
+  background: var(--ion-color-step-50, rgba(0, 0, 0, 0.04));
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.type-section-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ion-color-medium, #888);
+  margin-bottom: 12px;
+}
+
+/* Font size stepper row */
+.type-font-size-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.type-stepper-btn {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid var(--ion-color-step-200, rgba(0, 0, 0, 0.12));
+  background: transparent;
+  color: var(--ion-text-color, #000);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.type-stepper-btn:active {
+  background: var(--ion-color-step-100, rgba(0, 0, 0, 0.06));
+}
+
+.type-stepper-btn-large {
+  font-size: 18px;
+}
+
+.type-stepper-icon {
+  font-size: 10px;
+  margin-left: 1px;
+  font-weight: 700;
+}
+
+.type-font-size-track {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.type-font-size-track ion-range {
+  flex: 1;
+}
+
+.type-font-size-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-primary, #3880ff);
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Generic inline row (label + control) */
+.type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  gap: 12px;
+}
+
+.type-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ion-text-color, #000);
+  flex-shrink: 0;
+}
+
+.type-select {
+  max-width: 180px;
+  --padding-start: 8px;
+  font-size: 14px;
+}
+
+.type-align-segment {
+  max-width: 180px;
+}
+
+/* Slider rows */
+.type-slider-row {
+  margin-top: 4px;
+}
+
+.type-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ion-text-color, #000);
+}
+
+.type-slider-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-primary, #3880ff);
+  min-width: 42px;
+  text-align: right;
+}
+
+.type-compact-range {
+  padding: 4px 0 !important;
+  --bar-height: 4px;
+  --knob-size: 20px;
+}
+
+/* Custom font import */
+.type-custom-fonts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.type-hidden-input {
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: -1;
+}
+
+.type-import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px dashed var(--ion-color-step-300, rgba(0, 0, 0, 0.18));
+  background: transparent;
+  color: var(--ion-color-medium, #888);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.type-import-btn:hover {
+  border-color: var(--ion-color-primary, #3880ff);
+  color: var(--ion-color-primary, #3880ff);
+}
+
+.type-import-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.type-custom-font-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 12px;
+  border-radius: 16px;
+  background: var(--ion-color-step-100, rgba(0, 0, 0, 0.06));
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ion-text-color, #000);
+}
+
+.type-chip-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--ion-color-danger, #eb445a);
+  font-size: 16px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.type-chip-delete:hover {
+  opacity: 1;
+}
+
+.type-error {
+  color: var(--ion-color-danger, #eb445a);
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 0 4px;
+}
+
+/* Margins 2x2 grid */
+.type-margins-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.type-margin-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.type-margin-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ion-color-medium, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.type-margin-control {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 8px;
+  border: 1.5px solid var(--ion-color-step-200, rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.type-margin-btn {
+  width: 36px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--ion-text-color, #000);
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.type-margin-btn:active {
+  background: var(--ion-color-step-100, rgba(0, 0, 0, 0.06));
+}
+
+.type-margin-value {
+  width: 36px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-text-color, #000);
+  border-left: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.08));
+  border-right: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.08));
+  line-height: 34px;
+}
+
+/* Preset button */
+.type-preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ion-text-color, #000);
+  text-align: left;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.type-preset-btn:active {
+  background: var(--ion-color-step-100, rgba(0, 0, 0, 0.06));
+}
+
+.type-preset-btn ion-icon {
+  font-size: 22px;
+  color: var(--ion-color-primary, #3880ff);
+  flex-shrink: 0;
+}
+
+.type-preset-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.type-preset-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.type-preset-desc {
+  font-size: 12px;
+  color: var(--ion-color-medium, #888);
+}

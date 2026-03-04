@@ -440,196 +440,214 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
         )}
 
         {activeTab === 'typography' && (
-          <IonList>
-            <IonItem>
-              <IonLabel position="stacked">Font Size: {fontSize}px</IonLabel>
-              <IonRange
-                min={12}
-                max={32}
-                step={1}
-                value={fontSize}
-                onIonChange={handleFontSizeChange}
-                snaps
-              />
-            </IonItem>
+          <div className="type-settings">
+            {/* Font Size — compact stepper + slider */}
+            <div className="type-section">
+              <div className="type-section-header">Font</div>
+              <div className="type-font-size-row">
+                <button
+                  className="type-stepper-btn"
+                  onClick={() => setFontSize(Math.max(12, fontSize - 1))}
+                  aria-label="Decrease font size"
+                >
+                  A<span className="type-stepper-icon">−</span>
+                </button>
+                <div className="type-font-size-track">
+                  <IonRange
+                    min={12}
+                    max={32}
+                    step={1}
+                    value={fontSize}
+                    onIonChange={handleFontSizeChange}
+                    className="type-compact-range"
+                  />
+                  <span className="type-font-size-value">{fontSize}px</span>
+                </div>
+                <button
+                  className="type-stepper-btn type-stepper-btn-large"
+                  onClick={() => setFontSize(Math.min(32, fontSize + 1))}
+                  aria-label="Increase font size"
+                >
+                  A<span className="type-stepper-icon">+</span>
+                </button>
+              </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Line Height: {lineHeight}x</IonLabel>
-              <IonRange
-                min={1}
-                max={2.5}
-                step={0.1}
-                value={lineHeight}
-                onIonChange={handleLineHeightChange}
-                snaps
-              />
-            </IonItem>
+              <div className="type-row">
+                <IonLabel className="type-row-label">Font Family</IonLabel>
+                <IonSelect
+                  value={fontFamily}
+                  onIonChange={(e) => setFontFamily(e.detail.value as FontFamily)}
+                  interface="popover"
+                  className="type-select"
+                >
+                  {getAllFontFamilies().map((font) => (
+                    <IonSelectOption key={font.value} value={font.value}>
+                      {font.name}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Font Family</IonLabel>
-              <IonSelect
-                value={fontFamily}
-                onIonChange={(e) => setFontFamily(e.detail.value as FontFamily)}
-              >
-                {getAllFontFamilies().map((font) => (
-                  <IonSelectOption key={font.value} value={font.value}>
-                    {font.name}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-            </IonItem>
-
-            {/* Import Custom Font */}
-            <IonItem>
-              <IonLabel position="stacked">Custom Fonts</IonLabel>
-              <input
-                ref={fontInputRef}
-                type="file"
-                accept=".ttf,.otf,.woff,.woff2"
-                onChange={handleFontImport}
-                disabled={importingFont}
-                style={{
-                  width: '0.1px',
-                  height: '0.1px',
-                  opacity: 0,
-                  overflow: 'hidden',
-                  position: 'absolute',
-                  zIndex: -1,
-                }}
-              />
-              <IonButton
-                fill="outline"
-                slot="end"
-                onClick={() => fontInputRef.current?.click()}
-                disabled={importingFont}
-              >
-                <IonIcon icon={documentText} slot="start" />
-                {importingFont ? 'Importing...' : 'Import Font'}
-              </IonButton>
-            </IonItem>
-
-            {fontImportError && (
-              <IonItem>
-                <IonLabel color="danger">{fontImportError}</IonLabel>
-              </IonItem>
-            )}
-
-            {/* List of custom fonts */}
-            {customFonts.length > 0 && (
-              <>
+              {/* Custom font import */}
+              <div className="type-custom-fonts">
+                <input
+                  ref={fontInputRef}
+                  type="file"
+                  accept=".ttf,.otf,.woff,.woff2"
+                  onChange={handleFontImport}
+                  disabled={importingFont}
+                  className="type-hidden-input"
+                />
+                <button
+                  className="type-import-btn"
+                  onClick={() => fontInputRef.current?.click()}
+                  disabled={importingFont}
+                >
+                  <IonIcon icon={documentText} />
+                  {importingFont ? 'Importing...' : 'Import Font'}
+                </button>
                 {customFonts.map((font) => (
-                  <IonItem key={font.name}>
-                    <IonLabel>
-                      <h3>{font.name}</h3>
-                      <p>Custom font</p>
-                    </IonLabel>
-                    <IonButton fill="clear" slot="end" onClick={() => handleDeleteFont(font.name)}>
-                      <IonIcon icon={trash} color="danger" />
-                    </IonButton>
-                  </IonItem>
+                  <div key={font.name} className="type-custom-font-chip">
+                    <span>{font.name}</span>
+                    <button
+                      className="type-chip-delete"
+                      onClick={() => handleDeleteFont(font.name)}
+                      aria-label={`Remove ${font.name}`}
+                    >
+                      <IonIcon icon={closeCircle} />
+                    </button>
+                  </div>
                 ))}
-              </>
-            )}
+              </div>
+              {fontImportError && (
+                <div className="type-error">{fontImportError}</div>
+              )}
+            </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Text Alignment</IonLabel>
-              <IonSegment
-                value={textAlign}
-                onIonChange={(e) => setTextAlign(e.detail.value as TextAlignment)}
-              >
-                <IonSegmentButton value="left">
-                  <IonLabel>Left</IonLabel>
-                </IonSegmentButton>
-                <IonSegmentButton value="justify">
-                  <IonLabel>Justify</IonLabel>
-                </IonSegmentButton>
-              </IonSegment>
-            </IonItem>
+            {/* Text Layout */}
+            <div className="type-section">
+              <div className="type-section-header">Text Layout</div>
 
-            <IonItem>
-              <IonLabel>Hyphenation</IonLabel>
-              <IonToggle
-                checked={hyphenation}
-                onIonChange={(e) => setHyphenation(e.detail.checked)}
-              />
-            </IonItem>
+              <div className="type-row">
+                <IonLabel className="type-row-label">Alignment</IonLabel>
+                <IonSegment
+                  value={textAlign}
+                  onIonChange={(e) => setTextAlign(e.detail.value as TextAlignment)}
+                  className="type-align-segment"
+                >
+                  <IonSegmentButton value="left">
+                    <IonLabel>Left</IonLabel>
+                  </IonSegmentButton>
+                  <IonSegmentButton value="justify">
+                    <IonLabel>Justify</IonLabel>
+                  </IonSegmentButton>
+                </IonSegment>
+              </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Paragraph Spacing: {paragraphSpacing}em</IonLabel>
-              <IonRange
-                min={0}
-                max={4}
-                step={0.25}
-                value={paragraphSpacing}
-                onIonChange={(e) => setParagraphSpacing(e.detail.value as number)}
-                snaps
-              />
-            </IonItem>
+              <div className="type-row">
+                <IonLabel className="type-row-label">Hyphenation</IonLabel>
+                <IonToggle
+                  checked={hyphenation}
+                  onIonChange={(e) => setHyphenation(e.detail.checked)}
+                />
+              </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Letter Spacing: {letterSpacing}em</IonLabel>
-              <IonRange
-                min={0}
-                max={0.3}
-                step={0.01}
-                value={letterSpacing}
-                onIonChange={(e) => setLetterSpacing(e.detail.value as number)}
-                snaps
-              />
-            </IonItem>
+              <div className="type-slider-row">
+                <div className="type-slider-header">
+                  <span>Line Height</span>
+                  <span className="type-slider-value">{lineHeight}x</span>
+                </div>
+                <IonRange
+                  min={1}
+                  max={2.5}
+                  step={0.1}
+                  value={lineHeight}
+                  onIonChange={handleLineHeightChange}
+                  className="type-compact-range"
+                />
+              </div>
 
-            <IonItem button onClick={() => applyPreset('dyslexia')}>
-              <IonIcon icon={accessibility} slot="start" />
-              <IonLabel>
-                <h2>Dyslexia-Friendly Preset</h2>
-                <p>OpenDyslexic, wider spacing, left-aligned</p>
-              </IonLabel>
-            </IonItem>
+              <div className="type-slider-row">
+                <div className="type-slider-header">
+                  <span>Paragraph Spacing</span>
+                  <span className="type-slider-value">{paragraphSpacing}em</span>
+                </div>
+                <IonRange
+                  min={0}
+                  max={4}
+                  step={0.25}
+                  value={paragraphSpacing}
+                  onIonChange={(e) => setParagraphSpacing(e.detail.value as number)}
+                  className="type-compact-range"
+                />
+              </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Margin Top: {customMargins.top}px</IonLabel>
-              <IonRange
-                min={0}
-                max={64}
-                step={2}
-                value={customMargins.top}
-                onIonChange={(e) => setCustomMargins({ top: e.detail.value as number })}
-              />
-            </IonItem>
+              <div className="type-slider-row">
+                <div className="type-slider-header">
+                  <span>Letter Spacing</span>
+                  <span className="type-slider-value">{letterSpacing.toFixed(2)}em</span>
+                </div>
+                <IonRange
+                  min={0}
+                  max={0.3}
+                  step={0.02}
+                  value={letterSpacing}
+                  onIonChange={(e) => setLetterSpacing(e.detail.value as number)}
+                  className="type-compact-range"
+                />
+              </div>
+            </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Margin Bottom: {customMargins.bottom}px</IonLabel>
-              <IonRange
-                min={0}
-                max={64}
-                step={2}
-                value={customMargins.bottom}
-                onIonChange={(e) => setCustomMargins({ bottom: e.detail.value as number })}
-              />
-            </IonItem>
+            {/* Margins — compact 2x2 grid */}
+            <div className="type-section">
+              <div className="type-section-header">Margins</div>
+              <div className="type-margins-grid">
+                <div className="type-margin-cell">
+                  <label className="type-margin-label">Top</label>
+                  <div className="type-margin-control">
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ top: Math.max(0, customMargins.top - 4) })}>−</button>
+                    <span className="type-margin-value">{customMargins.top}</span>
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ top: Math.min(64, customMargins.top + 4) })}>+</button>
+                  </div>
+                </div>
+                <div className="type-margin-cell">
+                  <label className="type-margin-label">Bottom</label>
+                  <div className="type-margin-control">
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ bottom: Math.max(0, customMargins.bottom - 4) })}>−</button>
+                    <span className="type-margin-value">{customMargins.bottom}</span>
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ bottom: Math.min(64, customMargins.bottom + 4) })}>+</button>
+                  </div>
+                </div>
+                <div className="type-margin-cell">
+                  <label className="type-margin-label">Left</label>
+                  <div className="type-margin-control">
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ left: Math.max(0, customMargins.left - 4) })}>−</button>
+                    <span className="type-margin-value">{customMargins.left}</span>
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ left: Math.min(64, customMargins.left + 4) })}>+</button>
+                  </div>
+                </div>
+                <div className="type-margin-cell">
+                  <label className="type-margin-label">Right</label>
+                  <div className="type-margin-control">
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ right: Math.max(0, customMargins.right - 4) })}>−</button>
+                    <span className="type-margin-value">{customMargins.right}</span>
+                    <button className="type-margin-btn" onClick={() => setCustomMargins({ right: Math.min(64, customMargins.right + 4) })}>+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <IonItem>
-              <IonLabel position="stacked">Margin Left: {customMargins.left}px</IonLabel>
-              <IonRange
-                min={0}
-                max={64}
-                step={2}
-                value={customMargins.left}
-                onIonChange={(e) => setCustomMargins({ left: e.detail.value as number })}
-              />
-            </IonItem>
-
-            <IonItem>
-              <IonLabel position="stacked">Margin Right: {customMargins.right}px</IonLabel>
-              <IonRange
-                min={0}
-                max={64}
-                step={2}
-                value={customMargins.right}
-                onIonChange={(e) => setCustomMargins({ right: e.detail.value as number })}
-              />
-            </IonItem>
-          </IonList>
+            {/* Preset */}
+            <div className="type-section">
+              <button className="type-preset-btn" onClick={() => applyPreset('dyslexia')}>
+                <IonIcon icon={accessibility} />
+                <div className="type-preset-text">
+                  <span className="type-preset-title">Dyslexia-Friendly</span>
+                  <span className="type-preset-desc">OpenDyslexic, wider spacing, left-aligned</span>
+                </div>
+              </button>
+            </div>
+          </div>
         )}
 
         {activeTab === 'reading-tools' && (
