@@ -1,7 +1,16 @@
 diff --git a/node_modules/foliate-js/paginator.js b/node_modules/foliate-js/paginator.js
-index 95c4d0d..d191639 100644
+index 95c4d0d..b4dbdb8 100644
 --- a/node_modules/foliate-js/paginator.js
 +++ b/node_modules/foliate-js/paginator.js
+@@ -275,7 +275,7 @@ class View {
+         })
+     }
+     render(layout) {
+-        if (!layout || !this.document) return
++        if (!layout || !this.document?.documentElement) return
+         this.#column = layout.flow !== 'scrolled'
+         this.#layout = layout
+         if (this.#column) this.columnize(layout)
 @@ -408,7 +408,10 @@ class View {
          return this.#overlayer
      }
