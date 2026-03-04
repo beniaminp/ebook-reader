@@ -3,21 +3,23 @@ package com.ebookreader.app;
 import android.content.Context;
 import android.util.Log;
 
-import com.frostwire.jlibtorrent.AlertListener;
-import com.frostwire.jlibtorrent.SessionManager;
-import com.frostwire.jlibtorrent.SessionParams;
-import com.frostwire.jlibtorrent.SettingsPack;
-import com.frostwire.jlibtorrent.TorrentHandle;
-import com.frostwire.jlibtorrent.TorrentInfo;
-import com.frostwire.jlibtorrent.TorrentStatus;
-import com.frostwire.jlibtorrent.alerts.AddTorrentAlert;
-import com.frostwire.jlibtorrent.alerts.Alert;
-import com.frostwire.jlibtorrent.alerts.AlertType;
-import com.frostwire.jlibtorrent.alerts.MetadataReceivedAlert;
-import com.frostwire.jlibtorrent.alerts.PieceFinishedAlert;
-import com.frostwire.jlibtorrent.alerts.TorrentErrorAlert;
-import com.frostwire.jlibtorrent.alerts.TorrentFinishedAlert;
-import com.frostwire.jlibtorrent.swig.settings_pack;
+import org.libtorrent4j.AlertListener;
+import org.libtorrent4j.Priority;
+import org.libtorrent4j.SessionManager;
+import org.libtorrent4j.SessionParams;
+import org.libtorrent4j.SettingsPack;
+import org.libtorrent4j.TorrentFlags;
+import org.libtorrent4j.TorrentHandle;
+import org.libtorrent4j.TorrentInfo;
+import org.libtorrent4j.TorrentStatus;
+import org.libtorrent4j.alerts.AddTorrentAlert;
+import org.libtorrent4j.alerts.Alert;
+import org.libtorrent4j.alerts.AlertType;
+import org.libtorrent4j.alerts.MetadataReceivedAlert;
+import org.libtorrent4j.alerts.PieceFinishedAlert;
+import org.libtorrent4j.alerts.TorrentErrorAlert;
+import org.libtorrent4j.alerts.TorrentFinishedAlert;
+import org.libtorrent4j.swig.settings_pack;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,6 +40,10 @@ public class TorrentEngine {
 
     private static final Set<String> EBOOK_EXTENSIONS = new HashSet<>(Arrays.asList(
             "epub", "pdf", "mobi", "azw3", "fb2", "cbz", "cbr", "djvu", "txt", "docx", "odt", "rtf"
+    ));
+
+    private static final Set<String> ARCHIVE_EXTENSIONS = new HashSet<>(Arrays.asList(
+            "zip", "rar"
     ));
 
     private static TorrentEngine instance;
@@ -142,8 +148,8 @@ public class TorrentEngine {
                     case METADATA_RECEIVED: {
                         MetadataReceivedAlert a = (MetadataReceivedAlert) alert;
                         currentHandle = a.handle();
-                        currentHandle.setFlags(currentHandle.flags().and_(TorrentHandle.Flags.SEQUENTIAL_DOWNLOAD));
-                        prioritizeEbookFiles(currentHandle);
+                        currentHandle.setFlags(TorrentFlags.SEQUENTIAL_DOWNLOAD);
+                        prioritizeDownloadableFiles(currentHandle);
                         metadataLatch.countDown();
                         break;
                     }
@@ -201,15 +207,15 @@ public class TorrentEngine {
 
             if (cancelled.get() || hasError.get()) return;
 
-            // Find and read the ebook file
-            File ebookFile = findEbookFile(downloadDir);
-            if (ebookFile == null) {
-                callback.onError("No ebook file found in download");
+            // Find the best downloadable file (ebook first, then archive)
+            File bestFile = findDownloadableFile(downloadDir);
+            if (bestFile == null) {
+                callback.onError("No ebook or archive file found in download");
                 return;
             }
 
-            byte[] fileData = readFile(ebookFile);
-            callback.onComplete(fileData, ebookFile.getName());
+            byte[] fileData = readFile(bestFile);
+            callback.onComplete(fileData, bestFile.getName());
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -220,23 +226,52 @@ public class TorrentEngine {
         }
     }
 
-    private void prioritizeEbookFiles(TorrentHandle handle) {
+    private void prioritizeDownloadableFiles(TorrentHandle handle) {
         TorrentInfo info = handle.torrentFile();
         if (info == null) return;
 
         int numFiles = info.numFiles();
+        boolean hasDownloadable = false;
+
+        // First pass: check if there are any ebook or archive files
         for (int i = 0; i < numFiles; i++) {
             String fileName = info.files().fileName(i);
             String ext = getFileExtension(fileName).toLowerCase();
-            if (EBOOK_EXTENSIONS.contains(ext)) {
-                handle.filePriority(i, com.frostwire.jlibtorrent.Priority.NORMAL);
+            if (EBOOK_EXTENSIONS.contains(ext) || ARCHIVE_EXTENSIONS.contains(ext)) {
+                hasDownloadable = true;
+                break;
+            }
+        }
+
+        // If no ebook/archive files, download everything (let the TS side handle it)
+        if (!hasDownloadable) return;
+
+        // Second pass: prioritize ebook/archive files, ignore the rest
+        for (int i = 0; i < numFiles; i++) {
+            String fileName = info.files().fileName(i);
+            String ext = getFileExtension(fileName).toLowerCase();
+            if (EBOOK_EXTENSIONS.contains(ext) || ARCHIVE_EXTENSIONS.contains(ext)) {
+                handle.filePriority(i, Priority.NORMAL);
             } else {
-                handle.filePriority(i, com.frostwire.jlibtorrent.Priority.IGNORE);
+                handle.filePriority(i, Priority.IGNORE);
             }
         }
     }
 
-    private File findEbookFile(File dir) {
+    private File findDownloadableFile(File dir) {
+        // First try to find an ebook file
+        File ebookFile = findFileByExtensions(dir, EBOOK_EXTENSIONS);
+        if (ebookFile != null) return ebookFile;
+
+        // Then try archive files
+        File archiveFile = findFileByExtensions(dir, ARCHIVE_EXTENSIONS);
+        if (archiveFile != null) return archiveFile;
+
+        // Fallback: return the largest file
+        return findLargestFile(dir);
+    }
+
+    private File findFileByExtensions(File dir, Set<String> extensions) {
         File best = null;
         long bestSize = 0;
         File[] files = dir.listFiles();
@@ -244,17 +279,38 @@ public class TorrentEngine {
 
         for (File f : files) {
             if (f.isDirectory()) {
-                File nested = findEbookFile(f);
+                File nested = findFileByExtensions(f, extensions);
                 if (nested != null && nested.length() > bestSize) {
                     best = nested;
                     bestSize = nested.length();
                 }
             } else {
                 String ext = getFileExtension(f.getName()).toLowerCase();
-                if (EBOOK_EXTENSIONS.contains(ext) && f.length() > bestSize) {
+                if (extensions.contains(ext) && f.length() > bestSize) {
                     best = f;
                     bestSize = f.length();
                 }
+            }
+        }
+        return best;
+    }
+
+    private File findLargestFile(File dir) {
+        File best = null;
+        long bestSize = 0;
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+
+        for (File f : files) {
+            if (f.isDirectory()) {
+                File nested = findLargestFile(f);
+                if (nested != null && nested.length() > bestSize) {
+                    best = nested;
+                    bestSize = nested.length();
+                }
+            } else if (f.length() > bestSize) {
+                best = f;
+                bestSize = f.length();
             }
         }
         return best;

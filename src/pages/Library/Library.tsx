@@ -39,6 +39,7 @@ import {
   IonToast,
   IonInput,
   IonCheckbox,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   gridOutline,
@@ -163,6 +164,11 @@ const Library: React.FC = () => {
     loadBooks();
     loadFilterData();
   }, []);
+
+  // Reload books when the Library tab becomes visible (Ionic keeps tabs mounted)
+  useIonViewWillEnter(() => {
+    loadBooks();
+  });
 
   const loadFilterData = async () => {
     try {
@@ -2013,9 +2019,9 @@ const Library: React.FC = () => {
       <IonToast
         isOpen={!!toastMessage}
         message={toastMessage}
-        duration={4000}
+        duration={2000}
         color={toastColor}
-        position="bottom"
+        position="top"
         onDidDismiss={() => setToastMessage('')}
       />
 

@@ -53,11 +53,11 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
 
-    // jlibtorrent for native BitTorrent downloads
-    implementation 'com.github.nicktorwald:frostwire-jlibtorrent:2.1.0-31'
-    implementation 'com.github.nicktorwald:frostwire-jlibtorrent-android-arm64:2.1.0-31'
-    implementation 'com.github.nicktorwald:frostwire-jlibtorrent-android-arm:2.1.0-31'
-    implementation 'com.github.nicktorwald:frostwire-jlibtorrent-android-x86_64:2.1.0-31'
+    // libtorrent4j for native BitTorrent downloads
+    implementation 'org.libtorrent4j:libtorrent4j:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-arm64:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-arm:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-x86_64:2.1.0-39'
 
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

@@ -3,6 +3,8 @@ import type { PluginListenerHandle } from '@capacitor/core';
 
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
+  'wss://tracker.webtorrent.dev',
+  'wss://tracker.files.fm:7073/announce',
   'wss://tracker.btorrent.xyz',
 ];
 
@@ -14,6 +16,42 @@ export interface TorrentStats {
   downloaded: number;
   totalSize: number;
   timeRemaining: number;
+}
+
+const EBOOK_FILE_EXTS = new Set([
+  'epub', 'pdf', 'mobi', 'azw3', 'fb2', 'cbz', 'cbr',
+  'txt', 'html', 'htm', 'md', 'docx', 'odt',
+]);
+const ARCHIVE_FILE_EXTS = new Set(['zip', 'rar']);
+
+function getExt(name: string): string {
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 ? name.substring(dot + 1).toLowerCase() : '';
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function findBestFile(files: any[]): any {
+  if (!files || files.length === 0) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let bestEbook: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let bestArchive: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let largest: any = files[0];
+
+  for (const f of files) {
+    const ext = getExt(f.name);
+    if (EBOOK_FILE_EXTS.has(ext)) {
+      if (!bestEbook || f.length > bestEbook.length) bestEbook = f;
+    }
+    if (ARCHIVE_FILE_EXTS.has(ext)) {
+      if (!bestArchive || f.length > bestArchive.length) bestArchive = f;
+    }
+    if (f.length > largest.length) largest = f;
+  }
+
+  return bestEbook || bestArchive || largest;
 }
 
 // Lazy-load WebTorrent to avoid crashes on Android WebView
@@ -39,7 +77,7 @@ class TorrentService {
 
   /**
    * Returns true if torrent downloads are supported on the current platform.
-   * Now supported on both web (WebTorrent) and native (jlibtorrent).
+   * Now supported on both web (WebTorrent) and native (libtorrent4j).
    */
   isSupported(): boolean {
     return true;
@@ -168,8 +206,54 @@ class TorrentService {
     const client = await this.getClient();
     return new Promise((resolve, reject) => {
       let settled = false;
+      let stallTimer: ReturnType<typeof setInterval> | null = null;
+
+      const finish = (result?: { data: ArrayBuffer; fileName: string }, error?: Error) => {
+        if (settled) return;
+        settled = true;
+        if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
+        clearTimeout(metadataTimer);
+        clearTimeout(overallTimer);
+        if (error) reject(error);
+        else resolve(result!);
+      };
+
+      // Metadata resolution timeout — if no peers respond in 30s, give up early
+      const metadataTimer = setTimeout(() => {
+        finish(undefined, new Error(
+          'Could not find peers for this torrent. Browser downloads can only connect to other browser-based peers, which may be unavailable.'
+        ));
+      }, 30000);
+
+      // Overall download timeout (3 minutes)
+      const overallTimer = setTimeout(() => {
+        finish(undefined, new Error('Download timed out after 3 minutes.'));
+      }, 180000);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       client.add(magnetURI, { announce: WSS_TRACKERS }, (torrent: any) => {
+        clearTimeout(metadataTimer);
+
+        // Find best file: ebook > archive > largest
+        const file = findBestFile(torrent.files);
+        if (!file) {
+          finish(undefined, new Error('No files in torrent'));
+          return;
+        }
+
+        // Stall detection: if 0 peers and no progress for 45s after metadata, give up
+        let lastActivity = Date.now();
+        stallTimer = setInterval(() => {
+          if (torrent.numPeers > 0 || torrent.progress > 0.01) {
+            lastActivity = Date.now();
+          }
+          if (Date.now() - lastActivity > 45000) {
+            finish(undefined, new Error(
+              'No peers available to download this torrent. Try a torrent with more seeders.'
+            ));
+          }
+        }, 5000);
+
         const emitStats = () => {
           if (onProgress) {
             onProgress({
@@ -206,28 +290,16 @@ class TorrentService {
             });
           }
 
-          const file = torrent.files[0];
-          if (!file) {
-            if (!settled) { settled = true; reject(new Error('No files in torrent')); }
-            return;
-          }
           (file as unknown as { arrayBuffer: () => Promise<ArrayBuffer> })
             .arrayBuffer()
             .then((data: ArrayBuffer) => {
-              // Don't destroy the torrent — let it auto-seed for the community
-              if (!settled) { settled = true; resolve({ data, fileName: file.name }); }
+              finish({ data, fileName: file.name });
             })
             .catch((err: Error) => {
-              if (!settled) { settled = true; reject(err); }
+              finish(undefined, err);
             });
         });
       });
-      setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          reject(new Error('Download timed out'));
-        }
-      }, 300000);
     });
   }
 

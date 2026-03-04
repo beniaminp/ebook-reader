@@ -51,8 +51,124 @@ function formatDate(timestamp: number): string {
 
 const EBOOK_EXTENSIONS = [
   '.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz', '.cbr',
-  '.txt', '.html', '.htm', '.md', '.docx', '.odt', '.chm',
+  '.txt', '.html', '.htm', '.md', '.docx', '.odt',
 ];
+
+const EBOOK_EXT_SET = new Set([
+  'epub', 'pdf', 'mobi', 'azw3', 'fb2', 'cbz', 'cbr',
+  'txt', 'html', 'htm', 'md', 'docx', 'odt',
+]);
+
+function cleanTorrentName(name: string): string {
+  let clean = name;
+  // Remove file extensions
+  clean = clean.replace(/\.(epub|pdf|mobi|azw3|fb2|cbz|cbr|txt|html|htm|md|docx|odt|zip|rar)$/i, '');
+  // Remove common torrent tags like [group], (year), etc.
+  clean = clean.replace(/[\[\(].*?[\]\)]/g, '').trim();
+  // Replace underscores and dots with spaces
+  clean = clean.replace(/[_.]/g, ' ');
+  // Normalize whitespace
+  clean = clean.replace(/\s+/g, ' ').trim();
+  // Remove trailing hyphens
+  clean = clean.replace(/[\-]+$/, '').trim();
+  return clean || name;
+}
+
+function getFileExtension(name: string): string {
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 ? name.substring(dot + 1).toLowerCase() : '';
+}
+
+/**
+ * Process a downloaded file: if it's an ebook, return it directly.
+ * If it's a zip/rar archive, extract it and find ebook files inside.
+ * Falls back to format detection from torrent name.
+ */
+async function processDownloadedFile(
+  data: ArrayBuffer,
+  fileName: string,
+  torrentName: string,
+): Promise<{ data: ArrayBuffer; fileName: string; format: string }[]> {
+  const ext = getFileExtension(fileName);
+
+  // Direct ebook file
+  if (EBOOK_EXT_SET.has(ext)) {
+    return [{ data, fileName, format: ext }];
+  }
+
+  // ZIP archive — extract and find ebooks
+  if (ext === 'zip') {
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = await JSZip.loadAsync(data);
+      const results: { data: ArrayBuffer; fileName: string; format: string }[] = [];
+
+      for (const [path, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        const fileExt = getFileExtension(path);
+        if (EBOOK_EXT_SET.has(fileExt)) {
+          const fileData = await entry.async('arraybuffer');
+          const baseName = path.split('/').pop() || path;
+          results.push({ data: fileData, fileName: baseName, format: fileExt });
+        }
+      }
+
+      if (results.length > 0) {
+        // Return the largest ebook file
+        results.sort((a, b) => b.data.byteLength - a.data.byteLength);
+        return [results[0]];
+      }
+    } catch (err) {
+      console.error('ZIP extraction failed:', err);
+    }
+  }
+
+  // RAR archive — extract and find ebooks
+  if (ext === 'rar') {
+    try {
+      const { createExtractorFromData } = await import('unrar.js');
+      const uint8Array = new Uint8Array(data);
+      const extractor = createExtractorFromData(uint8Array);
+      const extracted = extractor.extract();
+
+      if (extracted.files) {
+        const results: { data: ArrayBuffer; fileName: string; format: string }[] = [];
+        for (const file of extracted.files) {
+          if (!file.fileHeader?.name) continue;
+          const fileExt = getFileExtension(file.fileHeader.name);
+          if (EBOOK_EXT_SET.has(fileExt) && file.extraction) {
+            const buffer = file.extraction.buffer.slice(
+              file.extraction.byteOffset,
+              file.extraction.byteOffset + file.extraction.byteLength
+            ) as ArrayBuffer;
+            const baseName = file.fileHeader.name.split('/').pop() || file.fileHeader.name;
+            results.push({ data: buffer, fileName: baseName, format: fileExt });
+          }
+        }
+        if (results.length > 0) {
+          results.sort((a, b) => b.data.byteLength - a.data.byteLength);
+          return [results[0]];
+        }
+      }
+    } catch (err) {
+      console.error('RAR extraction failed:', err);
+    }
+  }
+
+  // Fallback: try to detect format from the torrent name itself
+  const detectedFormat = detectFormat(torrentName);
+  if (detectedFormat) {
+    return [{ data, fileName, format: detectedFormat }];
+  }
+
+  // Last resort: try to detect from the file name even without matching extension
+  const detectedFromFile = detectFormat(fileName);
+  if (detectedFromFile) {
+    return [{ data, fileName, format: detectedFromFile }];
+  }
+
+  return [];
+}
 
 const SearchBooks: React.FC = () => {
   const addBook = useAppStore((s) => s.addBook);
@@ -100,27 +216,31 @@ const SearchBooks: React.FC = () => {
         setDownloadStats(stats);
       });
 
-      // Find the ebook file from the torrent
-      const ext = EBOOK_EXTENSIONS.find((e) => fileName.toLowerCase().endsWith(e));
-      const format = ext ? ext.slice(1) : detectFormat(result.name);
+      // Process the downloaded file (handles archives, finds ebooks)
+      const books = await processDownloadedFile(data, fileName, result.name);
 
-      if (!format) {
+      if (books.length === 0) {
         setToastColor('warning');
         setToastMessage('No ebook file found in torrent');
         return;
       }
 
+      const book = books[0]; // Take the best (largest) ebook
+
       // Store in IndexedDB and add to library
       const bookId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-      await webFileStorage.storeFile(bookId, data);
-      const filePath = `indexeddb://${bookId}/${fileName}`;
+      await webFileStorage.storeFile(bookId, book.data);
+      const filePath = `indexeddb://${bookId}/${book.fileName}`;
+
+      // Clean up torrent name for a better title
+      const title = cleanTorrentName(result.name);
 
       const bookData: Omit<Book, 'dateAdded'> = {
         id: bookId,
-        title: result.name,
+        title,
         author: 'Unknown',
         filePath,
-        format: format as Book['format'],
+        format: book.format as Book['format'],
         totalPages: 0,
         currentPage: 0,
         progress: 0,
@@ -131,7 +251,7 @@ const SearchBooks: React.FC = () => {
 
       await addBook(bookData);
       setToastColor('success');
-      setToastMessage(`Downloaded "${result.name}" successfully!`);
+      setToastMessage(`"${title}" added to library!`);
     } catch (err) {
       console.error('Download failed:', err);
       setToastColor('danger');
@@ -263,9 +383,10 @@ const SearchBooks: React.FC = () => {
         <IonToast
           isOpen={!!toastMessage}
           message={toastMessage}
-          duration={3000}
+          duration={2000}
           color={toastColor}
           onDidDismiss={() => setToastMessage('')}
+          position="top"
         />
       </IonContent>
     </IonPage>

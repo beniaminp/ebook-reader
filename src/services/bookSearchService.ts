@@ -1,6 +1,18 @@
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
+  'wss://tracker.webtorrent.dev',
+  'wss://tracker.files.fm:7073/announce',
   'wss://tracker.btorrent.xyz',
+];
+
+// Standard UDP/HTTP trackers for native BitTorrent clients (Android)
+const STANDARD_TRACKERS = [
+  'udp://tracker.opentrackr.org:1337/announce',
+  'udp://open.tracker.cl:1337/announce',
+  'udp://tracker.openbittorrent.com:6969/announce',
+  'udp://open.stealth.si:80/announce',
+  'udp://exodus.desync.com:6969/announce',
+  'udp://tracker.torrent.eu.org:451/announce',
 ];
 
 export interface SearchResult {
@@ -30,7 +42,8 @@ export function detectFormat(name: string): string | null {
 
 export function buildMagnetLink(infoHash: string, name: string): string {
   const dn = encodeURIComponent(name);
-  const trackers = WSS_TRACKERS.map((t) => `&tr=${encodeURIComponent(t)}`).join('');
+  const allTrackers = [...WSS_TRACKERS, ...STANDARD_TRACKERS];
+  const trackers = allTrackers.map((t) => `&tr=${encodeURIComponent(t)}`).join('');
   return `magnet:?xt=urn:btih:${infoHash}&dn=${dn}${trackers}`;
 }
 
