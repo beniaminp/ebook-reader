@@ -74,6 +74,52 @@ function buildTextNodeMap(doc: Document): TextNodeEntry[] {
   return entries;
 }
 
+/**
+ * Build a text node map restricted to only nodes within the given Range.
+ * For paginated EPUB, this gives us only the nodes on the visible page.
+ */
+function buildTextNodeMapFromRange(doc: Document, visibleRange: Range): TextNodeEntry[] {
+  const entries: TextNodeEntry[] = [];
+  const walker = doc.createTreeWalker(
+    visibleRange.commonAncestorContainer,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (parent?.classList.contains(HIGHLIGHT_CLASS)) return NodeFilter.FILTER_REJECT;
+        if (parent?.tagName === 'SCRIPT' || parent?.tagName === 'STYLE') {
+          return NodeFilter.FILTER_REJECT;
+        }
+        // Only include nodes that intersect the visible range
+        try {
+          const nodeRange = doc.createRange();
+          nodeRange.selectNodeContents(node);
+          if (
+            visibleRange.compareBoundaryPoints(Range.END_TO_START, nodeRange) >= 0 ||
+            visibleRange.compareBoundaryPoints(Range.START_TO_END, nodeRange) <= 0
+          ) {
+            return NodeFilter.FILTER_REJECT;
+          }
+        } catch {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    }
+  );
+
+  let offset = 0;
+  let node: Text | null;
+  while ((node = walker.nextNode() as Text | null)) {
+    const text = node.textContent || '';
+    if (text.length > 0) {
+      entries.push({ node, start: offset, end: offset + text.length });
+      offset += text.length;
+    }
+  }
+  return entries;
+}
+
 /** Inject the highlight CSS into a document if not already present. */
 function ensureStyleInjected(doc: Document): void {
   if (doc.getElementById(STYLE_ID)) return;
@@ -120,6 +166,11 @@ export interface UseTTSHighlighterOptions {
   /** Function that returns the content documents (iframe docs for EPUB) */
   getContentDocuments: () => Document[];
   /**
+   * Function that returns a Range for the currently visible text.
+   * Used to narrow sentence search to the visible page in paginated layouts.
+   */
+  getVisibleRange?: () => Range | null;
+  /**
    * Optional callback to scroll a highlighted element into view.
    * For EPUB (paginated iframes) the default scrollIntoView won't work,
    * so the caller can provide a custom implementation that, e.g., calls
@@ -142,6 +193,9 @@ export function useTTSHighlighter(
 ): UseTTSHighlighterReturn {
   const getContentDocumentsRef = useRef(options.getContentDocuments);
   getContentDocumentsRef.current = options.getContentDocuments;
+
+  const getVisibleRangeRef = useRef(options.getVisibleRange);
+  getVisibleRangeRef.current = options.getVisibleRange;
 
   const onScrollToHighlightRef = useRef(options.onScrollToHighlight);
   onScrollToHighlightRef.current = options.onScrollToHighlight;
@@ -208,7 +262,28 @@ export function useTTSHighlighter(
       currentSentenceRef.current = sentenceText;
 
       const docs = getContentDocumentsRef.current();
-      // Find the document that contains this sentence text
+
+      // For paginated EPUB, try using the visible range first to narrow search
+      // to only the text nodes on the current page.
+      const visibleRange = getVisibleRangeRef.current?.();
+      if (visibleRange && docs.length > 0) {
+        const doc = docs[0];
+        try {
+          ensureStyleInjected(doc);
+          const map = buildTextNodeMapFromRange(doc, visibleRange);
+          const offset = findSentenceInDocument(map, sentenceText);
+          if (offset >= 0) {
+            textNodeMapRef.current = map;
+            sentenceDocOffsetRef.current = offset;
+            activeDocRef.current = doc;
+            return;
+          }
+        } catch {
+          // fall through to full document search
+        }
+      }
+
+      // Fallback: search the full document(s)
       for (const doc of docs) {
         try {
           ensureStyleInjected(doc);

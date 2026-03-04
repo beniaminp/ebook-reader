@@ -73,8 +73,8 @@ export interface ReaderProgress {
  * The UnifiedReaderContainer calls these methods to drive navigation, search, etc.
  */
 export interface ReaderEngineRef {
-  next(): void;
-  prev(): void;
+  next(): void | Promise<void>;
+  prev(): void | Promise<void>;
   /** Navigate to a format-specific location (CFI, page number string, scroll %). */
   goToLocation(location: string): void;
   /** Navigate to a fractional position (0-1) through the book. */
@@ -125,4 +125,10 @@ export interface ReaderEngineRef {
   getVisibleText?(): string;
   /** Get the iframe document(s) for the currently visible content (EPUB). */
   getContentDocuments?(): Document[];
+  /**
+   * Get a Range representing the currently visible text in the document.
+   * For paginated EPUB, this is the text in the current CSS column.
+   * Used by TTS highlighter to narrow word search to visible content.
+   */
+  getVisibleRange?(): Range | null;
 }

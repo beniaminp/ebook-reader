@@ -529,6 +529,16 @@ export class FixedLayout extends HTMLElement {
         )
     }
 
+    /** Return visible text from all loaded frames. */
+    getVisibleText(): string {
+        const texts: string[] = []
+        for (const frame of this.#root.querySelectorAll('iframe')) {
+            const body = frame.contentDocument?.body
+            if (body) texts.push(body.innerText || body.textContent || '')
+        }
+        return texts.join('\n').trim()
+    }
+
     destroy(): void {
         this.#observer.unobserve(this)
     }

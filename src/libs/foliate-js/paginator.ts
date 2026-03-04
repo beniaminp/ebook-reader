@@ -1649,6 +1649,27 @@ export class Paginator extends HTMLElement {
         return []
     }
 
+    /** Return only the text that is visible on the current page/column. */
+    getVisibleText(): string {
+        if (!this.#view?.document) return ''
+        try {
+            const range = this.#getVisibleRange()
+            return range.toString()
+        } catch {
+            return ''
+        }
+    }
+
+    /** Return a Range representing the visible text on the current page. */
+    getVisibleRange(): Range | null {
+        if (!this.#view?.document) return null
+        try {
+            return this.#getVisibleRange()
+        } catch {
+            return null
+        }
+    }
+
     setStyles(styles: string | [string, string] | undefined): void {
         this.#styles = styles
         const $$styles = this.#styleMap.get(this.#view?.document!)

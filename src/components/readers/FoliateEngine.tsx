@@ -657,18 +657,18 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   useImperativeHandle(
     ref,
     () => ({
-      next: () => {
+      next: async () => {
         // Clear text selection inside iframe docs to prevent accidental selection during page turns
         loadedDocsRef.current.forEach((doc) => {
           try { doc.getSelection?.()?.removeAllRanges(); } catch { /* doc may be detached */ }
         });
-        viewRef.current?.next();
+        await viewRef.current?.next();
       },
-      prev: () => {
+      prev: async () => {
         loadedDocsRef.current.forEach((doc) => {
           try { doc.getSelection?.()?.removeAllRanges(); } catch { /* doc may be detached */ }
         });
-        viewRef.current?.prev();
+        await viewRef.current?.prev();
       },
       goToLocation: (location: string) => {
         viewRef.current?.goTo(location);
@@ -899,7 +899,16 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         viewRef.current?.deleteAnnotation?.({ value: cfi });
       },
       getVisibleText: (): string => {
-        // Extract text from currently visible iframe document(s)
+        // Use the paginator's getVisibleText() which returns only the text
+        // from the current page/column, not the entire chapter.
+        try {
+          const renderer = (viewRef.current as any)?.renderer;
+          if (renderer?.getVisibleText) {
+            const text = renderer.getVisibleText();
+            if (text) return text;
+          }
+        } catch { /* renderer not ready */ }
+        // Fallback: extract from loaded docs (entire section)
         const activeDocs: Document[] = [];
         try {
           const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
@@ -922,6 +931,15 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           } catch { /* detached doc */ }
         }
         return texts.join('\n').trim();
+      },
+      getVisibleRange: (): Range | null => {
+        try {
+          const renderer = (viewRef.current as any)?.renderer;
+          if (typeof renderer?.getVisibleRange === 'function') {
+            return renderer.getVisibleRange();
+          }
+        } catch { /* renderer not ready */ }
+        return null;
       },
       getContentDocuments: (): Document[] => {
         const activeDocs: Document[] = [];

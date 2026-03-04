@@ -211,6 +211,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // TTS word-level highlighter
   const ttsHighlighter = useTTSHighlighter({
     getContentDocuments: () => engineRef.current?.getContentDocuments?.() || [],
+    getVisibleRange: () => engineRef.current?.getVisibleRange?.() ?? null,
     onScrollToHighlight: useCallback((element: HTMLElement, doc: Document) => {
       try {
         const win = doc.defaultView;
@@ -278,11 +279,15 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
       ttsAutoAdvancingRef.current = true;
 
-      // Navigate to the next page
-      engine.next();
+      // Navigate to the next page and wait for it to complete
+      const advance = async () => {
+        try {
+          await engine.next();
+        } catch { /* navigation may fail at end of book */ }
 
-      // Wait a moment for the new page content to render, then get text and continue
-      setTimeout(() => {
+        // Small delay to let the DOM settle after page turn
+        await new Promise(r => setTimeout(r, 100));
+
         ttsAutoAdvancingRef.current = false;
 
         // Double-check TTS is still active (user may have stopped it)
@@ -308,7 +313,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           ttsLastTextRef.current = '';
           setTtsActive(false);
         }
-      }, 600);
+      };
+      advance();
     }, [ttsHighlighter]),
   });
 
