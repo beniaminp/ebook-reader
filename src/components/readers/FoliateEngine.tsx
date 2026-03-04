@@ -451,13 +451,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           // Clear stale docs from previous sections (their iframes have been destroyed)
           loadedDocsRef.current.clear();
           loadedDocsRef.current.add(e.detail.doc);
-          injectStyles(e.detail.doc);
-          if (bionicReadingRef.current) applyBionicToDoc(e.detail.doc);
-          applyInterlinear(e.detail.doc);
-          applyWordWiseToDoc(e.detail.doc);
 
-          // Inject tap-zone handler so user can tap to navigate without a
-          // blocking overlay — text selection stays fully functional.
+          // Inject tap-zone handler FIRST so tapping always works even if
+          // style/bionic/interlinear processing throws an error.
           const doc = e.detail.doc;
           let touchStart: { x: number; y: number; time: number } | null = null;
           let touchHandledTap = false;
@@ -515,6 +511,17 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           doc.addEventListener('contextmenu', (ev: Event) => {
             ev.preventDefault();
           });
+
+          // Apply styles and content transformations after tap handlers are
+          // registered so a failure here never breaks navigation.
+          try {
+            injectStyles(doc);
+            if (bionicReadingRef.current) applyBionicToDoc(doc);
+            applyInterlinear(doc);
+            applyWordWiseToDoc(doc);
+          } catch (err) {
+            console.warn('Failed to apply styles/transformations to loaded section:', err);
+          }
         }) as EventListener);
 
         // Annotation support: draw highlights when foliate creates overlayers
