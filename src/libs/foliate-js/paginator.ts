@@ -1509,7 +1509,9 @@ export class Paginator extends HTMLElement {
     }
 
     async goTo(target: GoToTarget | Promise<GoToTarget>): Promise<void> {
-        if (this.#locked) return
+        // Explicit navigation (chapter jump, link click) always takes priority
+        // over the page-turn lock. Force-unlock so the navigation proceeds.
+        this.#locked = false
         const resolved = await target
         if (resolved && this.#canGoToIndex(resolved.index))
             return this.#goTo(resolved)

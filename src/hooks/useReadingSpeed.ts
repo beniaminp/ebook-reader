@@ -191,8 +191,9 @@ export function useReadingSpeed(options: UseReadingSpeedOptions = {}): UseReadin
 
         // If the engine provides time estimates (foliate-js), use them
         if (progress.timeInBook != null && progress.timeInBook > 0) {
-          // foliate-js time values are in estimated seconds remaining
-          bookMinutes = Math.ceil(progress.timeInBook / 60);
+          // foliate-js time values are in estimated minutes remaining
+          // (calculated as remaining bytes / sizePerTimeUnit where sizePerTimeUnit ≈ 1600 bytes/min)
+          bookMinutes = Math.ceil(progress.timeInBook);
         } else {
           // Estimate based on total pages and WPM
           const totalWords = progress.total * getWordsPerPage();
@@ -204,8 +205,8 @@ export function useReadingSpeed(options: UseReadingSpeedOptions = {}): UseReadin
       // Calculate chapter time remaining
       let chapterMinutes: number | null = null;
       if (progress.timeInSection != null && progress.timeInSection > 0) {
-        // foliate-js provides section time estimate
-        chapterMinutes = Math.ceil(progress.timeInSection / 60);
+        // foliate-js provides section time estimate (already in minutes)
+        chapterMinutes = Math.ceil(progress.timeInSection);
       } else if (progress.section && progress.section.total > 0) {
         // Estimate: assume sections are roughly equal sized
         // Use the book fraction to estimate where we are in the current section
