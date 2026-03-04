@@ -1151,8 +1151,9 @@ export class Paginator extends HTMLElement {
 
     // Named differently from HTMLElement.scrollBy to avoid signature conflict
     doScrollBy(dx: number, dy: number): void {
+        if (!this.#scrollBounds) return
         const delta = this.#vertical ? dy : dx
-        const [offset, a, b] = this.#scrollBounds!
+        const [offset, a, b] = this.#scrollBounds
         const rtl = this.#rtl
         const min = rtl ? offset - b : offset - a
         const max = rtl ? offset + a : offset + b
@@ -1163,8 +1164,9 @@ export class Paginator extends HTMLElement {
     }
 
     snap(vx: number, vy: number): void {
+        if (!this.#scrollBounds) return
         const velocity = this.#vertical ? vy : vx
-        const [offset, a, b] = this.#scrollBounds!
+        const [offset, a, b] = this.#scrollBounds
         const { start, end, pages, size } = this
         const min = Math.abs(offset) - a
         const max = Math.abs(offset) + b
