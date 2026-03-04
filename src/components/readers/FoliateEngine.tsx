@@ -15,7 +15,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import type { View as FoliateView, FoliateLocation, FoliateTocItem } from 'foliate-js/view.js';
+import type { View as FoliateView, FoliateLocation, FoliateTocItem } from '../../libs/foliate-js/view.js';
 import type { EpubTheme } from '../../types/epub';
 import type { ReaderEngineRef, Chapter, SearchResult, ReaderProgress } from '../../types/reader';
 import { comicService } from '../../services/comicService';
@@ -436,7 +436,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           }
         }
 
-        const { View } = await import('foliate-js/view.js');
+        const { View } = await import('../../libs/foliate-js/view.js');
         if (destroyed) return;
 
         const view = new View() as FoliateView;
