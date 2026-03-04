@@ -41,10 +41,35 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+const CORS_PROXIES = [
+  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+];
+
+async function fetchWithCorsProxy(targetUrl: string): Promise<Response> {
+  // Try direct fetch first (works on native / when CORS is allowed)
+  try {
+    const response = await fetch(targetUrl);
+    if (response.ok) return response;
+  } catch {
+    // CORS blocked — fall through to proxies
+  }
+
+  // Try each CORS proxy
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const response = await fetch(proxy(targetUrl));
+      if (response.ok) return response;
+    } catch {
+      continue;
+    }
+  }
+  throw new Error('All fetch attempts failed (CORS proxies exhausted)');
+}
+
 export async function searchBooks(query: string): Promise<SearchResult[]> {
   const url = `https://apibay.org/q.php?q=${encodeURIComponent(query)}&cat=601`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+  const response = await fetchWithCorsProxy(url);
 
   const data = await response.json();
   if (!Array.isArray(data)) return [];
