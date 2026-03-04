@@ -203,6 +203,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     rules.push(
       `body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`
     );
+    // Suppress native context menu / text selection callout so the custom
+    // TextSelectionMenu bottom bar is the only UI that appears.
+    rules.push(`body { -webkit-touch-callout: none !important; -webkit-tap-highlight-color: transparent !important; }`);
     rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
     rules.push(`body, p, div { text-align: ${textAlignRef.current} !important; }`);
     const cm = customMarginsRef.current;
@@ -419,6 +422,12 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             if (sel && !sel.isCollapsed) return;
             const relX = toRelativeX(ev.clientX);
             onContentTapRef.current?.(relX);
+          });
+
+          // Suppress native context menu (long-press on Android/iOS) so the
+          // custom TextSelectionMenu bottom bar is the only UI shown.
+          doc.addEventListener('contextmenu', (ev: Event) => {
+            ev.preventDefault();
           });
         }) as EventListener);
 

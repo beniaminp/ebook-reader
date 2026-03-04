@@ -1179,7 +1179,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         )}
 
         {isFoliate ? (
-          <div className="unified-reader-wrapper">
+          <div className="unified-reader-wrapper" onContextMenu={(e) => e.preventDefault()}>
             {renderEngine}
             {themeStore.blueLightFilter && (
               <div

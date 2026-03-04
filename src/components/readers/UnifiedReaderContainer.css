@@ -37,9 +37,10 @@
   min-height: 44px;
 }
 
-/* Suppress native Android context menu so the custom TextSelectionMenu works */
+/* Suppress native Android/iOS context menu so the custom TextSelectionMenu works */
 .unified-reader-page {
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .unified-bottom-bar .page-info-wrapper {
