@@ -50,6 +50,8 @@ import { ScrollEngine } from './ScrollEngine';
 import { ReadingSettingsPanel } from '../reader-ui/ReadingSettingsPanel';
 import { TranslationPanel } from '../reader-ui/TranslationPanel';
 import { TextSelectionMenu } from '../reader-ui/TextSelectionMenu';
+import { ReadingRuler } from '../reader-ui/ReadingRuler';
+import { autoScrollManager } from '../reader-ui/AutoScrollManager';
 import { DictionaryPanel } from '../dictionary';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { EPUB_THEMES } from '../../types/epub';
@@ -672,6 +674,33 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     );
   }, [themeStore.wordWiseEnabled, themeStore.wordWiseLevel, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
 
+  // ─── AutoScroll ─────────────────────────
+
+  useEffect(() => {
+    if (themeStore.autoScroll) {
+      // Get the scrollable element from IonContent
+      const ionContent = ionContentRef?.current;
+      if (ionContent) {
+        ionContent.getScrollElement().then((scrollEl) => {
+          if (scrollEl) {
+            autoScrollManager.start(scrollEl, themeStore.autoScrollSpeed);
+          }
+        });
+      }
+    } else {
+      autoScrollManager.stop();
+    }
+    return () => {
+      autoScrollManager.stop();
+    };
+  }, [themeStore.autoScroll]);
+
+  useEffect(() => {
+    if (themeStore.autoScroll) {
+      autoScrollManager.updateSpeed(themeStore.autoScrollSpeed);
+    }
+  }, [themeStore.autoScrollSpeed, themeStore.autoScroll]);
+
   // ─── Content tap zones (for non-foliate formats: PDF, scroll) ─────────────────────────
   // (Foliate tap zones are now handled inside the iframe via FoliateEngine.onContentTap)
 
@@ -1200,6 +1229,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         ) : (
           renderEngine
         )}
+        <ReadingRuler ionContentRef={ionContentRef} />
       </IonContent>
 
       {/* ─── Bottom toolbar ─── */}

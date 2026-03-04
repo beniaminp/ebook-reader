@@ -56,6 +56,75 @@ export interface FoliateEngineProps {
   onContentTap?: (relX: number) => void;
 }
 
+// ─── Bionic Reading helpers ───────────────────────────────────
+
+const BIONIC_SKIP_TAGS = new Set([
+  'script', 'style', 'code', 'pre', 'samp', 'kbd', 'var', 'math', 'svg',
+  'canvas', 'video', 'audio', 'iframe', 'rt', 'ruby',
+]);
+
+function applyBionicToDoc(doc: Document): void {
+  const root = doc.body;
+  if (!root || root.getAttribute('data-bionic-applied') === 'true') return;
+
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      if (!node.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+      let parent = node.parentElement;
+      while (parent && parent !== root) {
+        if (BIONIC_SKIP_TAGS.has(parent.tagName.toLowerCase())) return NodeFilter.FILTER_REJECT;
+        if (parent.classList.contains('bionic-word')) return NodeFilter.FILTER_REJECT;
+        parent = parent.parentElement;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  const textNodes: Text[] = [];
+  let n: Node | null;
+  while ((n = walker.nextNode())) textNodes.push(n as Text);
+
+  for (const textNode of textNodes) {
+    const text = textNode.textContent || '';
+    if (!text.trim()) continue;
+    const frag = doc.createDocumentFragment();
+    // Split into word and non-word segments
+    const parts = text.match(/[\w\u00C0-\u024F\u1E00-\u1EFF]+|[^\w\u00C0-\u024F\u1E00-\u1EFF]+/g);
+    if (!parts) continue;
+    for (const part of parts) {
+      if (!/[\w\u00C0-\u024F]/.test(part)) {
+        frag.appendChild(doc.createTextNode(part));
+        continue;
+      }
+      if (part.length <= 1) {
+        frag.appendChild(doc.createTextNode(part));
+        continue;
+      }
+      const boldLen = part.length <= 3 ? 1 : Math.ceil(part.length * 0.5);
+      const span = doc.createElement('span');
+      span.className = 'bionic-word';
+      const b = doc.createElement('b');
+      b.textContent = part.substring(0, boldLen);
+      span.appendChild(b);
+      span.appendChild(doc.createTextNode(part.substring(boldLen)));
+      frag.appendChild(span);
+    }
+    textNode.parentNode?.replaceChild(frag, textNode);
+  }
+  root.setAttribute('data-bionic-applied', 'true');
+}
+
+function removeBionicFromDoc(doc: Document): void {
+  const root = doc.body;
+  if (!root) return;
+  root.removeAttribute('data-bionic-applied');
+  const bionicWords = root.querySelectorAll('.bionic-word');
+  for (const el of bionicWords) {
+    const text = el.textContent || '';
+    el.parentNode?.replaceChild(doc.createTextNode(text), el);
+  }
+}
+
 /** Map format string to MIME type for foliate-js. */
 function formatToMime(format: string): string {
   switch (format) {
@@ -236,8 +305,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     }
     if (bionicReadingRef.current) {
       rules.push(`
-        body { word-spacing: 0.1em !important; letter-spacing: 0.02em !important; }
-        b, strong { font-weight: 900 !important; }
+        .bionic-word b { font-weight: 700 !important; }
       `);
     }
     if (interlinearEnabledRef.current) {
@@ -382,6 +450,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           if (destroyed) return;
           loadedDocsRef.current.add(e.detail.doc);
           injectStyles(e.detail.doc);
+          if (bionicReadingRef.current) applyBionicToDoc(e.detail.doc);
           applyInterlinear(e.detail.doc);
           applyWordWiseToDoc(e.detail.doc);
 
@@ -687,6 +756,24 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       setBionicReading: (enabled: boolean) => {
         bionicReadingRef.current = enabled;
         reapplyStyles();
+
+        // Apply or remove bionic text transformation on active docs
+        const activeDocs: Document[] = [];
+        try {
+          const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
+          for (const c of contents) {
+            if (c.doc) activeDocs.push(c.doc);
+          }
+        } catch { /* renderer not ready */ }
+        if (activeDocs.length === 0) {
+          for (const doc of loadedDocsRef.current) activeDocs.push(doc);
+        }
+        for (const doc of activeDocs) {
+          try {
+            if (enabled) applyBionicToDoc(doc);
+            else removeBionicFromDoc(doc);
+          } catch { /* detached doc */ }
+        }
       },
       setInterlinearMode: (enabled: boolean, targetLanguage: string) => {
         const langChanged = interlinearLanguageRef.current !== targetLanguage;

@@ -20,6 +20,57 @@ interface TextSelectionMenuProps {
   enabledActions?: Array<'translate' | 'define' | 'highlight' | 'copy' | 'note'>;
 }
 
+/**
+ * Recursively find all iframes from a root, including inside shadow roots.
+ */
+function findAllIframes(root: Element | ShadowRoot): HTMLIFrameElement[] {
+  const iframes: HTMLIFrameElement[] = [];
+  const elements = root.querySelectorAll('iframe');
+  elements.forEach((el) => iframes.push(el as HTMLIFrameElement));
+
+  // Check shadow roots
+  root.querySelectorAll('*').forEach((el) => {
+    if (el.shadowRoot) {
+      iframes.push(...findAllIframes(el.shadowRoot));
+    }
+  });
+
+  return iframes;
+}
+
+/**
+ * Get selected text from all iframes inside foliate-view.
+ */
+function getIframeSelectionText(): string {
+  try {
+    const foliateView = document.querySelector('foliate-view');
+    if (!foliateView) return '';
+
+    // Search in shadow root first
+    const searchRoots: (Element | ShadowRoot)[] = [];
+    if (foliateView.shadowRoot) searchRoots.push(foliateView.shadowRoot);
+    searchRoots.push(foliateView);
+
+    for (const root of searchRoots) {
+      const iframes = findAllIframes(root);
+      for (const iframe of iframes) {
+        try {
+          const sel = iframe.contentWindow?.getSelection();
+          if (sel && !sel.isCollapsed) {
+            const text = sel.toString().trim();
+            if (text) return text;
+          }
+        } catch {
+          // cross-origin iframe
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+}
+
 export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   onTranslate,
   onDefine,
@@ -30,35 +81,20 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 }) => {
   const [visible, setVisible] = useState(false);
   const [selectedText, setSelectedText] = useState<string>('');
-  const iframeDocRef = useRef<Document | null>(null);
+  const attachedDocsRef = useRef<Set<Document>>(new Set());
   const observerRef = useRef<MutationObserver | null>(null);
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
-  // Get selection from foliate iframe
-  const getIframeSelection = useCallback((): string => {
-    try {
-      const foliateView = document.querySelector('foliate-view');
-      if (!foliateView) return '';
-      const iframe = foliateView.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
-      if (!iframe?.contentWindow) return '';
-      const sel = iframe.contentWindow.getSelection();
-      if (!sel || sel.isCollapsed) return '';
-      return sel.toString().trim();
-    } catch {
-      return '';
-    }
-  }, []);
-
-  // Check for text selection in both main document and iframe
+  // Check for text selection in both main document and iframes
   const checkSelection = useCallback(() => {
     // Check main document
     const mainSel = window.getSelection();
     let text = mainSel?.toString().trim() || '';
 
-    // If no main selection, check iframe
+    // If no main selection, check iframes
     if (!text) {
-      text = getIframeSelection();
+      text = getIframeSelectionText();
     }
 
     if (text && text.length > 0) {
@@ -68,29 +104,41 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       setVisible(false);
       setSelectedText('');
     }
-  }, [getIframeSelection]);
+  }, []);
 
-  // Attach listeners to iframe document (for EPUB content)
-  const attachIframeListeners = useCallback(() => {
-    // Clean up old listeners
-    if (iframeDocRef.current) {
-      iframeDocRef.current.removeEventListener('selectionchange', checkSelection);
-      iframeDocRef.current.removeEventListener('mouseup', checkSelection);
-      iframeDocRef.current.removeEventListener('touchend', checkSelection);
-    }
+  // Attach selection listeners to an iframe document
+  const attachToDoc = useCallback(
+    (doc: Document) => {
+      if (attachedDocsRef.current.has(doc)) return;
+      attachedDocsRef.current.add(doc);
+      doc.addEventListener('selectionchange', checkSelection);
+      doc.addEventListener('mouseup', checkSelection);
+      doc.addEventListener('touchend', checkSelection);
+    },
+    [checkSelection]
+  );
 
+  // Scan for all iframes and attach listeners
+  const scanAndAttach = useCallback(() => {
     const foliateView = document.querySelector('foliate-view');
-    if (!foliateView?.shadowRoot) return;
+    if (!foliateView) return;
 
-    const iframe = foliateView.shadowRoot.querySelector('iframe') as HTMLIFrameElement | null;
-    const doc = iframe?.contentDocument;
-    if (!doc) return;
+    const searchRoots: (Element | ShadowRoot)[] = [];
+    if (foliateView.shadowRoot) searchRoots.push(foliateView.shadowRoot);
+    searchRoots.push(foliateView);
 
-    iframeDocRef.current = doc;
-    doc.addEventListener('selectionchange', checkSelection);
-    doc.addEventListener('mouseup', checkSelection);
-    doc.addEventListener('touchend', checkSelection);
-  }, [checkSelection]);
+    for (const root of searchRoots) {
+      const iframes = findAllIframes(root);
+      for (const iframe of iframes) {
+        try {
+          const doc = iframe.contentDocument;
+          if (doc) attachToDoc(doc);
+        } catch {
+          // cross-origin
+        }
+      }
+    }
+  }, [attachToDoc]);
 
   useEffect(() => {
     // Listen on main document
@@ -98,22 +146,22 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     document.addEventListener('mouseup', checkSelection);
     document.addEventListener('touchend', checkSelection);
 
-    // Try attaching to iframe immediately and after delays
-    // (iframe may not be ready yet or may change on page turns)
-    attachIframeListeners();
-    const t1 = setTimeout(attachIframeListeners, 1000);
-    const t2 = setTimeout(attachIframeListeners, 3000);
+    // Scan for iframes immediately and after delays
+    scanAndAttach();
+    const t1 = setTimeout(scanAndAttach, 1000);
+    const t2 = setTimeout(scanAndAttach, 3000);
 
-    // Watch for iframe changes via MutationObserver on the foliate-view shadow root
+    // Watch for DOM changes (page turns create new iframes)
     const setupObserver = () => {
       const foliateView = document.querySelector('foliate-view');
-      if (!foliateView?.shadowRoot) return;
+      const observeTarget = foliateView?.shadowRoot || foliateView;
+      if (!observeTarget) return;
 
+      observerRef.current?.disconnect();
       observerRef.current = new MutationObserver(() => {
-        // Re-attach when iframe changes (page turn)
-        setTimeout(attachIframeListeners, 100);
+        setTimeout(scanAndAttach, 100);
       });
-      observerRef.current.observe(foliateView.shadowRoot, {
+      observerRef.current.observe(observeTarget, {
         childList: true,
         subtree: true,
       });
@@ -126,25 +174,38 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       document.removeEventListener('mouseup', checkSelection);
       document.removeEventListener('touchend', checkSelection);
 
-      if (iframeDocRef.current) {
-        iframeDocRef.current.removeEventListener('selectionchange', checkSelection);
-        iframeDocRef.current.removeEventListener('mouseup', checkSelection);
-        iframeDocRef.current.removeEventListener('touchend', checkSelection);
+      for (const doc of attachedDocsRef.current) {
+        try {
+          doc.removeEventListener('selectionchange', checkSelection);
+          doc.removeEventListener('mouseup', checkSelection);
+          doc.removeEventListener('touchend', checkSelection);
+        } catch {
+          // detached doc
+        }
       }
+      attachedDocsRef.current.clear();
 
       observerRef.current?.disconnect();
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [checkSelection, attachIframeListeners]);
+  }, [checkSelection, scanAndAttach]);
 
   const clearSelection = useCallback(() => {
     window.getSelection()?.removeAllRanges();
     try {
       const foliateView = document.querySelector('foliate-view');
-      const iframe = foliateView?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement | null;
-      iframe?.contentWindow?.getSelection()?.removeAllRanges();
+      if (!foliateView) return;
+      const searchRoots: (Element | ShadowRoot)[] = [];
+      if (foliateView.shadowRoot) searchRoots.push(foliateView.shadowRoot);
+      searchRoots.push(foliateView);
+      for (const root of searchRoots) {
+        const iframes = findAllIframes(root);
+        for (const iframe of iframes) {
+          try { iframe.contentWindow?.getSelection()?.removeAllRanges(); } catch { /* */ }
+        }
+      }
     } catch {
       // ignore
     }
