@@ -18,6 +18,14 @@ interface TextSelectionMenuProps {
   onCopy?: (text: string) => void;
   onAddNote?: (text: string, rect?: DOMRect) => void;
   enabledActions?: Array<'translate' | 'define' | 'highlight' | 'copy' | 'note'>;
+  /**
+   * Externally captured selection text. When set, this overrides the internal
+   * iframe-polling logic (used on Android to hide Chrome's native selection UI).
+   * Pass empty string or undefined to hide the menu.
+   */
+  capturedText?: string;
+  /** Called when the menu is dismissed (e.g. user performs an action). */
+  onDismiss?: () => void;
 }
 
 /**
@@ -78,6 +86,8 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   onCopy,
   onAddNote,
   enabledActions = ['translate', 'highlight', 'copy'],
+  capturedText,
+  onDismiss,
 }) => {
   const [visible, setVisible] = useState(false);
   const [selectedText, setSelectedText] = useState<string>('');
@@ -86,8 +96,24 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
+  // When capturedText is provided externally, use it directly
+  useEffect(() => {
+    if (capturedText !== undefined) {
+      if (capturedText) {
+        setSelectedText(capturedText);
+        setVisible(true);
+      } else {
+        setVisible(false);
+        setSelectedText('');
+      }
+    }
+  }, [capturedText]);
+
   // Check for text selection in both main document and iframes
   const checkSelection = useCallback(() => {
+    // If external capturedText is controlling us, skip polling
+    if (capturedText !== undefined) return;
+
     // Check main document
     const mainSel = window.getSelection();
     let text = mainSel?.toString().trim() || '';
@@ -104,7 +130,7 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       setVisible(false);
       setSelectedText('');
     }
-  }, []);
+  }, [capturedText]);
 
   // Attach selection listeners to an iframe document
   const attachToDoc = useCallback(
@@ -216,13 +242,15 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     onTranslate?.(selectedText);
     setVisible(false);
     clearSelection();
-  }, [selectedText, onTranslate, openTranslationPanel, clearSelection]);
+    onDismiss?.();
+  }, [selectedText, onTranslate, openTranslationPanel, clearSelection, onDismiss]);
 
   const handleDefine = useCallback(() => {
     onDefine?.(selectedText);
     setVisible(false);
     clearSelection();
-  }, [selectedText, onDefine, clearSelection]);
+    onDismiss?.();
+  }, [selectedText, onDefine, clearSelection, onDismiss]);
 
   const handleHighlight = useCallback(() => {
     onHighlight?.(selectedText);
@@ -239,13 +267,15 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     }
     setVisible(false);
     clearSelection();
-  }, [selectedText, onCopy, clearSelection]);
+    onDismiss?.();
+  }, [selectedText, onCopy, clearSelection, onDismiss]);
 
   const handleAddNote = useCallback(() => {
     onAddNote?.(selectedText);
     setVisible(false);
     clearSelection();
-  }, [selectedText, onAddNote, clearSelection]);
+    onDismiss?.();
+  }, [selectedText, onAddNote, clearSelection, onDismiss]);
 
   if (!visible || !selectedText) {
     return null;

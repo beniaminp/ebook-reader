@@ -45,6 +45,7 @@ import {
 
 import { Capacitor } from '@capacitor/core';
 import { FoliateEngine } from './FoliateEngine';
+import type { CapturedSelection } from './FoliateEngine';
 import { PdfEngineWithHighlights } from './PdfEngineWithHighlights';
 import { ScrollEngine } from './ScrollEngine';
 import { ReadingSettingsPanel } from '../reader-ui/ReadingSettingsPanel';
@@ -179,6 +180,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // Toast
   const [toastMessage, setToastMessage] = useState('');
+
+  // Captured selection (from FoliateEngine, native selection cleared immediately)
+  const [capturedSelectionText, setCapturedSelectionText] = useState('');
 
   // Theme
   const themeStore = useThemeStore();
@@ -1025,6 +1029,19 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   };
   const stableOnContentTap = useCallback((relX: number) => handleFoliateContentTapRef.current(relX), []);
 
+  const handleSelectionCapturedRef = useRef((_sel: CapturedSelection | null) => {});
+  handleSelectionCapturedRef.current = (sel: CapturedSelection | null) => {
+    setCapturedSelectionText(sel?.text || '');
+  };
+  const stableOnSelectionCaptured = useCallback(
+    (sel: CapturedSelection | null) => handleSelectionCapturedRef.current(sel),
+    []
+  );
+
+  const handleSelectionDismiss = useCallback(() => {
+    setCapturedSelectionText('');
+  }, []);
+
   const renderEngine = useMemo(() => {
     if (isFoliate && fileData) {
       return (
@@ -1040,6 +1057,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           onError={stableOnError}
           onHighlightTap={stableOnHighlightTap}
           onContentTap={stableOnContentTap}
+          onSelectionCaptured={stableOnSelectionCaptured}
         />
       );
     }
@@ -1423,6 +1441,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       {/* ─── Text Selection Menu ─── */}
       <TextSelectionMenu
         enabledActions={['translate', 'highlight', 'copy', 'define']}
+        capturedText={isFoliate ? capturedSelectionText : undefined}
+        onDismiss={handleSelectionDismiss}
         onHighlight={(text) => {
           // For PDF, the PdfEngineWithHighlights has its own menu
           if (isPdf) return;
