@@ -1,272 +1,4 @@
-// ============================================================================
-// Type definitions
-// ============================================================================
-
-type FieldType = 'string' | 'uint'
-type HeaderFieldDef = readonly [offset: number, length: number, type: FieldType]
-type StringFieldDef = readonly [number, number, 'string']
-type UintFieldDef = readonly [number, number, 'uint']
-
-interface HeaderDef {
-    readonly [key: string]: HeaderFieldDef
-}
-
-/** A parsed struct where each field is either a string or number depending on type */
-type ParsedStruct<T extends HeaderDef> = {
-    [K in keyof T]: T[K] extends StringFieldDef ? string
-        : T[K] extends UintFieldDef ? number
-        : string | number
-}
-
-interface PdbHeaderDef extends HeaderDef {
-    readonly name: StringFieldDef
-    readonly type: StringFieldDef
-    readonly creator: StringFieldDef
-    readonly numRecords: UintFieldDef
-}
-
-interface PalmdocHeaderDef extends HeaderDef {
-    readonly compression: UintFieldDef
-    readonly numTextRecords: UintFieldDef
-    readonly recordSize: UintFieldDef
-    readonly encryption: UintFieldDef
-}
-
-interface MobiHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly length: UintFieldDef
-    readonly type: UintFieldDef
-    readonly encoding: UintFieldDef
-    readonly uid: UintFieldDef
-    readonly version: UintFieldDef
-    readonly titleOffset: UintFieldDef
-    readonly titleLength: UintFieldDef
-    readonly localeRegion: UintFieldDef
-    readonly localeLanguage: UintFieldDef
-    readonly resourceStart: UintFieldDef
-    readonly huffcdic: UintFieldDef
-    readonly numHuffcdic: UintFieldDef
-    readonly exthFlag: UintFieldDef
-    readonly trailingFlags: UintFieldDef
-    readonly indx: UintFieldDef
-}
-
-interface Kf8HeaderDef extends HeaderDef {
-    readonly resourceStart: UintFieldDef
-    readonly fdst: UintFieldDef
-    readonly numFdst: UintFieldDef
-    readonly frag: UintFieldDef
-    readonly skel: UintFieldDef
-    readonly guide: UintFieldDef
-}
-
-interface ExthHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly length: UintFieldDef
-    readonly count: UintFieldDef
-}
-
-interface IndxHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly length: UintFieldDef
-    readonly type: UintFieldDef
-    readonly idxt: UintFieldDef
-    readonly numRecords: UintFieldDef
-    readonly encoding: UintFieldDef
-    readonly language: UintFieldDef
-    readonly total: UintFieldDef
-    readonly ordt: UintFieldDef
-    readonly ligt: UintFieldDef
-    readonly numLigt: UintFieldDef
-    readonly numCncx: UintFieldDef
-}
-
-interface TagxHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly length: UintFieldDef
-    readonly numControlBytes: UintFieldDef
-}
-
-interface HuffHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly offset1: UintFieldDef
-    readonly offset2: UintFieldDef
-}
-
-interface CdicHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly length: UintFieldDef
-    readonly numEntries: UintFieldDef
-    readonly codeLength: UintFieldDef
-}
-
-interface FdstHeaderDef extends HeaderDef {
-    readonly magic: StringFieldDef
-    readonly numEntries: UintFieldDef
-}
-
-interface FontHeaderDef extends HeaderDef {
-    readonly flags: UintFieldDef
-    readonly dataStart: UintFieldDef
-    readonly keyLength: UintFieldDef
-    readonly keyStart: UintFieldDef
-}
-
-type ExthRecordEntry = [name: string, type?: string, many?: boolean]
-
-interface VarLenResult {
-    value: number
-    length: number
-}
-
-interface MobiHeaders {
-    palmdoc: ParsedStruct<PalmdocHeaderDef>
-    mobi: ParsedStruct<MobiHeaderDef> & { title: ArrayBuffer; language: string | null }
-    exth: ExthData | null
-    kf8: ParsedStruct<Kf8HeaderDef> | null
-}
-
-interface ExthData {
-    [key: string]: unknown
-    title?: string
-    creator?: string[]
-    publisher?: string
-    description?: string
-    isbn?: string
-    subject?: string[]
-    date?: string
-    contributor?: string[]
-    rights?: string
-    subjectCode?: string[]
-    source?: string[]
-    asin?: string
-    boundary?: number
-    fixedLayout?: string
-    numResources?: number
-    originalResolution?: string
-    zeroGutter?: string
-    zeroMargin?: string
-    coverURI?: string
-    regionMagnification?: string
-    coverOffset?: number
-    thumbnailOffset?: number
-    language?: string[]
-    pageProgressionDirection?: string
-}
-
-interface MobiMetadata {
-    identifier: string
-    title: string
-    author: string[] | undefined
-    publisher: string
-    language: string[] | string | null
-    published: string | undefined
-    description: string
-    subject: string[] | undefined
-    rights: string
-    contributor: string[] | undefined
-}
-
-interface NCXItem {
-    index: number
-    offset: number | undefined
-    size: number | undefined
-    label: string
-    headingLevel: number | undefined
-    pos: number[] | undefined
-    parent: number | undefined
-    firstChild: number | undefined
-    lastChild: number | undefined
-    children?: NCXItem[]
-}
-
-interface TagMapEntry {
-    name: string
-    tagMap: Record<number, number[]>
-}
-
-interface IndexData {
-    table: TagMapEntry[]
-    cncx: Record<number, string>
-}
-
-interface SkelEntry {
-    index: number
-    name: string
-    numFrag: number
-    offset: number
-    length: number
-}
-
-interface FragEntry {
-    insertOffset: number
-    selector: string
-    index: number
-    offset: number
-    length: number
-}
-
-interface SectionEntry {
-    skel: SkelEntry
-    frags: FragEntry[]
-    fragEnd: number
-    length: number
-    totalLength: number
-}
-
-interface MOBI6Section {
-    book: MOBI6
-    raw: Uint8Array
-    start: number
-    end: number
-}
-
-interface BookSection {
-    id: number
-    load: () => Promise<string>
-    createDocument: () => Promise<Document>
-    size: number
-    pageSpread?: string
-    linear?: string
-}
-
-interface TOCItem {
-    label: string
-    href: string
-    subitems?: TOCItem[]
-}
-
-interface LandmarkItem {
-    label: string | null
-    type: string[] | undefined
-    href: string
-}
-
-interface ResolvedHref {
-    index: number
-    anchor: (doc: Document) => Element | null
-}
-
-interface ParsedResourceURI {
-    resourceType: string
-    id: number
-    type: string
-}
-
-interface ParsedPosURI {
-    fid: number
-    off: number
-}
-
-interface UnzlibFn {
-    (data: Uint8Array): Promise<Uint8Array>
-}
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const unescapeHTML = (str: string): string => {
+const unescapeHTML = (str: string | undefined | null): string => {
     if (!str) return ''
     const textarea = document.createElement('textarea')
     textarea.innerHTML = str
@@ -281,21 +13,27 @@ const MIME = {
     SVG: 'image/svg+xml',
 } as const
 
-const PDB_HEADER: PdbHeaderDef = {
+type HeaderFieldDef = [number, number, string]
+
+interface HeaderDef {
+    [key: string]: HeaderFieldDef
+}
+
+const PDB_HEADER: HeaderDef = {
     name: [0, 32, 'string'],
     type: [60, 4, 'string'],
     creator: [64, 4, 'string'],
     numRecords: [76, 2, 'uint'],
 }
 
-const PALMDOC_HEADER: PalmdocHeaderDef = {
+const PALMDOC_HEADER: HeaderDef = {
     compression: [0, 2, 'uint'],
     numTextRecords: [8, 2, 'uint'],
     recordSize: [10, 2, 'uint'],
     encryption: [12, 2, 'uint'],
 }
 
-const MOBI_HEADER: MobiHeaderDef = {
+const MOBI_HEADER: HeaderDef = {
     magic: [16, 4, 'string'],
     length: [20, 4, 'uint'],
     type: [24, 4, 'uint'],
@@ -314,7 +52,7 @@ const MOBI_HEADER: MobiHeaderDef = {
     indx: [244, 4, 'uint'],
 }
 
-const KF8_HEADER: Kf8HeaderDef = {
+const KF8_HEADER: HeaderDef = {
     resourceStart: [108, 4, 'uint'],
     fdst: [192, 4, 'uint'],
     numFdst: [196, 4, 'uint'],
@@ -323,13 +61,13 @@ const KF8_HEADER: Kf8HeaderDef = {
     guide: [260, 4, 'uint'],
 }
 
-const EXTH_HEADER: ExthHeaderDef = {
+const EXTH_HEADER: HeaderDef = {
     magic: [0, 4, 'string'],
     length: [4, 4, 'uint'],
     count: [8, 4, 'uint'],
 }
 
-const INDX_HEADER: IndxHeaderDef = {
+const INDX_HEADER: HeaderDef = {
     magic: [0, 4, 'string'],
     length: [4, 4, 'uint'],
     type: [8, 4, 'uint'],
@@ -344,31 +82,31 @@ const INDX_HEADER: IndxHeaderDef = {
     numCncx: [52, 4, 'uint'],
 }
 
-const TAGX_HEADER: TagxHeaderDef = {
+const TAGX_HEADER: HeaderDef = {
     magic: [0, 4, 'string'],
     length: [4, 4, 'uint'],
     numControlBytes: [8, 4, 'uint'],
 }
 
-const HUFF_HEADER: HuffHeaderDef = {
+const HUFF_HEADER: HeaderDef = {
     magic: [0, 4, 'string'],
     offset1: [8, 4, 'uint'],
     offset2: [12, 4, 'uint'],
 }
 
-const CDIC_HEADER: CdicHeaderDef = {
+const CDIC_HEADER: HeaderDef = {
     magic: [0, 4, 'string'],
     length: [4, 4, 'uint'],
     numEntries: [8, 4, 'uint'],
     codeLength: [12, 4, 'uint'],
 }
 
-const FDST_HEADER: FdstHeaderDef = {
+const FDST_HEADER: HeaderDef = {
     magic: [0, 4, 'string'],
     numEntries: [8, 4, 'uint'],
 }
 
-const FONT_HEADER: FontHeaderDef = {
+const FONT_HEADER: HeaderDef = {
     flags: [8, 4, 'uint'],
     dataStart: [12, 4, 'uint'],
     keyLength: [16, 4, 'uint'],
@@ -380,7 +118,9 @@ const MOBI_ENCODING: Record<number, string> = {
     65001: 'utf-8',
 }
 
-const EXTH_RECORD_TYPE: Record<number, ExthRecordEntry> = {
+type ExthRecordDef = [string, string?, boolean?]
+
+const EXTH_RECORD_TYPE: Record<number, ExthRecordDef> = {
     100: ['creator', 'string', true],
     101: ['publisher'],
     103: ['description'],
@@ -433,18 +173,13 @@ const MOBI_LANG: Record<number, (string | null)[]> = {
     87: ['kok'], 97: ['ne'], 98: ['fy'],
 }
 
-// ============================================================================
-// Utility functions
-// ============================================================================
-
-const concatTypedArray = (a: Uint8Array<ArrayBufferLike>, b: Uint8Array<ArrayBufferLike>): Uint8Array => {
+const concatTypedArray = (a: Uint8Array<ArrayBufferLike>, b: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike> => {
     const result = new Uint8Array(a.length + b.length)
     result.set(a)
     result.set(b, a.length)
     return result
 }
-
-const concatTypedArray3 = (a: Uint8Array<ArrayBufferLike>, b: Uint8Array<ArrayBufferLike>, c: Uint8Array<ArrayBufferLike>): Uint8Array => {
+const concatTypedArray3 = (a: Uint8Array<ArrayBufferLike>, b: Uint8Array<ArrayBufferLike>, c: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike> => {
     const result = new Uint8Array(a.length + b.length + c.length)
     result.set(a)
     result.set(b, a.length)
@@ -454,19 +189,24 @@ const concatTypedArray3 = (a: Uint8Array<ArrayBufferLike>, b: Uint8Array<ArrayBu
 
 const decoder = new TextDecoder()
 const getString = (buffer: ArrayBuffer): string => decoder.decode(buffer)
-const getUint = (buffer: ArrayBuffer): number | undefined => {
+const getUint = (buffer: ArrayBuffer | undefined): number | undefined => {
     if (!buffer) return
     const l = buffer.byteLength
     const func = l === 4 ? 'getUint32' : l === 2 ? 'getUint16' : 'getUint8'
     return new DataView(buffer)[func](0)
 }
 
-const getStruct = <T extends HeaderDef>(def: T, buffer: ArrayBuffer): ParsedStruct<T> =>
-    Object.fromEntries(Array.from(Object.entries(def))
-        .map(([key, [start, len, type]]) => [key,
-            (type === 'string' ? getString : getUint)(buffer.slice(start, start + len))])) as ParsedStruct<T>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getStruct = (def: HeaderDef, buffer: ArrayBuffer): any => Object.fromEntries(Array.from(Object.entries(def))
+    .map(([key, [start, len, type]]) => [key,
+        (type === 'string' ? getString : getUint)(buffer.slice(start, start + len))]))
 
 const getDecoder = (x: number): TextDecoder => new TextDecoder(MOBI_ENCODING[x])
+
+interface VarLenResult {
+    value: number
+    length: number
+}
 
 const getVarLen = (byteArray: Uint8Array, i: number = 0): VarLenResult => {
     let value = 0, length = 0
@@ -505,23 +245,18 @@ const decompressPalmDOC = (array: Uint8Array): Uint8Array => {
     const output: number[] = []
     for (let i = 0; i < array.length; i++) {
         const byte = array[i]
-        if (byte === 0) output.push(0) // uncompressed literal, just copy it
-        else if (byte <= 8) // copy next 1-8 bytes
+        if (byte === 0) output.push(0)
+        else if (byte <= 8)
             for (const x of array.subarray(i + 1, (i += byte) + 1))
                 output.push(x)
-        else if (byte <= 0b0111_1111) output.push(byte) // uncompressed literal
+        else if (byte <= 0b0111_1111) output.push(byte)
         else if (byte <= 0b1011_1111) {
-            // 1st and 2nd bits are 10, meaning this is a length-distance pair
-            // read next byte and combine it with current byte
             const bytes = (byte << 8) | array[i++ + 1]
-            // the 3rd to 13th bits encode distance
             const distance = (bytes & 0b0011_1111_1111_1111) >>> 3
-            // the last 3 bits, plus 3, is the length to copy
             const length = (bytes & 0b111) + 3
             for (let j = 0; j < length; j++)
                 output.push(output[output.length - distance])
         }
-        // compressed from space plus char
         else output.push(32, byte ^ 0b1000_0000)
     }
     return Uint8Array.from(output)
@@ -537,84 +272,92 @@ const read32Bits = (byteArray: Uint8Array, from: number): bigint => {
     return (bits >> (8n - BigInt(end & 7))) & 0xffffffffn
 }
 
-const huffcdic = async (
-    mobi: ParsedStruct<MobiHeaderDef>,
-    loadRecord: (index: number) => Promise<ArrayBuffer>
-): Promise<(byteArray: Uint8Array) => Uint8Array> => {
+type LoadRecordFn = (index: number) => Promise<ArrayBuffer>
+type DecompressFn = (data: Uint8Array<ArrayBufferLike>) => Uint8Array<ArrayBufferLike>
+
+interface MobiHeaderData {
+    huffcdic: number
+    numHuffcdic: number
+    encoding: number
+}
+
+const huffcdic = async (mobi: MobiHeaderData, loadRecord: LoadRecordFn): Promise<DecompressFn> => {
     const huffRecord = await loadRecord(mobi.huffcdic)
     const { magic, offset1, offset2 } = getStruct(HUFF_HEADER, huffRecord)
     if (magic !== 'HUFF') throw new Error('Invalid HUFF record')
 
-    // table1 is indexed by byte value
-    const table1 = Array.from({ length: 256 }, (_, i) => offset1 + i * 4)
-        .map(offset => getUint(huffRecord.slice(offset, offset + 4))!)
-        .map(x => [x & 0b1000_0000, x & 0b1_1111, x >>> 8] as [number, number, number])
+    const table1: [number, number, number][] = Array.from({ length: 256 }, (_, i) => offset1 + i * 4)
+        .map((offset: number) => getUint(huffRecord.slice(offset, offset + 4)) as number)
+        .map((x: number): [number, number, number] => [x & 0b1000_0000, x & 0b1_1111, x >>> 8])
 
-    // table2 is indexed by code length
-    const table2: ([number, number] | null)[] = [null].concat(
-        Array.from({ length: 32 }, (_, i) => offset2 + i * 8)
-            .map(offset => [
-                getUint(huffRecord.slice(offset, offset + 4))!,
-                getUint(huffRecord.slice(offset + 4, offset + 8))!,
-            ] as [number, number]) as any // eslint-disable-line @typescript-eslint/no-explicit-any
-    )
+    const table2: ([number, number] | null)[] = ([null] as ([number, number] | null)[]).concat(Array.from({ length: 32 }, (_, i) => offset2 + i * 8)
+        .map((offset: number): [number, number] => [
+            getUint(huffRecord.slice(offset, offset + 4)) as number,
+            getUint(huffRecord.slice(offset + 4, offset + 8)) as number]))
 
     const dictionary: [Uint8Array, boolean | number][] = []
     for (let i = 1; i < mobi.numHuffcdic; i++) {
         const record = await loadRecord(mobi.huffcdic + i)
         const cdic = getStruct(CDIC_HEADER, record)
         if (cdic.magic !== 'CDIC') throw new Error('Invalid CDIC record')
-        // `numEntries` is the total number of dictionary data across CDIC records
-        // so `n` here is the number of entries in *this* record
         const n = Math.min(1 << cdic.codeLength, cdic.numEntries - dictionary.length)
         const buffer = record.slice(cdic.length)
         for (let i = 0; i < n; i++) {
-            const offset = getUint(buffer.slice(i * 2, i * 2 + 2))!
-            const x = getUint(buffer.slice(offset, offset + 2))!
+            const offset = getUint(buffer.slice(i * 2, i * 2 + 2)) as number
+            const x = getUint(buffer.slice(offset, offset + 2)) as number
             const length = x & 0x7fff
             const decompressed = x & 0x8000
             const value = new Uint8Array(
-                buffer.slice(offset + 2, offset + 2 + length))
+                buffer.slice(offset + 2, offset + 2 + length)) as Uint8Array
             dictionary.push([value, decompressed])
         }
     }
 
-    const decompress = (byteArray: Uint8Array): Uint8Array => {
+    const decompress = (byteArray: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBufferLike> => {
         let output: Uint8Array<ArrayBufferLike> = new Uint8Array()
         const bitLength = byteArray.byteLength * 8
         for (let i = 0; i < bitLength;) {
             const bits = Number(read32Bits(byteArray, i))
             let [found, codeLength, value] = table1[bits >>> 24]
             if (!found) {
-                while (bits >>> (32 - codeLength) < table2[codeLength]![0])
+                while (bits >>> (32 - codeLength) < (table2[codeLength] as [number, number])[0])
                     codeLength += 1
-                value = table2[codeLength]![1]
+                value = (table2[codeLength] as [number, number])[1]
             }
             if ((i += codeLength) > bitLength) break
 
             const code = value - (bits >>> (32 - codeLength))
             let [result, decompressed] = dictionary[code]
             if (!decompressed) {
-                // the result is itself compressed
                 result = decompress(result)
-                // cache the result for next time
                 dictionary[code] = [result, true]
             }
             output = concatTypedArray(output, result)
         }
-        return output as Uint8Array
+        return output
     }
     return decompress
 }
 
-const getIndexData = async (
-    indxIndex: number,
-    loadRecord: (index: number) => Promise<ArrayBuffer>
-): Promise<IndexData> => {
+interface TagMapEntry {
+    [tag: number]: number[]
+}
+
+interface IndexTableEntry {
+    name: string
+    tagMap: TagMapEntry
+}
+
+interface IndexData {
+    table: IndexTableEntry[]
+    cncx: Record<number, string>
+}
+
+const getIndexData = async (indxIndex: number, loadRecord: LoadRecordFn): Promise<IndexData> => {
     const indxRecord = await loadRecord(indxIndex)
     const indx = getStruct(INDX_HEADER, indxRecord)
     if (indx.magic !== 'INDX') throw new Error('Invalid INDX record')
-    const indxDecoder = getDecoder(indx.encoding)
+    const decoder = getDecoder(indx.encoding)
 
     const tagxBuffer = indxRecord.slice(indx.length)
     const tagx = getStruct(TAGX_HEADER, tagxBuffer)
@@ -634,22 +377,22 @@ const getIndexData = async (
             pos += length
             const result = record.slice(pos, pos + value)
             pos += value
-            cncx[cncxRecordOffset + index] = indxDecoder.decode(result)
+            cncx[cncxRecordOffset + index] = decoder.decode(result)
         }
         cncxRecordOffset += 0x10000
     }
 
-    const table: TagMapEntry[] = []
+    const table: IndexTableEntry[] = []
     for (let i = 0; i < indx.numRecords; i++) {
         const record = await loadRecord(indxIndex + 1 + i)
         const array = new Uint8Array(record)
-        const innerIndx = getStruct(INDX_HEADER, record)
-        if (innerIndx.magic !== 'INDX') throw new Error('Invalid INDX record')
-        for (let j = 0; j < innerIndx.numRecords; j++) {
-            const offsetOffset = innerIndx.idxt + 4 + 2 * j
-            const offset = getUint(record.slice(offsetOffset, offsetOffset + 2))!
+        const indx = getStruct(INDX_HEADER, record)
+        if (indx.magic !== 'INDX') throw new Error('Invalid INDX record')
+        for (let j = 0; j < indx.numRecords; j++) {
+            const offsetOffset = indx.idxt + 4 + 2 * j
+            const offset = getUint(record.slice(offsetOffset, offsetOffset + 2)) as number
 
-            const length = getUint(record.slice(offset, offset + 1))!
+            const length = getUint(record.slice(offset, offset + 1)) as number
             const name = getString(record.slice(offset + 1, offset + 1 + length))
 
             const tags: [number, number | null, number | null, number][] = []
@@ -661,18 +404,18 @@ const getIndexData = async (
                     controlByteIndex++
                     continue
                 }
-                const tagOffset = startPos + controlByteIndex
-                const tagValue = getUint(record.slice(tagOffset, tagOffset + 1))! & mask
-                if (tagValue === mask) {
+                const offset = startPos + controlByteIndex
+                const value = (getUint(record.slice(offset, offset + 1)) as number) & mask
+                if (value === mask) {
                     if (countBitsSet(mask) > 1) {
                         const { value, length } = getVarLen(array, pos)
                         tags.push([tag, null, value, numValues])
                         pos += length
                     } else tags.push([tag, 1, null, numValues])
-                } else tags.push([tag, tagValue >> countUnsetEnd(mask), null, numValues])
+                } else tags.push([tag, value >> countUnsetEnd(mask), null, numValues])
             }
 
-            const tagMap: Record<number, number[]> = {}
+            const tagMap: TagMapEntry = {}
             for (const [tag, valueCount, valueBytes, numValues] of tags) {
                 const values: number[] = []
                 if (valueCount != null) {
@@ -683,7 +426,7 @@ const getIndexData = async (
                     }
                 } else {
                     let count = 0
-                    while (count < valueBytes!) {
+                    while (count < (valueBytes as number)) {
                         const { value, length } = getVarLen(array, pos)
                         values.push(value)
                         pos += length
@@ -698,10 +441,20 @@ const getIndexData = async (
     return { table, cncx }
 }
 
-const getNCX = async (
-    indxIndex: number,
-    loadRecord: (index: number) => Promise<ArrayBuffer>
-): Promise<NCXItem[]> => {
+interface NCXItem {
+    index: number
+    offset: number | undefined
+    size: number | undefined
+    label: string
+    headingLevel: number | undefined
+    pos: number[] | undefined
+    parent: number | undefined
+    firstChild: number | undefined
+    lastChild: number | undefined
+    children?: NCXItem[]
+}
+
+const getNCX = async (indxIndex: number, loadRecord: LoadRecordFn): Promise<NCXItem[]> => {
     const { table, cncx } = await getIndexData(indxIndex, loadRecord)
     const items: NCXItem[] = table.map(({ tagMap }, index) => ({
         index,
@@ -722,40 +475,42 @@ const getNCX = async (
     return items.filter(item => item.headingLevel === 0).map(getChildren)
 }
 
-const getEXTH = (buf: ArrayBuffer, encoding: number): ExthData => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getEXTH = (buf: ArrayBuffer, encoding: number): Record<string, any> => {
     const { magic, count } = getStruct(EXTH_HEADER, buf)
     if (magic !== 'EXTH') throw new Error('Invalid EXTH header')
-    const exthDecoder = getDecoder(encoding)
-    const results: ExthData = {} as ExthData
+    const decoder = getDecoder(encoding)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const results: Record<string, any> = {}
     let offset = 12
     for (let i = 0; i < count; i++) {
-        const type = getUint(buf.slice(offset, offset + 4))!
-        const length = getUint(buf.slice(offset + 4, offset + 8))!
+        const type = getUint(buf.slice(offset, offset + 4)) as number
+        const length = getUint(buf.slice(offset + 4, offset + 8)) as number
         if (type in EXTH_RECORD_TYPE) {
             const [name, typ, many] = EXTH_RECORD_TYPE[type]
             const data = buf.slice(offset + 8, offset + length)
-            const value = typ === 'uint' ? getUint(data) : exthDecoder.decode(data)
+            const value = typ === 'uint' ? getUint(data) : decoder.decode(data)
             if (many) {
-                (results as any)[name] ??= [] // eslint-disable-line @typescript-eslint/no-explicit-any
-                ;(results as any)[name].push(value) // eslint-disable-line @typescript-eslint/no-explicit-any
-            } else (results as any)[name] = value // eslint-disable-line @typescript-eslint/no-explicit-any
+                results[name] ??= []
+                results[name].push(value)
+            } else results[name] = value
         }
         offset += length
     }
     return results
 }
 
-const getFont = async (buf: ArrayBuffer, unzlib: UnzlibFn): Promise<Uint8Array> => {
+type UnzlibFn = (data: Uint8Array) => Promise<Uint8Array> | Uint8Array
+
+const getFont = async (buf: ArrayBuffer, unzlib: UnzlibFn): Promise<Uint8Array | ArrayBuffer> => {
     const { flags, dataStart, keyLength, keyStart } = getStruct(FONT_HEADER, buf)
     const array = new Uint8Array(buf.slice(dataStart))
-    // deobfuscate font
     if (flags & 0b10) {
         const bytes = keyLength === 16 ? 1024 : 1040
         const key = new Uint8Array(buf.slice(keyStart, keyStart + keyLength))
         const length = Math.min(bytes, array.length)
-        for (let i = 0; i < length; i++) array[i] = array[i] ^ key[i % key.length]
+        for (var i = 0; i < length; i++) array[i] = array[i] ^ key[i % key.length]
     }
-    // decompress font
     if (flags & 1) try {
         return await unzlib(array)
     } catch (e) {
@@ -765,71 +520,165 @@ const getFont = async (buf: ArrayBuffer, unzlib: UnzlibFn): Promise<Uint8Array> 
     return array
 }
 
-export const isMOBI = async (file: Blob): Promise<boolean> => {
+interface FileSlice {
+    slice(start: number, end: number): { arrayBuffer(): Promise<ArrayBuffer> }
+}
+
+export const isMOBI = async (file: FileSlice): Promise<boolean> => {
     const magic = getString(await file.slice(60, 68).arrayBuffer())
     return magic === 'BOOKMOBI'// || magic === 'TEXtREAd'
 }
 
-// ============================================================================
-// PDB class
-// ============================================================================
+interface PDBData {
+    name: string
+    type: string
+    creator: string
+    numRecords: number
+}
+
+interface PalmdocData {
+    compression: number
+    numTextRecords: number
+    recordSize: number
+    encryption: number
+}
+
+interface MobiData {
+    magic: string
+    length: number
+    type: number
+    encoding: number
+    uid: number
+    version: number
+    titleOffset: number
+    titleLength: number
+    localeRegion: number
+    localeLanguage: number
+    resourceStart: number
+    huffcdic: number
+    numHuffcdic: number
+    exthFlag: number
+    trailingFlags: number
+    indx: number
+    title: ArrayBuffer | string
+    language: string | null | undefined
+}
+
+interface KF8Data {
+    resourceStart: number
+    fdst: number
+    numFdst: number
+    frag: number
+    skel: number
+    guide: number
+}
+
+interface EXTHData {
+    boundary?: number
+    coverOffset?: number
+    thumbnailOffset?: number
+    title?: string
+    creator?: string[]
+    publisher?: string
+    language?: string[]
+    date?: string
+    description?: string
+    subject?: string[]
+    rights?: string
+    contributor?: string[]
+    fixedLayout?: string
+    originalResolution?: string
+    pageProgressionDirection?: string
+    [key: string]: unknown
+}
+
+interface Headers {
+    palmdoc: PalmdocData
+    mobi: MobiData
+    exth: EXTHData | null
+    kf8: KF8Data | null
+}
+
+interface TOCItem {
+    label: string
+    href: string
+    subitems?: TOCItem[]
+}
+
+interface LandmarkItem {
+    label: string | null
+    type: string[] | undefined
+    href: string
+}
+
+interface SectionRef {
+    id: number
+    load: () => Promise<string>
+    createDocument: () => Promise<Document>
+    size: number
+    pageSpread?: string
+    linear?: string
+}
+
+interface Metadata {
+    identifier: string
+    title: string
+    author: string[] | undefined
+    publisher: string
+    language: string[] | string | null | undefined
+    published: string | undefined
+    description: string
+    subject: string[] | undefined
+    rights: string
+    contributor: string[] | undefined
+}
 
 class PDB {
-    #file!: Blob
+    #file!: FileSlice
     #offsets!: [number, number | undefined][]
-    pdb!: ParsedStruct<PdbHeaderDef>
-
+    pdb!: PDBData
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async open(file: Blob): Promise<any> {
+    async open(file: FileSlice): Promise<any> {
         this.#file = file
-        const pdb = getStruct(PDB_HEADER, await file.slice(0, 78).arrayBuffer())
+        const pdb = getStruct(PDB_HEADER, await file.slice(0, 78).arrayBuffer()) as PDBData
         this.pdb = pdb
         const buffer = await file.slice(78, 78 + pdb.numRecords * 8).arrayBuffer()
-        // get start and end offsets for each record
         this.#offsets = Array.from({ length: pdb.numRecords },
-            (_, i) => getUint(buffer.slice(i * 8, i * 8 + 4))!)
+            (_, i) => getUint(buffer.slice(i * 8, i * 8 + 4)) as number)
             .map((x, i, a) => [x, a[i + 1]] as [number, number | undefined])
     }
-
     loadRecord(index: number): Promise<ArrayBuffer> {
         const offsets = this.#offsets[index]
         if (!offsets) throw new RangeError('Record index out of bounds')
-        return this.#file.slice(...offsets).arrayBuffer()
+        return this.#file.slice(...(offsets as [number, number])).arrayBuffer()
     }
-
     async loadMagic(index: number): Promise<string> {
         const start = this.#offsets[index][0]
         return getString(await this.#file.slice(start, start + 4).arrayBuffer())
     }
 }
 
-// ============================================================================
-// MOBI class
-// ============================================================================
-
 export class MOBI extends PDB {
-    #start: number = 0
+    #start = 0
     #resourceStart!: number
     #decoder!: TextDecoder
     #encoder!: TextEncoder
-    #decompress!: ((data: Uint8Array) => Uint8Array) | null
+    #decompress!: DecompressFn
     #removeTrailingEntries!: (array: Uint8Array) => Uint8Array
     unzlib: UnzlibFn
-    headers!: MobiHeaders
-
+    headers!: Headers
     constructor({ unzlib }: { unzlib: UnzlibFn }) {
         super()
         this.unzlib = unzlib
     }
-
-    async open(file: Blob): Promise<MOBI6 | KF8> {
+    async open(file: FileSlice): Promise<MOBI6 | KF8> {
         await super.open(file)
         // TODO: if (this.pdb.type === 'TEXt')
         this.headers = this.#getHeaders(await super.loadRecord(0))
         this.#resourceStart = this.headers.mobi.resourceStart
         let isKF8 = this.headers.mobi.version >= 8
         if (!isKF8) {
-            const boundary = (this.headers.exth as ExthData | null)?.boundary as number | undefined
+            const boundary = this.headers.exth?.boundary
             if (boundary != null && boundary < 0xffffffff) try {
                 // it's a "combo" MOBI/KF8 file; try to open the KF8 part
                 this.headers = this.#getHeaders(await super.loadRecord(boundary))
@@ -843,23 +692,21 @@ export class MOBI extends PDB {
         await this.#setup()
         return isKF8 ? new KF8(this).init() : new MOBI6(this).init()
     }
-
-    #getHeaders(buf: ArrayBuffer): MobiHeaders {
-        const palmdoc = getStruct(PALMDOC_HEADER, buf)
-        const mobi = getStruct(MOBI_HEADER, buf) as ParsedStruct<MobiHeaderDef> & { title: ArrayBuffer; language: string | null }
+    #getHeaders(buf: ArrayBuffer): Headers {
+        const palmdoc = getStruct(PALMDOC_HEADER, buf) as PalmdocData
+        const mobi = getStruct(MOBI_HEADER, buf) as MobiData
         if (mobi.magic !== 'MOBI') throw new Error('Missing MOBI header')
 
         const { titleOffset, titleLength, localeLanguage, localeRegion } = mobi
         mobi.title = buf.slice(titleOffset, titleOffset + titleLength)
         const lang = MOBI_LANG[localeLanguage]
-        mobi.language = lang?.[localeRegion >> 2] ?? lang?.[0] ?? null
+        mobi.language = lang?.[localeRegion >> 2] ?? lang?.[0]
 
         const exth = mobi.exthFlag & 0b100_0000
-            ? getEXTH(buf.slice(mobi.length + 16), mobi.encoding) : null
-        const kf8 = mobi.version >= 8 ? getStruct(KF8_HEADER, buf) : null
+            ? getEXTH(buf.slice(mobi.length + 16), mobi.encoding) as EXTHData : null
+        const kf8 = mobi.version >= 8 ? getStruct(KF8_HEADER, buf) as KF8Data : null
         return { palmdoc, mobi, exth, kf8 }
     }
-
     async #setup(): Promise<void> {
         const { palmdoc, mobi } = this.headers
         this.#decoder = getDecoder(mobi.encoding)
@@ -871,8 +718,8 @@ export class MOBI extends PDB {
         const { compression } = palmdoc
         this.#decompress = compression === 1 ? (f: Uint8Array) => f
             : compression === 2 ? decompressPalmDOC
-            : compression === 17480 ? await huffcdic(mobi, this.loadRecord.bind(this))
-            : null
+            : compression === 17480 ? await huffcdic(mobi as MobiHeaderData, this.loadRecord.bind(this))
+            : null as unknown as DecompressFn
         if (!this.#decompress) throw new Error('Unknown compression type')
 
         // set up function for removing trailing bytes
@@ -891,73 +738,60 @@ export class MOBI extends PDB {
             return array
         }
     }
-
     decode(...args: Parameters<TextDecoder['decode']>): string {
         return this.#decoder.decode(...args)
     }
-
     encode(...args: Parameters<TextEncoder['encode']>): Uint8Array {
         return this.#encoder.encode(...args)
     }
-
     loadRecord(index: number): Promise<ArrayBuffer> {
         return super.loadRecord(this.#start + index)
     }
-
     loadMagic(index: number): Promise<string> {
         return super.loadMagic(this.#start + index)
     }
-
-    loadText(index: number): Promise<Uint8Array> {
+    loadText(index: number): Promise<Uint8Array<ArrayBufferLike>> {
         return this.loadRecord(index + 1)
             .then(buf => new Uint8Array(buf))
             .then(this.#removeTrailingEntries)
-            .then(this.#decompress!)
+            .then(this.#decompress)
     }
-
-    async loadResource(index: number): Promise<ArrayBuffer | Uint8Array> {
+    async loadResource(index: number): Promise<Uint8Array | ArrayBuffer> {
         const buf = await super.loadRecord(this.#resourceStart + index)
         const magic = getString(buf.slice(0, 4))
         if (magic === 'FONT') return getFont(buf, this.unzlib)
         if (magic === 'VIDE' || magic === 'AUDI') return buf.slice(12)
         return buf
     }
-
     getNCX(): Promise<NCXItem[]> | undefined {
         const index = this.headers.mobi.indx
         if (index < 0xffffffff) return getNCX(index, this.loadRecord.bind(this))
     }
-
-    getMetadata(): MobiMetadata {
+    getMetadata(): Metadata {
         const { mobi, exth } = this.headers
         return {
             identifier: mobi.uid.toString(),
-            title: unescapeHTML(exth?.title as string || this.decode(mobi.title)),
-            author: (exth?.creator as string[] | undefined)?.map(unescapeHTML),
-            publisher: unescapeHTML(exth?.publisher as string),
+            title: unescapeHTML(exth?.title || this.decode(mobi.title as ArrayBuffer)),
+            author: exth?.creator?.map(unescapeHTML),
+            publisher: unescapeHTML(exth?.publisher),
             language: exth?.language ?? mobi.language,
-            published: exth?.date as string | undefined,
-            description: unescapeHTML(exth?.description as string),
-            subject: (exth?.subject as string[] | undefined)?.map(unescapeHTML),
-            rights: unescapeHTML(exth?.rights as string),
-            contributor: exth?.contributor as string[] | undefined,
+            published: exth?.date,
+            description: unescapeHTML(exth?.description),
+            subject: exth?.subject?.map(unescapeHTML),
+            rights: unescapeHTML(exth?.rights),
+            contributor: exth?.contributor,
         }
     }
-
     async getCover(): Promise<Blob | undefined> {
         const { exth } = this.headers
-        const offset = (exth?.coverOffset as number) < 0xffffffff ? (exth?.coverOffset as number)
-            : (exth?.thumbnailOffset as number) < 0xffffffff ? (exth?.thumbnailOffset as number) : null
+        const offset = exth?.coverOffset != null && exth.coverOffset < 0xffffffff ? exth.coverOffset
+            : exth?.thumbnailOffset != null && exth.thumbnailOffset < 0xffffffff ? exth.thumbnailOffset : null
         if (offset != null) {
             const buf = await this.loadResource(offset)
             return new Blob([buf as BlobPart])
         }
     }
 }
-
-// ============================================================================
-// MOBI6 class
-// ============================================================================
 
 const mbpPagebreakRegex = /<\s*(?:mbp:)?pagebreak[^>]*>/gi
 const fileposRegex = /<[^<>]+filepos=['"]{0,1}(\d+)[^<>]*>/gi
@@ -976,6 +810,19 @@ const getIndent = (el: Element | null): number => {
     return x
 }
 
+interface MOBI6Section {
+    book: MOBI6
+    raw: Uint8Array
+    start: number
+    end: number
+}
+
+interface FileposEntry {
+    filepos: string
+    number: number
+    offset?: number
+}
+
 class MOBI6 {
     parser = new DOMParser()
     serializer = new XMLSerializer()
@@ -983,41 +830,31 @@ class MOBI6 {
     #textCache = new Map<MOBI6Section, string>()
     #cache = new Map<MOBI6Section, string>()
     #sections!: MOBI6Section[]
-    #fileposList: { filepos: string; number: number }[] = []
+    #fileposList: FileposEntry[] = []
     #type: string = MIME.HTML
     mobi: MOBI
-    sections!: BookSection[]
+    sections!: SectionRef[]
     landmarks?: LandmarkItem[]
     toc?: TOCItem[]
-    metadata!: MobiMetadata
+    metadata!: Metadata
     getCover!: () => Promise<Blob | undefined>
-
     constructor(mobi: MOBI) {
         this.mobi = mobi
     }
-
     async init(): Promise<MOBI6> {
-        // load all text records in an array
         let array: Uint8Array<ArrayBufferLike> = new Uint8Array()
         for (let i = 0; i < this.mobi.headers.palmdoc.numTextRecords; i++)
             array = concatTypedArray(array, await this.mobi.loadText(i))
 
-        // convert to string so we can use regex
-        // note that `filepos` are byte offsets
-        // so it needs to preserve each byte as a separate character
-        // (see https://stackoverflow.com/q/50198017)
         const str = Array.from(new Uint8Array(array),
             c => String.fromCharCode(c)).join('')
 
-        // split content into sections at each `<mbp:pagebreak>`
         this.#sections = ([0] as number[])
             .concat(Array.from(str.matchAll(mbpPagebreakRegex), m => m.index!))
             .map((x, i, a) => str.slice(x, a[i + 1]))
-            // recover the original raw bytes
-            .map(s => Uint8Array.from(s, x => x.charCodeAt(0)))
-            .map(raw => ({ book: this, raw, start: 0, end: 0 } as MOBI6Section))
-            // get start and end filepos for each section
-            .reduce((arr: MOBI6Section[], x) => {
+            .map(str => Uint8Array.from(str, x => x.charCodeAt(0)))
+            .map(raw => ({ book: this, raw } as unknown as MOBI6Section))
+            .reduce((arr: MOBI6Section[], x: MOBI6Section) => {
                 const last = arr[arr.length - 1]
                 x.start = last?.end ?? 0
                 x.end = x.start + x.raw.byteLength
@@ -1044,10 +881,10 @@ class MOBI6 {
                 const lastLevelOfIndent = new Map<number, number>()
                 const lastParentOfLevel = new Map<number, TOCItem>()
                 this.toc = Array.from(doc.querySelectorAll('a[filepos]'))
-                    .reduce((arr: TOCItem[], a) => {
+                    .reduce((arr: TOCItem[], a: Element) => {
                         const indent = getIndent(a)
                         const item: TOCItem = {
-                            label: (a as HTMLAnchorElement).innerText?.trim() ?? '',
+                            label: (a as HTMLElement).innerText?.trim() ?? '',
                             href: `filepos:${a.getAttribute('filepos')}`,
                         }
                         const level = indent > lastIndent ? lastLevel + 1
@@ -1077,9 +914,6 @@ class MOBI6 {
             console.warn(e)
         }
 
-        // get list of all `filepos` references in the book,
-        // which will be used to insert anchor elements
-        // because only then can they be referenced in the DOM
         this.#fileposList = [...new Set(
             Array.from(str.matchAll(fileposRegex), m => m[1]))]
             .map(filepos => ({ filepos, number: Number(filepos) }))
@@ -1089,7 +923,6 @@ class MOBI6 {
         this.getCover = this.mobi.getCover.bind(this.mobi)
         return this
     }
-
     async getGuide(): Promise<LandmarkItem[]> {
         const doc = await this.createDocument(this.#sections[0])
         return Array.from(doc.getElementsByTagName('reference'), ref => ({
@@ -1098,7 +931,6 @@ class MOBI6 {
             href: `filepos:${ref.getAttribute('filepos')}`,
         }))
     }
-
     async loadResource(index: number): Promise<string> {
         if (this.#resourceCache.has(index)) return this.#resourceCache.get(index)!
         const raw = await this.mobi.loadResource(index)
@@ -1106,16 +938,14 @@ class MOBI6 {
         this.#resourceCache.set(index, url)
         return url
     }
-
     async loadRecindex(recindex: string): Promise<string> {
         return this.loadResource(Number(recindex) - 1)
     }
-
     async replaceResources(doc: Document): Promise<void> {
         for (const img of doc.querySelectorAll('img[recindex]')) {
             const recindex = img.getAttribute('recindex')
             try {
-                ;(img as HTMLImageElement).src = await this.loadRecindex(recindex!)
+                (img as HTMLImageElement).src = await this.loadRecindex(recindex!)
             } catch {
                 console.warn(`Failed to load image ${recindex}`)
             }
@@ -1124,7 +954,7 @@ class MOBI6 {
             const mediarecindex = media.getAttribute('mediarecindex')
             const recindex = media.getAttribute('recindex')
             try {
-                ;(media as HTMLMediaElement).src = await this.loadRecindex(mediarecindex!)
+                (media as HTMLMediaElement).src = await this.loadRecindex(mediarecindex!)
                 if (recindex) (media as HTMLVideoElement).poster = await this.loadRecindex(recindex)
             } catch {
                 console.warn(`Failed to load media ${mediarecindex}`)
@@ -1135,34 +965,30 @@ class MOBI6 {
             ;(a as HTMLAnchorElement).href = `filepos:${filepos}`
         }
     }
-
     async loadText(section: MOBI6Section): Promise<string> {
         if (this.#textCache.has(section)) return this.#textCache.get(section)!
         const { raw } = section
 
-        // insert anchor elements for each `filepos`
         const fileposList = this.#fileposList
             .filter(({ number }) => number >= section.start && number < section.end)
             .map(obj => ({ ...obj, offset: obj.number - section.start }))
         let arr: Uint8Array = raw
         if (fileposList.length) {
-            arr = raw.subarray(0, fileposList[0].offset)
+            arr = raw.subarray(0, fileposList[0].offset!)
             fileposList.forEach(({ filepos, offset }, i) => {
                 const next = fileposList[i + 1]
                 const a = this.mobi.encode(`<a id="filepos${filepos}"></a>`)
-                arr = concatTypedArray3(arr, a, raw.subarray(offset, next?.offset))
+                arr = concatTypedArray3(arr, a, raw.subarray(offset!, next?.offset))
             })
         }
         const str = this.mobi.decode(arr).replaceAll(mbpPagebreakRegex, '')
         this.#textCache.set(section, str)
         return str
     }
-
     async createDocument(section: MOBI6Section): Promise<Document> {
         const str = await this.loadText(section)
         return this.parser.parseFromString(str, this.#type as DOMParserSupportedType)
     }
-
     async loadSection(section: MOBI6Section): Promise<string> {
         if (this.#cache.has(section)) return this.#cache.get(section)!
         const doc = await this.createDocument(section)
@@ -1186,54 +1012,42 @@ class MOBI6 {
         this.#cache.set(section, url)
         return url
     }
-
-    resolveHref(href: string): ResolvedHref {
+    resolveHref(href: string): { index: number; anchor: (doc: Document) => Element | null } {
         const filepos = href.match(/filepos:(.*)/)![1]
         const number = Number(filepos)
         const index = this.#sections.findIndex(section => section.end > number)
         const anchor = (doc: Document) => doc.getElementById(`filepos${filepos}`)
         return { index, anchor }
     }
-
     splitTOCHref(href: string): [number, string] {
         const filepos = href.match(/filepos:(.*)/)![1]
         const number = Number(filepos)
         const index = this.#sections.findIndex(section => section.end > number)
         return [index, `filepos${filepos}`]
     }
-
     getTOCFragment(doc: Document, id: string): Element | null {
         return doc.getElementById(id)
     }
-
     isExternal(uri: string): boolean {
         return /^(?!blob|filepos)\w+:/i.test(uri)
     }
-
     destroy(): void {
         for (const url of this.#resourceCache.values()) URL.revokeObjectURL(url)
         for (const url of this.#cache.values()) URL.revokeObjectURL(url)
     }
 }
 
-// ============================================================================
-// KF8 helpers
-// ============================================================================
-
 // handlers for `kindle:` uris
 const kindleResourceRegex = /kindle:(flow|embed):(\w+)(?:\?mime=(\w+\/[-+.\w]+))?/
 const kindlePosRegex = /kindle:pos:fid:(\w+):off:(\w+)/
-
-const parseResourceURI = (str: string): ParsedResourceURI => {
+const parseResourceURI = (str: string): { resourceType: string; id: number; type: string } => {
     const [resourceType, id, type] = str.match(kindleResourceRegex)!.slice(1)
     return { resourceType, id: parseInt(id, 32), type }
 }
-
-const parsePosURI = (str: string): ParsedPosURI => {
+const parsePosURI = (str: string): { fid: number; off: number } => {
     const [fid, off] = str.match(kindlePosRegex)!.slice(1)
     return { fid: parseInt(fid, 32), off: parseInt(off, 32) }
 }
-
 const makePosURI = (fid: number = 0, off: number = 0): string =>
     `kindle:pos:fid:${fid.toString(32).toUpperCase().padStart(4, '0')
     }:off:${off.toString(32).toUpperCase().padStart(10, '0')}`
@@ -1249,13 +1063,9 @@ const getFragmentSelector = (str: string): string | undefined => {
 }
 
 // replace asynchronously and sequentially
-const replaceSeries = async (
-    str: string,
-    regex: RegExp,
-    f: (...args: any[]) => Promise<string> // eslint-disable-line @typescript-eslint/no-explicit-any
-): Promise<string> => {
-    const matches: any[][] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
-    str.replace(regex, (...args) => (matches.push(args), null as unknown as string))
+const replaceSeries = async (str: string, regex: RegExp, f: (...args: string[]) => Promise<string>): Promise<string> => {
+    const matches: string[][] = []
+    str.replace(regex, (...args: string[]) => (matches.push(args), null as unknown as string))
     const results: string[] = []
     for (const args of matches) results.push(await f(...args))
     return str.replace(regex, () => results.shift()!)
@@ -1271,9 +1081,29 @@ const getPageSpread = (properties: string[]): string | undefined => {
     }
 }
 
-// ============================================================================
-// KF8 class
-// ============================================================================
+interface SkelEntry {
+    index: number
+    name: string
+    numFrag: number
+    offset: number
+    length: number
+}
+
+interface FragEntry {
+    insertOffset: number
+    selector: string
+    index: number
+    offset: number
+    length: number
+}
+
+interface KF8Section {
+    skel: SkelEntry
+    frags: FragEntry[]
+    fragEnd: number
+    length: number
+    totalLength: number
+}
 
 interface KF8Tables {
     fdstTable?: [number, number][]
@@ -1284,11 +1114,11 @@ interface KF8Tables {
 class KF8 {
     parser = new DOMParser()
     serializer = new XMLSerializer()
-    #cache = new Map<string | SectionEntry, string>()
+    #cache = new Map<string | KF8Section, string>()
     #fragmentOffsets = new Map<number, number[]>()
     #fragmentSelectors = new Map<number, Map<number, string | undefined>>()
     #tables: KF8Tables = {}
-    #sections!: SectionEntry[]
+    #sections!: KF8Section[]
     #fullRawLength: number | undefined
     #rawHead: Uint8Array<ArrayBufferLike> = new Uint8Array()
     #rawTail: Uint8Array<ArrayBufferLike> = new Uint8Array()
@@ -1297,18 +1127,16 @@ class KF8 {
     #type: string = MIME.XHTML
     #inlineMap = new Map<string, Element>()
     mobi: MOBI
-    sections!: (BookSection | { linear: string })[]
+    sections!: (SectionRef | { linear: string })[]
     toc?: TOCItem[]
     landmarks?: LandmarkItem[]
     dir?: string
-    rendition!: { layout: string; viewport: Record<string, string> }
-    metadata!: MobiMetadata
+    rendition?: { layout: string; viewport: Record<string, string> }
+    metadata!: Metadata
     getCover!: () => Promise<Blob | undefined>
-
     constructor(mobi: MOBI) {
         this.mobi = mobi
     }
-
     async init(): Promise<KF8> {
         const loadRecord = this.mobi.loadRecord.bind(this.mobi)
         const { kf8 } = this.mobi.headers
@@ -1317,17 +1145,16 @@ class KF8 {
             const fdstBuffer = await loadRecord(kf8!.fdst)
             const fdst = getStruct(FDST_HEADER, fdstBuffer)
             if (fdst.magic !== 'FDST') throw new Error('Missing FDST record')
-            const fdstTable = Array.from({ length: fdst.numEntries },
+            const fdstTable: [number, number][] = Array.from({ length: fdst.numEntries },
                 (_, i) => 12 + i * 8)
-                .map(offset => [
-                    getUint(fdstBuffer.slice(offset, offset + 4))!,
-                    getUint(fdstBuffer.slice(offset + 4, offset + 8))!,
-                ] as [number, number])
+                .map((offset: number): [number, number] => [
+                    getUint(fdstBuffer.slice(offset, offset + 4)) as number,
+                    getUint(fdstBuffer.slice(offset + 4, offset + 8)) as number])
             this.#tables.fdstTable = fdstTable
             this.#fullRawLength = fdstTable[fdstTable.length - 1][1]
-        } catch { /* empty */ }
+        } catch {}
 
-        const skelTable = (await getIndexData(kf8!.skel, loadRecord)).table
+        const skelTable: SkelEntry[] = (await getIndexData(kf8!.skel, loadRecord)).table
             .map(({ name, tagMap }, index) => ({
                 index, name,
                 numFrag: tagMap[1][0],
@@ -1335,7 +1162,7 @@ class KF8 {
                 length: tagMap[6][1],
             }))
         const fragData = await getIndexData(kf8!.frag, loadRecord)
-        const fragTable = fragData.table.map(({ name, tagMap }) => ({
+        const fragTable: FragEntry[] = fragData.table.map(({ name, tagMap }) => ({
             insertOffset: parseInt(name),
             selector: fragData.cncx[tagMap[2][0]],
             index: tagMap[4][0],
@@ -1345,7 +1172,7 @@ class KF8 {
         this.#tables.skelTable = skelTable
         this.#tables.fragTable = fragTable
 
-        this.#sections = skelTable.reduce((arr: SectionEntry[], skel) => {
+        this.#sections = skelTable.reduce((arr: KF8Section[], skel) => {
             const last = arr[arr.length - 1]
             const fragStart = last?.fragEnd ?? 0, fragEnd = fragStart + skel.numFrag
             const frags = fragTable.slice(fragStart, fragEnd)
@@ -1397,19 +1224,18 @@ class KF8 {
         }
 
         const { exth } = this.mobi.headers
-        this.dir = exth?.pageProgressionDirection as string | undefined
+        this.dir = exth?.pageProgressionDirection
         this.rendition = {
-            layout: (exth?.fixedLayout as string) === 'true' ? 'pre-paginated' : 'reflowable',
-            viewport: Object.fromEntries((exth?.originalResolution as string | undefined)
+            layout: exth?.fixedLayout === 'true' ? 'pre-paginated' : 'reflowable',
+            viewport: Object.fromEntries(exth?.originalResolution
                 ?.split('x')?.slice(0, 2)
-                ?.map((x, i) => [i ? 'height' : 'width', x]) ?? []),
+                ?.map((x: string, i: number) => [i ? 'height' : 'width', x]) ?? []),
         }
 
         this.metadata = this.mobi.getMetadata()
         this.getCover = this.mobi.getCover.bind(this.mobi)
         return this
     }
-
     // is this really the only way of getting to RESC, PAGE, etc.?
     async getResourcesByMagic(keys: string[]): Promise<Record<string, number>> {
         const results: Record<string, number> = {}
@@ -1420,11 +1246,10 @@ class KF8 {
                 const magic = await this.mobi.loadMagic(i)
                 const match = keys.find(key => key === magic)
                 if (match) results[match] = i
-            } catch { /* empty */ }
+            } catch {}
         }
         return results
     }
-
     async getGuide(): Promise<LandmarkItem[] | undefined> {
         const index = this.mobi.headers.kf8!.guide
         if (index < 0xffffffff) {
@@ -1437,13 +1262,12 @@ class KF8 {
             }))
         }
     }
-
     async loadResourceBlob(str: string): Promise<[Blob, Element | null]> {
         const { resourceType, id, type } = parseResourceURI(str)
         const raw = resourceType === 'flow' ? await this.loadFlow(id)
             : await this.mobi.loadResource(id - 1)
-        const result: string | ArrayBuffer | Uint8Array = ([MIME.XHTML, MIME.HTML, MIME.CSS, MIME.SVG] as string[]).includes(type)
-            ? await this.replaceResources(this.mobi.decode(raw as ArrayBuffer)) : raw!
+        const result = ([MIME.XHTML, MIME.HTML, MIME.CSS, MIME.SVG] as string[]).includes(type)
+            ? await this.replaceResources(this.mobi.decode(raw as ArrayBuffer)) : raw
         const doc = type === MIME.SVG ? this.parser.parseFromString(result as string, type as DOMParserSupportedType) : null
         return [new Blob([result as BlobPart], { type }),
             // SVG wrappers need to be inlined
@@ -1451,7 +1275,6 @@ class KF8 {
             doc?.getElementsByTagNameNS('http://www.w3.org/2000/svg', 'image')?.length
                 ? doc.documentElement : null]
     }
-
     async loadResource(str: string): Promise<string> {
         if (this.#cache.has(str)) return this.#cache.get(str)!
         const [blob, inline] = await this.loadResourceBlob(str)
@@ -1460,12 +1283,10 @@ class KF8 {
         this.#cache.set(str, url)
         return url
     }
-
     replaceResources(str: string): Promise<string> {
         const regex = new RegExp(kindleResourceRegex, 'g')
         return replaceSeries(str, regex, this.loadResource.bind(this))
     }
-
     // NOTE: there doesn't seem to be a way to access text randomly?
     // how to know the decompressed size of the records without decompressing?
     // 4096 is just the maximum size
@@ -1494,13 +1315,11 @@ class KF8 {
         const rawTailStart = this.#fullRawLength! - this.#rawTail.length
         return this.#rawTail.slice(start - rawTailStart, end - rawTailStart)
     }
-
     loadFlow(index: number): Promise<Uint8Array> | undefined {
         if (index < 0xffffffff)
             return this.loadRaw(...this.#tables.fdstTable![index])
     }
-
-    async loadText(section: SectionEntry): Promise<string> {
+    async loadText(section: KF8Section): Promise<string> {
         const { skel, frags, length } = section
         const raw = await this.loadRaw(skel.offset, skel.offset + length)
         let skeleton: Uint8Array<ArrayBufferLike> = raw.slice(0, skel.length)
@@ -1521,13 +1340,11 @@ class KF8 {
         }
         return this.mobi.decode(skeleton)
     }
-
-    async createDocument(section: SectionEntry): Promise<Document> {
+    async createDocument(section: KF8Section): Promise<Document> {
         const str = await this.loadText(section)
         return this.parser.parseFromString(str, this.#type as DOMParserSupportedType)
     }
-
-    async loadSection(section: SectionEntry): Promise<string> {
+    async loadSection(section: KF8Section): Promise<string> {
         if (this.#cache.has(section)) return this.#cache.get(section)!
         const str = await this.loadText(section)
         const replaced = await this.replaceResources(str)
@@ -1547,12 +1364,10 @@ class KF8 {
         this.#cache.set(section, url)
         return url
     }
-
     getIndexByFID(fid: number): number {
         return this.#sections.findIndex(section =>
             section.frags.some(frag => frag.index === fid))
     }
-
     #setFragmentSelector(id: number, offset: number, selector: string | undefined): void {
         const map = this.#fragmentSelectors.get(id)
         if (map) map.set(offset, selector)
@@ -1562,14 +1377,13 @@ class KF8 {
             map.set(offset, selector)
         }
     }
-
-    async resolveHref(href: string): Promise<ResolvedHref | undefined> {
+    async resolveHref(href: string): Promise<{ index: number; anchor: (doc: Document) => Element | null } | undefined> {
         const { fid, off } = parsePosURI(href)
         const index = this.getIndexByFID(fid)
         if (index < 0) return
 
         const saved = this.#fragmentSelectors.get(fid)?.get(off)
-        if (saved) return { index, anchor: doc => doc.querySelector(saved) }
+        if (saved) return { index, anchor: (doc: Document) => doc.querySelector(saved) }
 
         const { skel, frags } = this.#sections[index]
         const frag = frags.find(frag => frag.index === fid)!
@@ -1581,22 +1395,18 @@ class KF8 {
         const anchor = (doc: Document) => doc.querySelector(selector!)
         return { index, anchor }
     }
-
-    splitTOCHref(href: string): [number, ParsedPosURI] {
+    splitTOCHref(href: string): [number, { fid: number; off: number }] {
         const pos = parsePosURI(href)
         const index = this.getIndexByFID(pos.fid)
         return [index, pos]
     }
-
-    getTOCFragment(doc: Document, { fid, off }: ParsedPosURI): Element | null {
+    getTOCFragment(doc: Document, { fid, off }: { fid: number; off: number }): Element | null {
         const selector = this.#fragmentSelectors.get(fid)?.get(off)
         return doc.querySelector(selector!)
     }
-
     isExternal(uri: string): boolean {
         return /^(?!blob|kindle)\w+:/i.test(uri)
     }
-
     destroy(): void {
         for (const url of this.#cache.values()) URL.revokeObjectURL(url)
     }
