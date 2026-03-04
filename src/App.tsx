@@ -32,6 +32,7 @@ import { useAuthStore } from './stores/useAuthStore';
 import { useAppStore } from './stores/useAppStore';
 import { useAutoRestore } from './hooks/useAutoRestore';
 import { initDatabase } from './services/database';
+import { torrentService } from './services/torrentService';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -89,10 +90,13 @@ const AppTabs: React.FC = () => {
   }, [loadCustomFonts]);
 
   useEffect(() => {
-    // Resume seeding shared books on app startup (fire-and-forget, don't block UI)
+    // Resume seeding shared books on app startup (fire-and-forget, don't block UI).
+    // resumeSeeding() already checks isSupported() and exits early on native.
     useSharingStore.getState().resumeSeeding().catch((err) => {
       console.error('Failed to resume seeding:', err);
     });
+    // Clean up WebTorrent client on app unmount
+    return () => { torrentService.destroy(); };
   }, []);
 
   // Initialize Firebase auth listener

@@ -23,7 +23,7 @@ import {
   cloudOutline,
 } from 'ionicons/icons';
 import { useSharingStore } from '../../stores/useSharingStore';
-import { torrentService, TorrentStats } from '../../services/torrentService';
+import { torrentService, type TorrentStats } from '../../services/torrentService';
 import type { SharedBookDoc } from '../../services/sharingService';
 import './MySharedBooks.css';
 
@@ -51,6 +51,8 @@ const MySharedBooks: React.FC = () => {
   }, [loadMySharedBooks]);
 
   useEffect(() => {
+    // Seeding stats are only available on web (WebTorrent)
+    if (!torrentService.isSupported()) return;
     const poll = async () => {
       const stats: Record<string, TorrentStats | null> = {};
       const status: Record<string, boolean> = {};
@@ -69,7 +71,7 @@ const MySharedBooks: React.FC = () => {
       setSeedingStatus(status);
     };
     poll();
-    const interval = setInterval(poll, 2000);
+    const interval = setInterval(poll, 5000);
     return () => clearInterval(interval);
   }, [mySharedBooks]);
 

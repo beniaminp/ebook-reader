@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
   'wss://tracker.btorrent.xyz',
@@ -27,18 +29,39 @@ async function loadWebTorrent() {
 class TorrentService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private client: any = null;
+  // Prevent concurrent initialization creating multiple clients
+  private clientPromise: Promise<any> | null = null;
+
+  /**
+   * Returns true if WebTorrent is supported on the current platform.
+   * Native (Android/iOS) platforms cannot run WebTorrent.
+   */
+  isSupported(): boolean {
+    return !Capacitor.isNativePlatform();
+  }
 
   private async getClient() {
-    if (!this.client) {
-      try {
-        const WT = await loadWebTorrent();
-        this.client = new WT({ dht: false, lsd: false } as unknown as Record<string, unknown>);
-      } catch (err) {
-        throw new Error(
-          `WebTorrent initialization failed: ${err instanceof Error ? err.message : String(err)}`
-        );
-      }
+    if (!this.isSupported()) {
+      throw new Error('WebTorrent is not supported on native platforms');
     }
+    if (this.client) return this.client;
+    // Use a cached promise to prevent race conditions where multiple
+    // callers trigger concurrent initialization
+    if (!this.clientPromise) {
+      this.clientPromise = (async () => {
+        try {
+          const WT = await loadWebTorrent();
+          return new WT({ dht: false, lsd: false } as unknown as Record<string, unknown>);
+        } catch (err) {
+          // Reset so future calls can retry
+          this.clientPromise = null;
+          throw new Error(
+            `WebTorrent initialization failed: ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
+      })();
+    }
+    this.client = await this.clientPromise;
     return this.client;
   }
 
@@ -50,17 +73,14 @@ class TorrentService {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       client.seed(file as unknown as Buffer, { announce: WSS_TRACKERS }, (torrent: any) => {
         const finish = () => {
-          if (!settled) {
-            settled = true;
-            console.log(`Seeding ${fileName}, magnet: ${torrent.magnetURI}`);
-            resolve(torrent.magnetURI);
-          }
+          if (settled) return;
+          settled = true;
+          torrent.removeListener('trackerAnnounce', finish);
+          console.log(`Seeding ${fileName}, magnet: ${torrent.magnetURI}`);
+          resolve(torrent.magnetURI);
         };
         // Wait for tracker to acknowledge the announce so peers can find us
-        (torrent as unknown as { on(event: string, cb: () => void): void }).on(
-          'trackerAnnounce',
-          finish
-        );
+        torrent.on('trackerAnnounce', finish);
         // Fallback: resolve after 3s even without tracker confirmation
         setTimeout(finish, 3000);
       });
@@ -102,8 +122,21 @@ class TorrentService {
         emitStats();
 
         torrent.on('done', () => {
+          // Clean up the download progress listener
+          torrent.removeListener('download', emitStats);
+
           // Emit final stats with progress=1
-          emitStats();
+          if (onProgress) {
+            onProgress({
+              progress: 1,
+              downloadSpeed: 0,
+              uploadSpeed: torrent.uploadSpeed,
+              numPeers: torrent.numPeers,
+              downloaded: torrent.downloaded,
+              totalSize: torrent.length,
+              timeRemaining: 0,
+            });
+          }
 
           const file = torrent.files[0];
           if (!file) {
@@ -131,9 +164,9 @@ class TorrentService {
   }
 
   async getSeedingStats(magnetURI: string): Promise<TorrentStats | null> {
-    const client = await this.getClient();
+    if (!this.client) return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const torrent = client.get(magnetURI) as any;
+    const torrent = this.client.get(magnetURI) as any;
     if (!torrent) return null;
     return {
       progress: torrent.progress,
@@ -147,16 +180,18 @@ class TorrentService {
   }
 
   async stopSeeding(magnetURI: string): Promise<void> {
-    const client = await this.getClient();
-    const torrent = await client.get(magnetURI);
+    if (!this.client) return;
+    // client.get() is synchronous — do not await it
+    const torrent = this.client.get(magnetURI);
     if (torrent) {
       torrent.destroy();
     }
   }
 
   async isSeeding(magnetURI: string): Promise<boolean> {
-    const client = await this.getClient();
-    const torrent = await client.get(magnetURI);
+    if (!this.client) return false;
+    // client.get() is synchronous — do not await it
+    const torrent = this.client.get(magnetURI);
     return !!torrent;
   }
 
@@ -164,6 +199,7 @@ class TorrentService {
     if (this.client) {
       this.client.destroy();
       this.client = null;
+      this.clientPromise = null;
     }
   }
 }

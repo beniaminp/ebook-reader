@@ -6,6 +6,8 @@ import { getUserId } from '../services/userIdentityService';
 import { webFileStorage } from '../services/webFileStorage';
 import { useAppStore } from './useAppStore';
 
+const webTorrentSupported = torrentService.isSupported();
+
 interface SharingState {
   communityBooks: SharedBookDoc[];
   mySharedBooks: SharedBookDoc[];
@@ -55,11 +57,13 @@ export const useSharingStore = create<SharingState>((set, get) => ({
       let magnetURI: string | undefined;
       let downloadURL: string | undefined;
 
-      // Try WebTorrent first
-      try {
-        magnetURI = await torrentService.seed(fileData, fileName);
-      } catch (err) {
-        console.warn('WebTorrent seeding failed, falling back to Firebase Storage:', err);
+      // Try WebTorrent first (web only — not available on native)
+      if (webTorrentSupported) {
+        try {
+          magnetURI = await torrentService.seed(fileData, fileName);
+        } catch (err) {
+          console.warn('WebTorrent seeding failed, falling back to Firebase Storage:', err);
+        }
       }
 
       // Fall back to Firebase Storage if WebTorrent failed
@@ -123,8 +127,8 @@ export const useSharingStore = create<SharingState>((set, get) => ({
       let data: ArrayBuffer;
       let fileName: string;
 
-      // Try WebTorrent first if magnetURI is available
-      if (doc.magnetURI) {
+      // Try WebTorrent first if magnetURI is available (web only)
+      if (doc.magnetURI && webTorrentSupported) {
         try {
           const result = await torrentService.download(
             doc.magnetURI,
@@ -208,6 +212,8 @@ export const useSharingStore = create<SharingState>((set, get) => ({
   },
 
   resumeSeeding: async () => {
+    // WebTorrent seeding is web-only — skip entirely on native
+    if (!webTorrentSupported) return;
     try {
       const userId = await getUserId();
       const myBooks = await sharingService.getMySharedBooks(userId);
@@ -224,7 +230,6 @@ export const useSharingStore = create<SharingState>((set, get) => ({
             }
           }
         } catch (err) {
-          // WebTorrent may fail on some platforms — skip this book silently
           console.warn(`Failed to resume seeding for "${book.title}":`, err);
         }
       }
