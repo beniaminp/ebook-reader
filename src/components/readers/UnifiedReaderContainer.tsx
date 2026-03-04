@@ -1040,6 +1040,12 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   const handleSelectionDismiss = useCallback(() => {
     setCapturedSelectionText('');
+    // Clear native selection in iframes
+    try {
+      engineRef.current?.getContentDocuments?.()?.forEach((d) => {
+        try { d.getSelection?.()?.removeAllRanges(); } catch { /* */ }
+      });
+    } catch { /* */ }
   }, []);
 
   const renderEngine = useMemo(() => {
@@ -1523,6 +1529,13 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
                 setColorPickerOpen(false);
                 setPendingHighlightText('');
                 setPendingHighlightMeta(null);
+                setCapturedSelectionText('');
+                // Clear native selection in iframes
+                try {
+                  engineRef.current?.getContentDocuments?.()?.forEach((d) => {
+                    try { d.getSelection?.()?.removeAllRanges(); } catch { /* */ }
+                  });
+                } catch { /* */ }
                 window.getSelection()?.removeAllRanges();
               }}
               style={{

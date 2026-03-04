@@ -250,11 +250,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const highlightsRef = useRef<FoliateHighlight[]>(highlights || []);
   highlightsRef.current = highlights || [];
 
-  // Cached selection info (captured eagerly, native selection cleared immediately)
+  // Cached selection info — tracks the currently selected text for the menu
   const cachedSelectionRef = useRef<CapturedSelection | null>(null);
-  // Track temporary highlight spans applied during selection
-  const tempSelectionHighlightRef = useRef<HTMLElement | null>(null);
-  const tempSelectionDocRef = useRef<Document | null>(null);
 
   // Stable callback refs
   const onRelocateRef = useRef(onRelocate);
@@ -500,70 +497,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             return clientX / viewportWidth;
           };
 
-          // ─── Helper: remove temporary selection highlight ───
-          const clearTempHighlight = () => {
-            const span = tempSelectionHighlightRef.current;
-            if (span) {
-              try {
-                const p = span.parentNode;
-                if (p) {
-                  const textNode = (span.ownerDocument || document).createTextNode(span.textContent || '');
-                  p.replaceChild(textNode, span);
-                  p.normalize();
-                }
-              } catch { /* detached */ }
-              tempSelectionHighlightRef.current = null;
-              tempSelectionDocRef.current = null;
-            }
-          };
-
-          // ─── Helper: capture selection, replace with custom highlight, clear native ───
-          let selectionDebounce: ReturnType<typeof setTimeout> | null = null;
-          const captureAndClearSelection = () => {
-            const sel = doc.getSelection?.();
-            if (!sel || sel.isCollapsed) return;
-
-            const text = sel.toString().trim();
-            if (!text) return;
-
-            // Get the range before clearing
-            let cfi: string | undefined;
-            try {
-              const range = sel.getRangeAt(0);
-              const contents = (viewRef.current as any)?.renderer?.getContents?.() || [];
-              for (const { index: idx } of contents) {
-                cfi = (viewRef.current as any)?.getCFI(idx, range);
-                if (cfi) break;
-              }
-
-              // Create temporary visual highlight
-              clearTempHighlight();
-              try {
-                const highlightRange = range.cloneRange();
-                const span = doc.createElement('span');
-                span.style.backgroundColor = 'rgba(255, 213, 79, 0.45)';
-                span.style.borderRadius = '2px';
-                span.setAttribute('data-temp-selection', 'true');
-                highlightRange.surroundContents(span);
-                tempSelectionHighlightRef.current = span;
-                tempSelectionDocRef.current = doc;
-              } catch {
-                // surroundContents may fail if range crosses element boundaries
-                // In that case, skip temp highlight — the selection info is still captured
-              }
-            } catch (err) {
-              console.warn('Failed to capture selection CFI:', err);
-            }
-
-            // Cache the selection info
-            cachedSelectionRef.current = { text, cfi };
-
-            // Clear native selection to hide Chrome's handles/toolbar
-            sel.removeAllRanges();
-
-            // Notify parent
-            onSelectionCapturedRef.current?.({ text, cfi });
-          };
+          // ─── Selection notification (keeps native selection alive for extending) ───
+          let selectionNotifyDebounce: ReturnType<typeof setTimeout> | null = null;
 
           doc.addEventListener('touchstart', (ev: TouchEvent) => {
             const t = ev.touches[0];
@@ -578,18 +513,20 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             touchStart = null;
             // Only treat as tap if short duration and no significant movement
             if (dx > 10 || dy > 10 || elapsed > 300) return;
-            // Skip if we have an active captured selection — tap clears it
-            if (cachedSelectionRef.current) {
-              clearTempHighlight();
+            // If there's an active native selection, tap clears it and dismisses menu
+            const sel = doc.getSelection?.();
+            if (sel && !sel.isCollapsed) {
+              sel.removeAllRanges();
               cachedSelectionRef.current = null;
               onSelectionCapturedRef.current?.(null);
-              // Also clear any remaining native selection
-              doc.getSelection?.()?.removeAllRanges();
               return;
             }
-            // Skip if user has selected text (shouldn't happen with our capture, but guard)
-            const sel = doc.getSelection?.();
-            if (sel && !sel.isCollapsed) return;
+            // If there's a cached selection (from a previous capture), clear it
+            if (cachedSelectionRef.current) {
+              cachedSelectionRef.current = null;
+              onSelectionCapturedRef.current?.(null);
+              return;
+            }
             touchHandledTap = true;
             const relX = toRelativeX(t.clientX);
             onContentTapRef.current?.(relX);
@@ -597,30 +534,44 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           doc.addEventListener('click', (ev: MouseEvent) => {
             // On touch devices, touchend already handled the tap
             if (touchHandledTap) { touchHandledTap = false; return; }
-            // Skip if we have an active captured selection — click clears it
-            if (cachedSelectionRef.current) {
-              clearTempHighlight();
+            // If there's an active native selection, click clears it
+            const sel = doc.getSelection?.();
+            if (sel && !sel.isCollapsed) {
+              sel.removeAllRanges();
               cachedSelectionRef.current = null;
               onSelectionCapturedRef.current?.(null);
-              doc.getSelection?.()?.removeAllRanges();
               return;
             }
-            // Skip if user has selected text
-            const sel = doc.getSelection?.();
-            if (sel && !sel.isCollapsed) return;
+            if (cachedSelectionRef.current) {
+              cachedSelectionRef.current = null;
+              onSelectionCapturedRef.current?.(null);
+              return;
+            }
             const relX = toRelativeX(ev.clientX);
             onContentTapRef.current?.(relX);
           });
 
-          // Listen for selection changes — debounce to wait for user to finish adjusting
+          // Notify parent of selection changes so the menu shows/hides.
+          // Native selection stays alive — user can still extend with handles.
           doc.addEventListener('selectionchange', () => {
-            if (selectionDebounce) clearTimeout(selectionDebounce);
+            if (selectionNotifyDebounce) clearTimeout(selectionNotifyDebounce);
             const sel = doc.getSelection?.();
-            if (!sel || sel.isCollapsed) return;
-            // Wait 400ms after user stops adjusting the selection
-            selectionDebounce = setTimeout(() => {
-              captureAndClearSelection();
-            }, 400);
+            if (!sel || sel.isCollapsed) {
+              // Selection collapsed — notify parent to hide menu
+              if (cachedSelectionRef.current) {
+                cachedSelectionRef.current = null;
+                onSelectionCapturedRef.current?.(null);
+              }
+              return;
+            }
+            // Debounce to let user finish adjusting selection handles
+            selectionNotifyDebounce = setTimeout(() => {
+              const text = sel.toString().trim();
+              if (text) {
+                cachedSelectionRef.current = { text };
+                onSelectionCapturedRef.current?.({ text });
+              }
+            }, 200);
           });
 
           // Suppress native context menu (long-press on Android/iOS) so the

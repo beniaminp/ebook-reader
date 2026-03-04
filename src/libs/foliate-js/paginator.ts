@@ -845,6 +845,9 @@ export class Paginator extends HTMLElement {
         const checkPointerSelection = debounce(
             (range: Range, sel: Selection) => {
                 if (!sel.rangeCount) return
+                // On touch devices, don't auto-navigate when extending
+                // selection with handles — it causes unwanted page turns.
+                if ('ontouchstart' in globalThis) return
                 const selRange = sel.getRangeAt(0)
                 const backward = selectionIsBackward(sel)
                 if (
