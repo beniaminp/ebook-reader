@@ -1,13 +1,22 @@
 diff --git a/node_modules/foliate-js/paginator.js b/node_modules/foliate-js/paginator.js
-index 95c4d0d..55f3a87 100644
+index 95c4d0d..ce165be 100644
 --- a/node_modules/foliate-js/paginator.js
 +++ b/node_modules/foliate-js/paginator.js
+@@ -198,7 +198,7 @@ const setStylesImportant = (el, styles) => {
+ }
+ 
+ class View {
+-    #observer = new ResizeObserver(() => this.expand())
++    #observer = new ResizeObserver(() => { try { this.expand() } catch { /* doc may be detached */ } })
+     #element = document.createElement('div')
+     #iframe = document.createElement('iframe')
+     #contentRange = document.createRange()
 @@ -275,7 +275,7 @@ class View {
          })
      }
      render(layout) {
 -        if (!layout || !this.document) return
-+        if (!layout || !this.document?.documentElement) return
++        if (!layout || !this.document?.documentElement || !this.document?.body) return
          this.#column = layout.flow !== 'scrolled'
          this.#layout = layout
          if (this.#column) this.columnize(layout)
@@ -15,7 +24,7 @@ index 95c4d0d..55f3a87 100644
      scrolled({ margin, gap, columnWidth }) {
          const vertical = this.#vertical
          const doc = this.document
-+        if (!doc?.documentElement) return
++        if (!doc?.documentElement || !doc.body) return
          setStylesImportant(doc.documentElement, {
              'box-sizing': 'border-box',
              'padding': vertical ? `${margin*1.5}px ${gap}px` : `0 ${gap}px`,
@@ -23,7 +32,7 @@ index 95c4d0d..55f3a87 100644
          this.#size = vertical ? height : width
  
          const doc = this.document
-+        if (!doc?.documentElement) return
++        if (!doc?.documentElement || !doc.body) return
          setStylesImportant(doc.documentElement, {
              'box-sizing': 'border-box',
              'column-width': `${Math.trunc(columnWidth)}px`,
@@ -55,6 +64,15 @@ index 95c4d0d..55f3a87 100644
      }
  }
  
+@@ -419,7 +426,7 @@ export class Paginator extends HTMLElement {
+         'max-inline-size', 'max-block-size', 'max-column-count',
+     ]
+     #root = this.attachShadow({ mode: 'closed' })
+-    #observer = new ResizeObserver(() => this.render())
++    #observer = new ResizeObserver(() => { try { this.render() } catch { /* doc may be detached */ } })
+     #top
+     #background
+     #container
 @@ -1095,14 +1102,17 @@ export class Paginator extends HTMLElement {
      async #turnPage(dir, distance) {
          if (this.#locked) return
