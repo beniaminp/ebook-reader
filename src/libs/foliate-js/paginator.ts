@@ -1,3 +1,5 @@
+import type { Overlayer } from './overlayer'
+
 // ---- Interfaces ----
 
 interface LayoutConfig {
@@ -66,11 +68,6 @@ interface BeforeRenderInfo extends DirectionInfo {
 interface MappedRect {
     left: number;
     right: number;
-}
-
-interface Overlayer {
-    element: HTMLElement;
-    redraw(): void;
 }
 
 interface Book {
