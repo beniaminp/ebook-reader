@@ -27,6 +27,7 @@ import CommunityBooks from './pages/CommunityBooks/CommunityBooks';
 import MySharedBooks from './pages/MySharedBooks/MySharedBooks';
 import ReadingGoals from './pages/ReadingGoals/ReadingGoals';
 import HardcoverSettings from './pages/HardcoverSettings/HardcoverSettings';
+import SearchBooks from './pages/SearchBooks/SearchBooks';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
@@ -195,6 +196,9 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/hardcover-settings">
           <HardcoverSettings />
+        </Route>
+        <Route exact path="/search-books">
+          <SearchBooks />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

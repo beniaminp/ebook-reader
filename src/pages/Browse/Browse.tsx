@@ -31,6 +31,7 @@ import {
   checkmarkDoneOutline,
   timeOutline,
   arrowBack,
+  searchOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -340,6 +341,17 @@ const Browse: React.FC = () => {
           <SeriesView books={books} />
         ) : (
         <>
+        {/* Search Books Online */}
+        <div className="browse-section">
+          <button
+            className="browse-chip browse-chip--highlight"
+            onClick={() => history.push('/search-books')}
+          >
+            <IonIcon icon={searchOutline} style={{ marginRight: 6 }} />
+            Search Books Online
+          </button>
+        </div>
+
         {/* Recently Added */}
         {recentlyAdded.length > 0 && (
           <div className="browse-recent-section">
