@@ -33,8 +33,8 @@ type IndexedChild = Node | Node[] | string | null;
 
 const findIndices = <T>(arr: T[], f: (x: T, i: number, a: T[]) => boolean): number[] => arr
     .map((x, i, a) => f(x, i, a) ? i : null).filter((x): x is number => x != null)
-const splitAt = <T>(arr: T[], is: number[]): T[][] => [-1, ...is, arr.length].reduce(({ xs, a }: { xs: T[][]; a: number }, b: number) =>
-    ({ xs: xs?.concat([arr.slice(a + 1, b)]) ?? [], a: b }), { xs: [] as T[][], a: 0 } as { xs: T[][]; a: number }).xs
+const splitAt = <T>(arr: T[], is: number[]): T[][] => [-1, ...is, arr.length].reduce(({ xs, a }: { xs: T[][] | undefined; a: number }, b: number) =>
+    ({ xs: xs?.concat([arr.slice(a + 1, b)]) ?? [], a: b }), {} as { xs: T[][] | undefined; a: number }).xs!
 const concatArrays = <T>(a: T[][], b: T[][]): T[][] =>
     a.slice(0, -1).concat([a[a.length - 1].concat(b[0])]).concat(b.slice(1))
 
