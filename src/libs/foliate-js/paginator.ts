@@ -416,34 +416,38 @@ class View {
                         resolve()
                         return
                     }
-                    afterLoad?.(doc)
+                    try {
+                        afterLoad?.(doc)
 
-                    // it needs to be visible for Firefox to get computed style
-                    this.#iframe.style.display = 'block'
-                    const { vertical, rtl } = getDirection(doc)
-                    this.docBackground = getBackground(doc)
-                    if (doc.body) doc.body.style.background = 'none'
-                    const background = this.docBackground
-                    this.#iframe.style.display = 'none'
+                        // it needs to be visible for Firefox to get computed style
+                        this.#iframe.style.display = 'block'
+                        const { vertical, rtl } = getDirection(doc)
+                        this.docBackground = getBackground(doc)
+                        if (doc.body) doc.body.style.background = 'none'
+                        const background = this.docBackground
+                        this.#iframe.style.display = 'none'
 
-                    this.#vertical = vertical
-                    this.#rtl = rtl
+                        this.#vertical = vertical
+                        this.#rtl = rtl
 
-                    if (doc.body) {
-                        this.#contentRange.selectNodeContents(doc.body)
+                        if (doc.body) {
+                            this.#contentRange.selectNodeContents(doc.body)
+                        }
+                        const layout = beforeRender?.({ vertical, rtl, background })
+                        this.#iframe.style.display = 'block'
+                        this.render(layout as LayoutConfig | undefined)
+                        if (doc.body) {
+                            this.#observer.observe(doc.body)
+                        }
+
+                        // the resize observer above doesn't work in Firefox
+                        // until the bug is fixed we can at least account for font load
+                        doc.fonts.ready.then(() => this.expand())
+                    } catch (e) {
+                        console.error('Error in iframe load handler:', e)
+                    } finally {
+                        resolve()
                     }
-                    const layout = beforeRender?.({ vertical, rtl, background })
-                    this.#iframe.style.display = 'block'
-                    this.render(layout as LayoutConfig | undefined)
-                    if (doc.body) {
-                        this.#observer.observe(doc.body)
-                    }
-
-                    // the resize observer above doesn't work in Firefox
-                    // until the bug is fixed we can at least account for font load
-                    doc.fonts.ready.then(() => this.expand())
-
-                    resolve()
                 },
                 { once: true },
             )
@@ -1165,6 +1169,7 @@ export class Paginator extends HTMLElement {
 
     snap(vx: number, vy: number): void {
         if (!this.#scrollBounds) return
+        if (this.#locked) return
         const velocity = this.#vertical ? vy : vx
         const [offset, a, b] = this.#scrollBounds
         const { start, end, pages, size } = this
@@ -1181,6 +1186,7 @@ export class Paginator extends HTMLElement {
             ) / size,
         )
 
+        this.#locked = true
         this.#scrollToPage(page, 'snap').then(() => {
             const dir =
                 page <= 0 ? -1 : page >= pages - 1 ? 1 : null
@@ -1189,6 +1195,8 @@ export class Paginator extends HTMLElement {
                     index: this.#adjacentIndex(dir)!,
                     anchor: dir < 0 ? () => 1 : () => 0,
                 })
+        }).finally(() => {
+            this.#locked = false
         })
     }
 
@@ -1570,6 +1578,9 @@ export class Paginator extends HTMLElement {
     async #turnPage(dir: -1 | 1, distance?: number): Promise<void> {
         if (this.#locked) return
         this.#locked = true
+        // Safety timeout: force-unlock after 5s to prevent permanent lock-up
+        // if a promise hangs (e.g., iframe destroyed mid-load)
+        const safetyTimer = setTimeout(() => { this.#locked = false }, 5000)
         try {
             const prev = dir === -1
             const shouldGo = await (prev
@@ -1583,6 +1594,7 @@ export class Paginator extends HTMLElement {
             if (shouldGo || !this.hasAttribute('animated'))
                 await wait(100)
         } finally {
+            clearTimeout(safetyTimer)
             this.#locked = false
         }
     }
