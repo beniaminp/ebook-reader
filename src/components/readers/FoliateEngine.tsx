@@ -448,6 +448,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
         view.addEventListener('load', ((e: CustomEvent<{ doc: Document; index: number }>) => {
           if (destroyed) return;
+          // Clear stale docs from previous sections (their iframes have been destroyed)
+          loadedDocsRef.current.clear();
           loadedDocsRef.current.add(e.detail.doc);
           injectStyles(e.detail.doc);
           if (bionicReadingRef.current) applyBionicToDoc(e.detail.doc);
@@ -650,11 +652,15 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     () => ({
       next: () => {
         // Clear text selection inside iframe docs to prevent accidental selection during page turns
-        loadedDocsRef.current.forEach((doc) => doc.getSelection?.()?.removeAllRanges());
+        loadedDocsRef.current.forEach((doc) => {
+          try { doc.getSelection?.()?.removeAllRanges(); } catch { /* doc may be detached */ }
+        });
         viewRef.current?.next();
       },
       prev: () => {
-        loadedDocsRef.current.forEach((doc) => doc.getSelection?.()?.removeAllRanges());
+        loadedDocsRef.current.forEach((doc) => {
+          try { doc.getSelection?.()?.removeAllRanges(); } catch { /* doc may be detached */ }
+        });
         viewRef.current?.prev();
       },
       goToLocation: (location: string) => {
