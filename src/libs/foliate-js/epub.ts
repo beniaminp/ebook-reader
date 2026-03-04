@@ -1,159 +1,6 @@
 import * as CFI from './epubcfi'
 
-// ── Interfaces ──────────────────────────────────────────────────────────────
-
-export interface ManifestItem {
-    href: string
-    id: string
-    mediaType: string
-    properties?: string[]
-    mediaOverlay?: string
-}
-
-export interface SpineItem {
-    idref: string
-    id: string
-    linear: string | null
-    properties?: string[]
-}
-
-export interface Section {
-    id: string
-    load: () => Promise<string | null>
-    unload: () => void
-    createDocument: () => Promise<Document>
-    size: number
-    cfi: string
-    linear: string | null
-    pageSpread?: string
-    resolveHref: (href: string) => string
-    mediaOverlay: ManifestItem | null
-}
-
-export interface NavItem {
-    label: string
-    href: string | null
-    type?: string[]
-    subitems?: NavItem[] | null
-}
-
-export interface NavResult {
-    toc: NavItem[] | null
-    pageList: NavItem[] | null
-    landmarks?: NavItem[] | null
-    others: Array<{ label: string; type?: string[]; list: NavItem[] | null }>
-}
-
-export interface Contributor {
-    name: unknown
-    sortAs?: unknown
-    role?: string[]
-    code?: string
-    scheme?: string
-}
-
-export interface CollectionInfo {
-    name: unknown
-    position?: string
-}
-
-export interface EpubMetadata {
-    identifier: string
-    title: unknown
-    sortAs?: unknown
-    subtitle?: string
-    language?: string[]
-    description?: string
-    publisher?: Contributor | null
-    published?: string
-    modified?: string
-    subject?: Array<Contributor | null>
-    belongsTo?: {
-        collection?: CollectionInfo[] | null
-        series?: CollectionInfo | CollectionInfo[] | null
-    }
-    altIdentifier?: unknown
-    source?: unknown
-    rights?: string
-    [key: string]: unknown
-}
-
-export interface RenditionInfo {
-    layout?: string
-    flow?: string
-    orientation?: string
-    spread?: string
-    [key: string]: unknown
-}
-
-export interface MediaInfo {
-    duration?: number
-    activeClass?: string
-    playbackActiveClass?: string
-    narrator?: string
-    [key: string]: unknown
-}
-
-export interface GuideReference {
-    label: string
-    type: string[]
-    href: string
-}
-
-export interface DisplayOptions {
-    fixedLayout: string
-    openToSpread: string
-}
-
-export interface ResolvedHref {
-    index: number
-    anchor: (doc: Document) => unknown
-}
-
-export interface CalibreBookmark {
-    [key: string]: unknown
-}
-
-interface LoaderOptions {
-    loadText: (uri: string) => Promise<string>
-    loadBlob: (uri: string) => Promise<Blob>
-    resources: Resources
-}
-
-interface ResourcesOptions {
-    opf: Document
-    resolveHref: (url: string) => string
-}
-
-interface EPUBOptions {
-    loadText: (uri: string) => Promise<string>
-    loadBlob: (uri: string) => Promise<Blob>
-    getSize: (href: string) => number
-    sha1?: (str: string) => Promise<Uint8Array>
-}
-
-interface DeobfuscatorAlgo {
-    key: (opf: Document) => Uint8Array | Promise<Uint8Array>
-    decode: (key: Uint8Array, blob: Blob) => Promise<Blob>
-}
-
-interface ParsedMeta {
-    property: string | null
-    scheme: string | null
-    lang: string | null
-    value: string
-    props: Record<string, ParsedMeta[]> | null
-    attrs: Record<string, string>
-}
-
-interface SMILEntry {
-    src: string
-    items: Array<{ text: string; begin: number | undefined; end: number | undefined }>
-}
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-const NS: Record<string, string> = {
+const NS = {
     CONTAINER: 'urn:oasis:names:tc:opendocument:xmlns:container',
     XHTML: 'http://www.w3.org/1999/xhtml',
     OPF: 'http://www.idpf.org/2007/opf',
@@ -164,15 +11,15 @@ const NS: Record<string, string> = {
     NCX: 'http://www.daisy.org/z3986/2005/ncx/',
     XLINK: 'http://www.w3.org/1999/xlink',
     SMIL: 'http://www.w3.org/ns/SMIL',
-}
+} as const
 
-const MIME: Record<string, string | RegExp> = {
-    XML: 'application/xml',
-    NCX: 'application/x-dtbncx+xml',
-    XHTML: 'application/xhtml+xml',
-    HTML: 'text/html',
-    CSS: 'text/css',
-    SVG: 'image/svg+xml',
+const MIME = {
+    XML: 'application/xml' as const,
+    NCX: 'application/x-dtbncx+xml' as const,
+    XHTML: 'application/xhtml+xml' as const,
+    HTML: 'text/html' as const,
+    CSS: 'text/css' as const,
+    SVG: 'image/svg+xml' as const,
     JS: /\/(x-)?(javascript|ecmascript)/,
 }
 
@@ -209,7 +56,175 @@ const ONIX5: Record<string, string> = {
     '34': 'issn',
 }
 
-// ── Utility functions ───────────────────────────────────────────────────────
+interface ManifestItem {
+    href: string
+    id: string
+    mediaType: string
+    properties: string[] | null
+    mediaOverlay: string | null
+}
+
+interface SpineItem {
+    idref: string
+    id: string
+    linear: string | null
+    properties: string[] | null
+}
+
+interface GuideReference {
+    label: string
+    type: string[]
+    href: string
+}
+
+interface NavItem {
+    label: string
+    href: string | null
+    subitems: NavItem[] | null
+    type?: string[]
+}
+
+interface NavResult {
+    toc: NavItem[] | null
+    pageList: NavItem[] | null
+    landmarks?: NavItem[] | null
+    others: { label: string; type?: string[]; list: NavItem[] | null }[]
+}
+
+interface SMILAudioItem {
+    text: string
+    begin: number | undefined
+    end: number | undefined
+}
+
+interface SMILAudioEntry {
+    src: string
+    items: SMILAudioItem[]
+}
+
+interface MetadataParsed {
+    property: string | null
+    scheme: string | null
+    lang: string | null
+    value: string
+    props: Record<string, MetadataParsed[]> | null
+    attrs: Record<string, string>
+}
+
+interface LanguageMap {
+    [lang: string]: string
+}
+
+interface Contributor {
+    name: string | LanguageMap | null
+    sortAs?: string | LanguageMap | null
+    role?: (string | null)[]
+    code?: string | null
+    scheme?: string | null
+}
+
+interface Collection {
+    name: string | LanguageMap | null
+    position?: string | null
+}
+
+interface AltIdentifier {
+    scheme: string
+    value: string
+}
+
+interface EpubMetadata {
+    identifier: string
+    title: string | LanguageMap | null
+    sortAs?: string | LanguageMap | null
+    subtitle?: string
+    language?: string[]
+    description?: string
+    publisher?: Contributor | null
+    published?: string
+    modified?: string
+    subject?: (Contributor | null)[]
+    belongsTo?: {
+        collection?: Collection[] | Collection
+        series?: Collection[] | Collection | null
+    }
+    altIdentifier?: (string | AltIdentifier)[]
+    source?: (string | AltIdentifier)[]
+    rights?: string
+    [key: string]: unknown
+}
+
+interface Rendition {
+    layout?: string
+    [key: string]: string | undefined
+}
+
+interface MediaProperties {
+    duration?: number | string
+    [key: string]: unknown
+}
+
+interface MetadataResult {
+    metadata: EpubMetadata
+    rendition: Rendition
+    media: MediaProperties
+}
+
+interface DisplayOptions {
+    fixedLayout: string
+    openToSpread: string
+}
+
+interface Section {
+    id: string
+    load: () => Promise<string | null>
+    unload: () => void
+    createDocument: () => Promise<Document>
+    size: number
+    cfi: string
+    linear: string | null
+    pageSpread: string | undefined
+    resolveHref: (href: string) => string
+    mediaOverlay: ManifestItem | null
+}
+
+interface ResolvedHref {
+    index: number
+    anchor: (doc: Document) => Range | Element | number | null
+}
+
+interface LoaderOptions {
+    loadText: (uri: string) => Promise<string>
+    loadBlob: (uri: string) => Promise<Blob>
+    resources: Resources
+}
+
+interface ResourcesOptions {
+    opf: Document
+    resolveHref: (url: string) => string
+}
+
+interface EPUBOptions {
+    loadText: (uri: string) => Promise<string>
+    loadBlob: (uri: string) => Promise<Blob>
+    getSize: (href: string) => number
+    sha1?: (str: string) => Promise<Uint8Array>
+}
+
+interface DeobfuscationAlgorithm {
+    key: (opf: Document) => Uint8Array | Promise<Uint8Array>
+    decode: (key: Uint8Array, blob: Blob) => Promise<Blob>
+}
+
+interface CalibreBookmarks {
+    [key: string]: unknown
+}
+
+type ChildGetter = {
+    $: (el: Element, name: string) => Element | undefined
+    $$: (el: Element, name: string) => Element[]
+    $$$: (el: Element | Document, name: string) => Element[]
+}
 
 // convert to camel case
 const camel = (x: string): string => x.toLowerCase().replace(/[-:](.)/g, (_, g: string) => g.toUpperCase())
@@ -221,29 +236,29 @@ const normalizeWhitespace = (str: string | null | undefined): string => str ? st
     .replace(/^[\t\n\f\r ]+/, '')
     .replace(/[\t\n\f\r ]+$/, '') : ''
 
-const filterAttribute = (attr: string, value: string | ((v: string | null) => boolean), isList?: boolean) => isList
-    ? (el: Element) => el.getAttribute(attr)?.split(/\s/)?.includes(value as string)
+const filterAttribute = (attr: string, value: string | ((val: string | null) => boolean), isList?: boolean): ((el: Element) => boolean) => isList
+    ? (el: Element) => el.getAttribute(attr)?.split(/\s/)?.includes(value as string) ?? false
     : typeof value === 'function'
         ? (el: Element) => value(el.getAttribute(attr))
         : (el: Element) => el.getAttribute(attr) === value
 
-const getAttributes = (...xs: string[]) => (el: Element | null): Record<string, any> | null =>
+const getAttributes = (...xs: string[]) => (el: Element | null): Record<string, string | null> | null =>
     el ? Object.fromEntries(xs.map(x => [camel(x), el.getAttribute(x)])) : null
 
 const getElementText = (el: Element | null | undefined): string => normalizeWhitespace(el?.textContent)
 
-const childGetter = (doc: Document | Element, ns: string) => {
+const childGetter = (doc: Document | Element, ns: string): ChildGetter => {
     // ignore the namespace if it doesn't appear in document at all
     const useNS = doc.lookupNamespaceURI(null) === ns || doc.lookupPrefix(ns)
     const f = useNS
         ? (_el: Element, name: string) => (el: Element) => el.namespaceURI === ns && el.localName === name
         : (_el: Element, name: string) => (el: Element) => el.localName === name
     return {
-        $: (el: Element, name: string): Element | undefined => [...el.children].find(f(el, name)),
-        $$: (el: Element, name: string): Element[] => [...el.children].filter(f(el, name)),
+        $: (el: Element, name: string) => [...el.children].find(f(el, name)),
+        $$: (el: Element, name: string) => [...el.children].filter(f(el, name)),
         $$$: useNS
-            ? (el: Element | Document, name: string): Element[] => [...(el as Document).getElementsByTagNameNS(ns, name)]
-            : (el: Element | Document, name: string): Element[] => [...(el as Document).getElementsByTagName(name)],
+            ? (el: Element | Document, name: string) => [...(el as Element).getElementsByTagNameNS(ns, name)]
+            : (el: Element | Document, name: string) => [...(el as Element).getElementsByTagName(name)],
     }
 }
 
@@ -251,7 +266,7 @@ const resolveURL = (url: string, relativeTo: string): string => {
     try {
         // replace %2c in the url with a comma, this might be introduced by calibre
         url = url.replace(/%2c/, ',')
-        if (relativeTo.includes(':') && !relativeTo.startsWith('OEBPS')) return new URL(url, relativeTo) as any
+        if (relativeTo.includes(':') && !relativeTo.startsWith('OEBPS')) return new URL(url, relativeTo) as unknown as string
         // the base needs to be a valid URL, so set a base URL and then remove it
         const root = 'https://invalid.invalid/'
         const obj = new URL(url, root + relativeTo)
@@ -278,9 +293,9 @@ const pathDirname = (str: string): string => str.slice(0, str.lastIndexOf('/') +
 
 // replace asynchronously and sequentially
 // same technique as https://stackoverflow.com/a/48032528
-const replaceSeries = async (str: string, regex: RegExp, f: (...args: any[]) => Promise<string>): Promise<string> => {
-    const matches: any[][] = []
-    str.replace(regex, (...args: any[]) => (matches.push(args), null as any))
+const replaceSeries = async (str: string, regex: RegExp, f: (...args: string[]) => Promise<string>): Promise<string> => {
+    const matches: string[][] = []
+    str.replace(regex, (...args: string[]) => (matches.push(args), null as unknown as string))
     const results: string[] = []
     for (const args of matches) results.push(await f(...args))
     return str.replace(regex, () => results.shift()!)
@@ -288,27 +303,27 @@ const replaceSeries = async (str: string, regex: RegExp, f: (...args: any[]) => 
 
 const regexEscape = (str: string): string => str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
 
-const tidy = (obj: any): any => {
+const tidy = (obj: Record<string, unknown>): unknown => {
     for (const [key, val] of Object.entries(obj))
         if (val == null) delete obj[key]
         else if (Array.isArray(val)) {
             obj[key] = val.filter(x => x).map(x =>
-                typeof x === 'object' && !Array.isArray(x) ? tidy(x) : x)
-            if (!obj[key].length) delete obj[key]
-            else if (obj[key].length === 1) obj[key] = obj[key][0]
+                typeof x === 'object' && !Array.isArray(x) ? tidy(x as Record<string, unknown>) : x)
+            if (!(obj[key] as unknown[]).length) delete obj[key]
+            else if ((obj[key] as unknown[]).length === 1) obj[key] = (obj[key] as unknown[])[0]
         }
         else if (typeof val === 'object') {
-            obj[key] = tidy(val)
-            if (!Object.keys(val as object).length) delete obj[key]
+            obj[key] = tidy(val as Record<string, unknown>)
+            if (!Object.keys(val as Record<string, unknown>).length) delete obj[key]
         }
     const keys = Object.keys(obj)
-    if (keys.length === 1 && keys[0] === 'name') return obj[keys[0]]
+    if (keys.length === 1 && keys[0] === 'name') return (obj as Record<string, unknown>)[keys[0]]
     return obj
 }
 
 // https://www.w3.org/TR/epub/#sec-prefix-attr
-const getPrefixes = (doc: Document): Map<string | null, string> => {
-    const map = new Map<string | null, string>(Object.entries(PREFIX))
+const getPrefixes = (doc: Document): Map<string, string> => {
+    const map = new Map<string, string>(Object.entries(PREFIX))
     const value = doc.documentElement.getAttributeNS(NS.EPUB, 'prefix')
         || doc.documentElement.getAttribute('prefix')
     if (value) for (const [, prefix, url] of value
@@ -318,28 +333,28 @@ const getPrefixes = (doc: Document): Map<string | null, string> => {
 
 // https://www.w3.org/TR/epub-rs/#sec-property-values
 // but ignoring the case where the prefix is omitted
-const getPropertyURL = (value: string | null, prefixes: Map<string | null, string>): string | null => {
+const getPropertyURL = (value: string | null, prefixes: Map<string, string>): string | null => {
     if (!value) return null
     const [a, b] = value.split(':')
     const prefix = b ? a : null
     const reference = b ? b : a
-    const baseURL = prefixes.get(prefix)
+    const baseURL = prefixes.get(prefix!)
     return baseURL ? baseURL + reference : null
 }
 
-const getMetadata = (opf: Document): { metadata: EpubMetadata; rendition: RenditionInfo; media: MediaInfo } => {
+const getMetadata = (opf: Document): MetadataResult => {
     const { $ } = childGetter(opf, NS.OPF)
     const $metadata = $(opf.documentElement, 'metadata')!
 
     // first pass: convert to JS objects
-    const els = Object.groupBy([...$metadata.children], (el: Element) =>
+    const els = Object.groupBy([...$metadata.children] as Element[], (el: Element) =>
         el.namespaceURI === NS.DC ? 'dc'
         : el.namespaceURI === NS.OPF && el.localName === 'meta' ?
             (el.hasAttribute('name') ? 'legacyMeta' : 'meta') : '')
     const baseLang = $metadata.getAttribute('xml:lang')
         ?? opf.documentElement.getAttribute('xml:lang') ?? 'und'
     const prefixes = getPrefixes(opf)
-    const parse = (el: Element): ParsedMeta => {
+    const parse = (el: Element): MetadataParsed => {
         const property = el.getAttribute('property')
         const scheme = el.getAttribute('scheme')
         return {
@@ -355,44 +370,44 @@ const getMetadata = (opf: Document): { metadata: EpubMetadata; rendition: Rendit
         }
     }
     const refines = Map.groupBy(els.meta ?? [], (el: Element) => el.getAttribute('refines'))
-    const getProperties = (el: Element | null): Record<string, ParsedMeta[]> | null => {
-        const foundEls = refines.get(el ? '#' + el.getAttribute('id') : null)
-        if (!foundEls) return null
-        return Object.groupBy(foundEls.map(parse), (x: ParsedMeta) => x.property!) as Record<string, ParsedMeta[]>
+    const getProperties = (el?: Element | null): Record<string, MetadataParsed[]> | null => {
+        const els = refines.get(el ? '#' + el.getAttribute('id') : null)
+        if (!els) return null
+        return Object.groupBy(els.map(parse), (x: MetadataParsed) => x.property!) as Record<string, MetadataParsed[]>
     }
-    const dc: Record<string, ParsedMeta[]> = Object.fromEntries(Object.entries(Object.groupBy(els.dc || [], (el: Element) => el.localName))
-        .map(([name, dcEls]) => [name, (dcEls ?? []).map(parse)]))
-    const properties = getProperties(null) ?? {}
-    const legacyMeta: Record<string, string> = Object.fromEntries(els.legacyMeta?.map((el: Element) =>
-        [el.getAttribute('name'), el.getAttribute('content')]) ?? [])
+    const dc = Object.fromEntries(Object.entries(Object.groupBy(els.dc || [], (el: Element) => el.localName))
+        .map(([name, els]) => [name, els!.map(parse)])) as Record<string, MetadataParsed[]>
+    const properties = getProperties() ?? {} as Record<string, MetadataParsed[]>
+    const legacyMeta = Object.fromEntries(els.legacyMeta?.map((el: Element) =>
+        [el.getAttribute('name'), el.getAttribute('content')]) ?? []) as Record<string, string>
 
     // second pass: map to webpub
-    const one = (x: ParsedMeta[] | undefined): string | undefined => x?.[0]?.value
-    const prop = (x: ParsedMeta | undefined, p: string): string | undefined => one(x?.props?.[p])
-    const makeLanguageMap = (x: ParsedMeta | undefined): unknown => {
+    const one = (x: MetadataParsed[] | undefined): string | undefined => x?.[0]?.value
+    const prop = (x: MetadataParsed | undefined, p: string): string | undefined => one(x?.props?.[p])
+    const makeLanguageMap = (x: MetadataParsed | undefined): string | LanguageMap | null => {
         if (!x) return null
         const alts = x.props?.['alternate-script'] ?? []
         const altRep = x.attrs['alt-rep']
         if (!alts.length && (!x.lang || x.lang === baseLang) && !altRep) return x.value
-        const map: Record<string, string> = { [x.lang ?? baseLang]: x.value }
+        const map: LanguageMap = { [x.lang ?? baseLang]: x.value }
         if (altRep) map[x.attrs['alt-rep-lang']] = altRep
         for (const y of alts) map[y.lang!] ??= y.value
         return map
     }
-    const makeContributor = (x: ParsedMeta | undefined): any => x ? ({
+    const makeContributor = (x: MetadataParsed | undefined): Contributor | null => x ? ({
         name: makeLanguageMap(x),
         sortAs: makeLanguageMap(x.props?.['file-as']?.[0]) ?? x.attrs['file-as'],
-        role: x.props?.role?.filter(r => r.scheme === PREFIX.marc + 'relators')
-            ?.map(r => r.value) ?? [x.attrs.role],
+        role: x.props?.role?.filter((x: MetadataParsed) => x.scheme === PREFIX.marc + 'relators')
+            ?.map((x: MetadataParsed) => x.value) ?? [x.attrs.role],
         code: prop(x, 'term') ?? x.attrs.term,
         scheme: prop(x, 'authority') ?? x.attrs.authority,
     }) : null
-    const makeCollection = (x: ParsedMeta): CollectionInfo => ({
+    const makeCollection = (x: MetadataParsed): Collection => ({
         name: makeLanguageMap(x),
         // NOTE: webpub requires number but EPUB allows values like "2.2.1"
         position: one(x.props?.['group-position']),
     })
-    const makeAltIdentifier = (x: ParsedMeta): unknown => {
+    const makeAltIdentifier = (x: MetadataParsed): string | AltIdentifier => {
         const { value } = x
         if (/^urn:/i.test(value)) return value
         if (/^doi:/i.test(value)) return `urn:${value}`
@@ -413,22 +428,22 @@ const getMetadata = (opf: Document): { metadata: EpubMetadata; rendition: Rendit
         return value
     }
     const belongsTo = Object.groupBy(properties['belongs-to-collection'] ?? [],
-        (x: ParsedMeta) => prop(x, 'collection-type') === 'series' ? 'series' : 'collection')
-    const mainTitle = dc.title?.find(x => prop(x, 'title-type') === 'main') ?? dc.title?.[0]
-    const metadata: any = {
+        (x: MetadataParsed) => prop(x, 'collection-type') === 'series' ? 'series' : 'collection')
+    const mainTitle = dc.title?.find((x: MetadataParsed) => prop(x, 'title-type') === 'main') ?? dc.title?.[0]
+    const metadata: EpubMetadata = {
         identifier: getIdentifier(opf),
         title: makeLanguageMap(mainTitle),
         sortAs: makeLanguageMap(mainTitle?.props?.['file-as']?.[0])
             ?? mainTitle?.attrs?.['file-as']
             ?? legacyMeta?.['calibre:title_sort'],
-        subtitle: dc.title?.find(x => prop(x, 'title-type') === 'subtitle')?.value,
-        language: dc.language?.map(x => x.value),
+        subtitle: dc.title?.find((x: MetadataParsed) => prop(x, 'title-type') === 'subtitle')?.value,
+        language: dc.language?.map((x: MetadataParsed) => x.value),
         description: one(dc.description),
         publisher: makeContributor(dc.publisher?.[0]),
-        published: dc.date?.find(x => x.attrs.event === 'publication')?.value
+        published: dc.date?.find((x: MetadataParsed) => x.attrs.event === 'publication')?.value
             ?? one(dc.date),
         modified: one(properties[PREFIX.dcterms + 'modified'])
-            ?? dc.date?.find(x => x.attrs.event === 'modification')?.value,
+            ?? dc.date?.find((x: MetadataParsed) => x.attrs.event === 'modification')?.value,
         subject: dc.subject?.map(makeContributor),
         belongsTo: {
             collection: belongsTo.collection?.map(makeCollection),
@@ -436,39 +451,39 @@ const getMetadata = (opf: Document): { metadata: EpubMetadata; rendition: Rendit
             ?? legacyMeta?.['calibre:series'] ? {
                 name: legacyMeta?.['calibre:series'],
                 position: parseFloat(legacyMeta?.['calibre:series_index']),
-            } : null,
+            } as unknown as Collection : null,
         },
         altIdentifier: dc.identifier?.map(makeAltIdentifier),
         source: dc.source?.map(makeAltIdentifier), // NOTE: not in webpub schema
         rights: one(dc.rights), // NOTE: not in webpub schema
     }
-    const remapContributor = (defaultKey: string) => (x: any): [Set<string> | string[], any] => {
-        const keys = new Set<string>(x.role?.map((role: string) => RELATORS[role] ?? defaultKey))
-        return [keys.size ? keys : [defaultKey], x]
+    const remapContributor = (defaultKey: string) => (x: Contributor) => {
+        const keys = new Set<string>(x.role?.map((role: string | null) => RELATORS[role!] ?? defaultKey))
+        return [keys.size ? keys : [defaultKey], x] as [Set<string> | string[], Contributor]
     }
-    for (const [keys, val] of ([] as Array<[Set<string> | string[], any]>).concat(
-        dc.creator?.map(makeContributor)?.map(remapContributor('author')) ?? [],
-        dc.contributor?.map(makeContributor)?.map(remapContributor('contributor')) ?? []))
+    for (const [keys, val] of ([] as [Set<string> | string[], Contributor][]).concat(
+        dc.creator?.map(makeContributor)?.filter((x): x is Contributor => x !== null)?.map(remapContributor('author')) ?? [],
+        dc.contributor?.map(makeContributor)?.filter((x): x is Contributor => x !== null)?.map(remapContributor('contributor')) ?? []))
         for (const key of keys)
-            if (metadata[key]) metadata[key].push(val)
+            if (metadata[key]) (metadata[key] as Contributor[]).push(val)
             else metadata[key] = [val]
-    tidy(metadata)
-    if (metadata.altIdentifier === metadata.identifier)
+    tidy(metadata as unknown as Record<string, unknown>)
+    if (metadata.altIdentifier as unknown === metadata.identifier)
         delete metadata.altIdentifier
 
-    const rendition: RenditionInfo = {}
-    const media: MediaInfo = {}
+    const rendition: Rendition = {}
+    const media: MediaProperties = {}
     for (const [key, val] of Object.entries(properties)) {
         if (key.startsWith(PREFIX.rendition))
             rendition[camel(key.replace(PREFIX.rendition, ''))] = one(val)
         else if (key.startsWith(PREFIX.media))
             media[camel(key.replace(PREFIX.media, ''))] = one(val)
     }
-    if (media.duration) media.duration = parseClock(media.duration as unknown as string)
+    if (media.duration) media.duration = parseClock(media.duration as string)!
     return { metadata, rendition, media }
 }
 
-const parseNav = (doc: Document, resolve: (f: string) => string = f => f): NavResult => {
+const parseNav = (doc: Document, resolve: (href: string) => string = (f: string) => f): NavResult => {
     const { $, $$, $$$ } = childGetter(doc, NS.XHTML)
     const resolveHref = (href: string | null): string | null => href ? decodeURI(resolve(href)) : null
     const parseLI = (getType: boolean) => ($li: Element): NavItem => {
@@ -488,33 +503,33 @@ const parseNav = (doc: Document, resolve: (f: string) => string = f => f): NavRe
     let toc: NavItem[] | null = null
     let pageList: NavItem[] | null = null
     let landmarks: NavItem[] | null = null
-    const others: Array<{ label: string; type: string[]; list: NavItem[] | null }> = []
+    const others: { label: string; type: string[]; list: NavItem[] | null }[] = []
     for (const $nav of $$nav) {
-        const type = ($nav as Element).getAttributeNS(NS.EPUB, 'type')?.split(/\s/) ?? []
-        if (type.includes('toc')) toc ??= parseNavEl($nav as Element)
-        else if (type.includes('page-list')) pageList ??= parseNavEl($nav as Element)
-        else if (type.includes('landmarks')) landmarks ??= parseNavEl($nav as Element, true)
+        const type = $nav.getAttributeNS(NS.EPUB, 'type')?.split(/\s/) ?? []
+        if (type.includes('toc')) toc ??= parseNavEl($nav)
+        else if (type.includes('page-list')) pageList ??= parseNavEl($nav)
+        else if (type.includes('landmarks')) landmarks ??= parseNavEl($nav, true)
         else others.push({
-            label: getElementText(($nav as Element).firstElementChild), type,
-            list: parseNavEl($nav as Element),
+            label: getElementText($nav.firstElementChild), type,
+            list: parseNavEl($nav),
         })
     }
     return { toc, pageList, landmarks, others }
 }
 
-const parseNCX = (doc: Document, resolve: (f: string) => string = f => f): NavResult => {
+const parseNCX = (doc: Document, resolve: (href: string) => string = (f: string) => f): NavResult => {
     const { $, $$ } = childGetter(doc, NS.NCX)
     const resolveHref = (href: string | null): string | null => href ? decodeURI(resolve(href)) : null
     const parseItem = (el: Element): NavItem => {
         const $label = $(el, 'navLabel')
         const $content = $(el, 'content')
         const label = getElementText($label)
-        const href = resolveHref($content?.getAttribute('src') ?? null)
+        const href = resolveHref($content!.getAttribute('src'))
         if (el.localName === 'navPoint') {
             const els = $$(el, 'navPoint')
             return { label, href, subitems: els.length ? els.map(parseItem) : null }
         }
-        return { label, href }
+        return { label, href, subitems: null }
     }
     const parseList = (el: Element, itemName: string): NavItem[] => $$(el, itemName).map(parseItem)
     const getSingle = (container: string, itemName: string): NavItem[] | null => {
@@ -531,7 +546,7 @@ const parseNCX = (doc: Document, resolve: (f: string) => string = f => f): NavRe
     }
 }
 
-const parseClock = (str: string | undefined): number | undefined => {
+const parseClock = (str: string | null | undefined): number | undefined => {
     if (!str) return
     const parts = str.split(':').map(x => parseFloat(x))
     if (parts.length === 3) {
@@ -552,15 +567,15 @@ const parseClock = (str: string | undefined): number | undefined => {
 }
 
 class MediaOverlay extends EventTarget {
-    #entries!: SMILEntry[]
-    #lastMediaOverlayItem: ManifestItem | undefined
-    #sectionIndex!: number
-    #audioIndex!: number
-    #itemIndex!: number
+    #entries: SMILAudioEntry[] = []
+    #lastMediaOverlayItem: ManifestItem | null = null
+    #sectionIndex: number = 0
+    #audioIndex: number = -1
+    #itemIndex: number = -1
     #audio: HTMLAudioElement | null = null
-    #volume = 1
-    #rate = 1
-    #state: 'playing' | 'paused' | 'stopped' | undefined
+    #volume: number = 1
+    #rate: number = 1
+    #state: string | undefined
     book: EPUB
     loadXML: (uri: string) => Promise<Document | null>
     constructor(book: EPUB, loadXML: (uri: string) => Promise<Document | null>) {
@@ -576,13 +591,13 @@ class MediaOverlay extends EventTarget {
         const { $, $$$ } = childGetter(doc, NS.SMIL)
         this.#audioIndex = -1
         this.#itemIndex = -1
-        this.#entries = $$$(doc, 'par').reduce((arr: SMILEntry[], $par: Element) => {
+        this.#entries = $$$(doc, 'par').reduce((arr: SMILAudioEntry[], $par: Element) => {
             const text = resolve($($par, 'text')?.getAttribute('src') ?? null)
             const $audio = $($par, 'audio')
             if (!text || !$audio) return arr
             const src = resolve($audio.getAttribute('src'))
-            const begin = parseClock($audio.getAttribute('clipBegin') ?? undefined)
-            const end = parseClock($audio.getAttribute('clipEnd') ?? undefined)
+            const begin = parseClock($audio.getAttribute('clipBegin'))
+            const end = parseClock($audio.getAttribute('clipEnd'))
             const last = arr.at(-1)
             if (last?.src === src) last.items.push({ text, begin, end })
             else arr.push({ src: src!, items: [{ text, begin, end }] })
@@ -590,10 +605,10 @@ class MediaOverlay extends EventTarget {
         }, [])
         this.#lastMediaOverlayItem = item
     }
-    get #activeAudio(): SMILEntry | undefined {
+    get #activeAudio(): SMILAudioEntry | undefined {
         return this.#entries[this.#audioIndex]
     }
-    get #activeItem(): SMILEntry['items'][number] | undefined {
+    get #activeItem(): SMILAudioItem | undefined {
         return this.#activeAudio?.items?.[this.#itemIndex]
     }
     #error(e: unknown): void {
@@ -622,7 +637,7 @@ class MediaOverlay extends EventTarget {
             if (audio.paused) return
             const t = audio.currentTime
             const { items } = this.#activeAudio!
-            if (t > (this.#activeItem?.end ?? Infinity)) {
+            if (t > this.#activeItem?.end!) {
                 this.#unhighlight()
                 if (this.#itemIndex === items.length - 1) {
                     this.#play(this.#audioIndex + 1, 0).catch(e => this.#error(e))
@@ -630,7 +645,7 @@ class MediaOverlay extends EventTarget {
                 }
             }
             const oldIndex = this.#itemIndex
-            while (items[this.#itemIndex + 1]?.begin !== undefined && items[this.#itemIndex + 1].begin! <= t) this.#itemIndex++
+            while (items[this.#itemIndex + 1]?.begin! <= t) this.#itemIndex++
             if (this.#itemIndex !== oldIndex) this.#highlight()
         })
         audio.addEventListener('error', () =>
@@ -654,7 +669,7 @@ class MediaOverlay extends EventTarget {
             audio.play().catch(e => this.#error(e))
         }, { once: true })
     }
-    async start(sectionIndex: number, filter: (item: SMILEntry['items'][number], j: number, items: SMILEntry['items']) => boolean = () => true): Promise<void> {
+    async start(sectionIndex: number, filter: (item: SMILAudioItem, index: number, items: SMILAudioItem[]) => boolean = () => true): Promise<void> {
         this.#audio?.pause()
         const section = this.book.sections[sectionIndex]
         const href = section?.id
@@ -698,7 +713,7 @@ class MediaOverlay extends EventTarget {
         else if (this.#audioIndex > 0) this.#play(this.#audioIndex - 1,
             this.#entries[this.#audioIndex - 1].items.length - 1)
         else if (this.#sectionIndex > 0)
-            this.start(this.#sectionIndex - 1, (_, i, items) => i === items.length - 1)
+            this.start(this.#sectionIndex - 1, (_: SMILAudioItem, i: number, items: SMILAudioItem[]) => i === items.length - 1)
     }
     next(): void {
         this.#play(this.#audioIndex, this.#itemIndex + 1)
@@ -741,7 +756,7 @@ const WebCryptoSHA1 = async (str: string): Promise<Uint8Array> => {
     return new Uint8Array(buffer)
 }
 
-const deobfuscators = (sha1: (str: string) => Promise<Uint8Array> = WebCryptoSHA1): Record<string, DeobfuscatorAlgo> => ({
+const deobfuscators = (sha1: (str: string) => Promise<Uint8Array> = WebCryptoSHA1): Record<string, DeobfuscationAlgorithm> => ({
     'http://www.idpf.org/2008/embedding': {
         key: (opf: Document) => sha1(getIdentifier(opf)
             // eslint-disable-next-line no-control-regex
@@ -761,14 +776,14 @@ const deobfuscators = (sha1: (str: string) => Promise<Uint8Array> = WebCryptoSHA
 class Encryption {
     #uris = new Map<string, string>()
     #decoders = new Map<string, (blob: Blob) => Blob | Promise<Blob>>()
-    #algorithms: Record<string, DeobfuscatorAlgo>
-    constructor(algorithms: Record<string, DeobfuscatorAlgo>) {
+    #algorithms: Record<string, DeobfuscationAlgorithm>
+    constructor(algorithms: Record<string, DeobfuscationAlgorithm>) {
         this.#algorithms = algorithms
     }
     async init(encryption: Document | null, opf: Document): Promise<void> {
         if (!encryption) return
         const data = Array.from(
-            encryption.getElementsByTagNameNS(NS.ENC, 'EncryptedData'), el => ({
+            encryption.getElementsByTagNameNS(NS.ENC, 'EncryptedData'), (el: Element) => ({
                 algorithm: el.getElementsByTagNameNS(NS.ENC, 'EncryptionMethod')[0]
                     ?.getAttribute('Algorithm'),
                 uri: el.getElementsByTagNameNS(NS.ENC, 'CipherReference')[0]
@@ -783,7 +798,7 @@ class Encryption {
                     continue
                 }
                 const key = await algo.key(opf)
-                this.#decoders.set(algorithm, blob => algo.decode(key, blob))
+                this.#decoders.set(algorithm, (blob: Blob) => algo.decode(key, blob))
             }
             this.#uris.set(uri, algorithm)
         }
@@ -803,7 +818,6 @@ class Resources {
     guide?: GuideReference[]
     cover: ManifestItem | undefined
     cfis: string[]
-
     constructor({ opf, resolveHref }: ResourcesOptions) {
         this.opf = opf
         const { $, $$, $$$ } = childGetter(opf, NS.OPF)
@@ -814,46 +828,51 @@ class Resources {
 
         this.manifest = $$($manifest, 'item')
             .map(getAttributes('href', 'id', 'media-type', 'properties', 'media-overlay'))
-            .map((item: any) => {
-                item.href = resolveHref(item.href)
-                item.properties = item.properties?.split(/\s/)
-                return item as ManifestItem
+            .map(item => {
+                const i = item as unknown as ManifestItem
+                i.href = resolveHref((i as unknown as Record<string, string>).href)
+                i.properties = (item as unknown as Record<string, string | null>).properties?.split(/\s/) ?? null
+                return i
             })
         this.spine = $$itemref
             .map(getAttributes('idref', 'id', 'linear', 'properties'))
-            .map((item: any) => (item.properties = item.properties?.split(/\s/), item as SpineItem))
+            .map(item => {
+                const i = item as unknown as SpineItem
+                i.properties = (item as unknown as Record<string, string | null>).properties?.split(/\s/) ?? null
+                return i
+            })
         this.pageProgressionDirection = $spine
             .getAttribute('page-progression-direction')
 
         this.navPath = this.getItemByProperty('nav')?.href
-        this.ncxPath = (this.getItemByID($spine.getAttribute('toc')!)
+        this.ncxPath = (this.getItemByID($spine.getAttribute('toc'))
             ?? this.manifest.find(item => item.mediaType === MIME.NCX))?.href
 
         const $guide = $(opf.documentElement, 'guide')
         if ($guide) this.guide = $$($guide, 'reference')
             .map(getAttributes('type', 'title', 'href'))
-            .map(({ type, title, href }: any) => ({
-                label: title as string,
-                type: (type as string).split(/\s/),
-                href: resolveHref(href) as string,
-            }))
+            .map((item) => { const { type, title, href } = item as Record<string, string | null>; return ({
+                label: title!,
+                type: type!.split(/\s/),
+                href: resolveHref(href!),
+            })})
 
         this.cover = this.getItemByProperty('cover-image')
             // EPUB 2 compat
             ?? this.getItemByID($$$(opf, 'meta')
-                .find(filterAttribute('name', 'cover') as any)
-                ?.getAttribute('content')!)
+                .find(filterAttribute('name', 'cover'))
+                ?.getAttribute('content'))
             ?? this.manifest.find(item => item.href.includes('cover')
                 && item.mediaType.startsWith('image'))
             ?? this.getItemByHref(this.guide
-                ?.find(ref => ref.type.includes('cover'))?.href ?? '')
+                ?.find(ref => ref.type.includes('cover'))?.href)
 
         this.cfis = CFI.fromElements($$itemref)
     }
-    getItemByID(id: string): ManifestItem | undefined {
+    getItemByID(id: string | null | undefined): ManifestItem | undefined {
         return this.manifest.find(item => item.id === id)
     }
-    getItemByHref(href: string): ManifestItem | undefined {
+    getItemByHref(href: string | undefined): ManifestItem | undefined {
         return this.manifest.find(item => item.href === href)
     }
     getItemByProperty(prop: string): ManifestItem | undefined {
@@ -861,18 +880,18 @@ class Resources {
     }
     resolveCFI(cfi: string): ResolvedHref {
         const parts = CFI.parse(cfi)
-        const top = ((parts as any).parent ?? parts).shift()
-        let $itemref = CFI.toElement(this.opf, top)
+        const top = ((parts as { parent?: CFI.CFIPart[][] }).parent ?? parts as unknown as CFI.CFIPart[][]).shift()!
+        let $itemref = CFI.toElement(this.opf, top as unknown as string)
         // make sure it's an idref; if not, try again without the ID assertion
         // mainly because Epub.js used to generate wrong ID assertions
         // https://github.com/futurepress/epub.js/issues/1236
         if ($itemref && $itemref.nodeName !== 'idref') {
-            top.at(-1).id = null
-            $itemref = CFI.toElement(this.opf, top)
+            (top as CFI.CFIPart[])[(top as CFI.CFIPart[]).length - 1].id = null as unknown as string
+            $itemref = CFI.toElement(this.opf, top as unknown as string)
         }
-        const idref = ($itemref as Element | null)?.getAttribute('idref')
+        const idref = ($itemref as Element)?.getAttribute('idref')
         const index = this.spine.findIndex(item => item.idref === idref)
-        const anchor = (doc: Document) => CFI.toRange(doc, parts)
+        const anchor = (doc: Document) => CFI.toRange(doc, parts as unknown as string)
         return { index, anchor }
     }
 }
@@ -881,13 +900,12 @@ class Loader {
     #cache = new Map<string, string>()
     #children = new Map<string, string[]>()
     #refCount = new Map<string, number>()
-    allowScript = false
+    allowScript: boolean = false
     eventTarget = new EventTarget()
     loadText: (uri: string) => Promise<string>
     loadBlob: (uri: string) => Promise<Blob>
     manifest: ManifestItem[]
     assets: ManifestItem[]
-
     constructor({ loadText, loadBlob, resources }: LoaderOptions) {
         this.loadText = loadText
         this.loadBlob = loadBlob
@@ -896,15 +914,15 @@ class Loader {
         // needed only when replacing in (X)HTML w/o parsing (see below)
         //.filter(({ mediaType }) => ![MIME.XHTML, MIME.HTML].includes(mediaType))
     }
-    async createURL(href: string, data: unknown, type: string, parent?: string): Promise<string> {
+    async createURL(href: string, data: string | Promise<string | Blob | ArrayBuffer> | Blob | ArrayBuffer, type: string, parent?: string): Promise<string> {
         if (!data) return ''
-        const detail: any = { data, type }
+        const detail: { data: unknown; type: unknown; readonly name?: string } = { data, type }
         Object.defineProperty(detail, 'name', { value: href }) // readonly
         const event = new CustomEvent('data', { detail })
         this.eventTarget.dispatchEvent(event)
         const newData = await event.detail.data
-        const newType = await event.detail.type
-        const url = URL.createObjectURL(new Blob([newData], { type: newType }))
+        const newType = await event.detail.type as string
+        const url = URL.createObjectURL(new Blob([newData as BlobPart], { type: newType }))
         this.#cache.set(href, url)
         this.#refCount.set(href, 1)
         if (parent) {
@@ -917,7 +935,7 @@ class Loader {
     ref(href: string, parent?: string): string | undefined {
         const childList = this.#children.get(parent!)
         if (!childList?.includes(href)) {
-            this.#refCount.set(href, (this.#refCount.get(href) ?? 0) + 1)
+            this.#refCount.set(href, this.#refCount.get(href)! + 1)
             if (childList) childList.push(href)
             else this.#children.set(parent!, [href])
         }
@@ -941,14 +959,14 @@ class Loader {
         if (!item) return null
         const { href, mediaType } = item
 
-        const isScript = (MIME.JS as RegExp).test(item.mediaType)
+        const isScript = MIME.JS.test(item.mediaType)
         if (isScript && !this.allowScript) return null
 
         const parent = parents.at(-1)
         if (this.#cache.has(href)) return this.ref(href, parent) ?? null
 
         const shouldReplace =
-            (isScript || [MIME.XHTML, MIME.HTML, MIME.CSS, MIME.SVG].includes(mediaType))
+            (isScript || [MIME.XHTML, MIME.HTML, MIME.CSS, MIME.SVG].includes(mediaType as typeof MIME.XHTML))
             // prevent circular references
             && parents.every(p => p !== href)
         if (shouldReplace) return this.loadReplaced(item, parents)
@@ -985,36 +1003,38 @@ class Loader {
         // or text that just happen to be paths
 
         // parse and replace in HTML
-        if ([MIME.XHTML, MIME.HTML, MIME.SVG].includes(mediaType)) {
+        if ([MIME.XHTML, MIME.HTML, MIME.SVG].includes(mediaType as typeof MIME.XHTML)) {
             let doc = new DOMParser().parseFromString(str, mediaType as DOMParserSupportedType)
             // change to HTML if it's not valid XHTML
             if (mediaType === MIME.XHTML && (doc.querySelector('parsererror')
             || !doc.documentElement?.namespaceURI)) {
-                console.warn(doc.querySelector('parsererror')?.textContent ?? 'Invalid XHTML')
-                mediaType = MIME.HTML as string
-                ;(item as any).mediaType = mediaType
-                doc = new DOMParser().parseFromString(str, mediaType as DOMParserSupportedType)
+                console.warn((doc.querySelector('parsererror') as HTMLElement | null)?.innerText ?? 'Invalid XHTML')
+                item.mediaType = MIME.HTML
+                mediaType = MIME.HTML
+                doc = new DOMParser().parseFromString(str, item.mediaType as DOMParserSupportedType)
             }
             // replace hrefs in XML processing instructions
             // this is mainly for SVGs that use xml-stylesheet
-            if ([MIME.XHTML, MIME.SVG].includes(mediaType)) {
-                let child = doc.firstChild as ProcessingInstruction | null
+            if ([MIME.XHTML, MIME.SVG].includes(item.mediaType as typeof MIME.XHTML)) {
+                let child: ChildNode | null = doc.firstChild
                 while (child instanceof ProcessingInstruction) {
                     if (child.data) {
                         const replacedData = await replaceSeries(child.data,
                             /(?:^|\s*)(href\s*=\s*['"])([^'"]*)(['"])/i,
-                            (_, p1: string, p2: string, p3: string) => this.loadHref(p2, href, parents)
+                            (_: string, p1: string, p2: string, p3: string) => this.loadHref(p2, href, parents)
                                 .then(p2 => `${p1}${p2}${p3}`))
                         child.replaceWith(doc.createProcessingInstruction(
                             child.target, replacedData))
                     }
-                    child = child.nextSibling as ProcessingInstruction | null
+                    child = child.nextSibling
                 }
             }
             // replace hrefs (excluding anchors)
             // TODO: srcset?
-            const replace = async (el: Element, attr: string) => el.setAttribute(attr,
-                await this.loadHref(el.getAttribute(attr)!, href, parents))
+            const replace = async (el: Element, attr: string): Promise<void> => {
+                el.setAttribute(attr,
+                    await this.loadHref(el.getAttribute(attr)!, href, parents))
+            }
             for (const el of doc.querySelectorAll('link[href]')) await replace(el, 'href')
             for (const el of doc.querySelectorAll('[src]')) await replace(el, 'src')
             for (const el of doc.querySelectorAll('[poster]')) await replace(el, 'poster')
@@ -1031,7 +1051,7 @@ class Loader {
                     await this.replaceCSS(el.getAttribute('style')!, href, parents))
             // TODO: replace inline scripts? probably not worth the trouble
             const result = new XMLSerializer().serializeToString(doc)
-            return this.createURL(href, result, mediaType, parent)
+            return this.createURL(href, result, item.mediaType, parent)
         }
 
         const result = mediaType === MIME.CSS
@@ -1042,12 +1062,12 @@ class Loader {
     async replaceCSS(str: string, href: string, parents: string[] = []): Promise<string> {
         const replacedUrls = await replaceSeries(str,
             /url\(\s*["']?([^'"\n]*?)\s*["']?\s*\)/gi,
-            (_, url: string) => this.loadHref(url, href, parents)
+            (_: string, url: string) => this.loadHref(url, href, parents)
                 .then(url => `url("${url}")`))
         // apart from `url()`, strings can be used for `@import` (but why?!)
         return replaceSeries(replacedUrls,
             /@import\s*["']([^"'\n]*?)["']/gi,
-            (_, url: string) => this.loadHref(url, href, parents)
+            (_: string, url: string) => this.loadHref(url, href, parents)
                 .then(url => `@import "${url}"`))
     }
     // find & replace all possible relative paths for all assets without parsing
@@ -1102,7 +1122,7 @@ const getDisplayOptions = (doc: Document | null): DisplayOptions | null => {
 
 export class EPUB {
     parser = new DOMParser()
-    #loader!: Loader
+    #loader: Loader | null = null
     #encryption: Encryption
     loadText: (uri: string) => Promise<string>
     loadBlob: (uri: string) => Promise<Blob>
@@ -1114,10 +1134,9 @@ export class EPUB {
     pageList: NavItem[] | null = null
     landmarks: NavItem[] | null = null
     metadata!: EpubMetadata
-    rendition!: RenditionInfo
-    media!: MediaInfo
+    rendition!: Rendition
+    media!: MediaProperties
     dir: string | null = null
-
     constructor({ loadText, loadBlob, getSize, sha1 }: EPUBOptions) {
         this.loadText = loadText
         this.loadBlob = loadBlob
@@ -1127,10 +1146,10 @@ export class EPUB {
     async #loadXML(uri: string): Promise<Document | null> {
         const str = await this.loadText(uri)
         if (!str) return null
-        const doc = this.parser.parseFromString(str, MIME.XML as DOMParserSupportedType)
+        const doc = this.parser.parseFromString(str, MIME.XML)
         if (doc.querySelector('parsererror'))
             throw new Error(`XML parsing error: ${uri}
-${doc.querySelector('parsererror')!.textContent}`)
+${(doc.querySelector('parsererror') as HTMLElement).innerText}`)
         return doc
     }
     async init(): Promise<this> {
@@ -1140,10 +1159,10 @@ ${doc.querySelector('parsererror')!.textContent}`)
         const opfs = Array.from(
             $container.getElementsByTagNameNS(NS.CONTAINER, 'rootfile'),
             getAttributes('full-path', 'media-type'))
-            .filter((file: any) => file.mediaType === 'application/oebps-package+xml')
+            .filter(file => file!.mediaType === 'application/oebps-package+xml')
 
         if (!opfs.length) throw new Error('No package document defined in container')
-        const opfPath = (opfs[0] as any).fullPath as string
+        const opfPath = (opfs[0] as Record<string, string>).fullPath
         const opf = await this.#loadXML(opfPath)
         if (!opf) throw new Error('Failed to load package document')
 
@@ -1161,7 +1180,7 @@ ${doc.querySelector('parsererror')!.textContent}`)
             resources: this.resources,
         })
         this.transformTarget = this.#loader.eventTarget
-        this.sections = this.resources.spine.map((spineItem, index) => {
+        this.sections = this.resources.spine.map((spineItem: SpineItem, index: number) => {
             const { idref, linear, properties = [] } = spineItem
             const item = this.resources.getItemByID(idref)
             if (!item) {
@@ -1170,17 +1189,17 @@ ${doc.querySelector('parsererror')!.textContent}`)
             }
             return {
                 id: item.href,
-                load: () => this.#loader.loadItem(item),
-                unload: () => this.#loader.unloadItem(item),
+                load: () => this.#loader!.loadItem(item),
+                unload: () => this.#loader!.unloadItem(item),
                 createDocument: () => this.loadDocument(item),
                 size: this.getSize(item.href),
                 cfi: this.resources.cfis[index],
                 linear,
-                pageSpread: getPageSpread(properties),
+                pageSpread: getPageSpread(properties ?? []),
                 resolveHref: (href: string) => resolveURL(href, item.href),
                 mediaOverlay: item.mediaOverlay
                     ? this.resources.getItemByID(item.mediaOverlay) ?? null : null,
-            } as Section
+            }
         }).filter((s): s is Section => s !== null)
 
         const { navPath, ncxPath } = this.resources
@@ -1201,7 +1220,7 @@ ${doc.querySelector('parsererror')!.textContent}`)
         } catch(e) {
             console.warn(e)
         }
-        this.landmarks ??= this.resources.guide ?? null
+        this.landmarks ??= this.resources.guide as NavItem[] | null ?? null
 
         const { metadata, rendition, media } = getMetadata(opf)
         this.metadata = metadata
@@ -1214,11 +1233,9 @@ ${doc.querySelector('parsererror')!.textContent}`)
         if (displayOptions) {
             if (displayOptions.fixedLayout === 'true')
                 this.rendition.layout ??= 'pre-paginated'
-            if (displayOptions.openToSpread === 'false') {
-                const firstLinear = this.sections.find(section => section.linear !== 'no')
-                if (firstLinear) firstLinear.pageSpread ??=
+            if (displayOptions.openToSpread === 'false') this.sections
+                .find(section => section.linear !== 'no')!.pageSpread ??=
                     this.dir === 'rtl' ? 'left' : 'right'
-            }
         }
         return this
     }
@@ -1240,7 +1257,7 @@ ${doc.querySelector('parsererror')!.textContent}`)
         const anchor = hash ? (doc: Document) => getHTMLFragment(doc, hash) : () => 0
         return { index, anchor }
     }
-    splitTOCHref(href: string | undefined): string[] {
+    splitTOCHref(href: string | null | undefined): string[] {
         return href?.split('#') ?? []
     }
     getTOCFragment(doc: Document, id: string): Element | null {
@@ -1256,7 +1273,7 @@ ${doc.querySelector('parsererror')!.textContent}`)
             ? new Blob([await this.loadBlob(cover.href)], { type: cover.mediaType })
             : null
     }
-    async getCalibreBookmarks(): Promise<CalibreBookmark | undefined> {
+    async getCalibreBookmarks(): Promise<CalibreBookmarks | undefined> {
         const txt = await this.loadText('META-INF/calibre_bookmarks.txt')
         const magic = 'encoding=json+base64:'
         if (txt?.startsWith(magic)) {
