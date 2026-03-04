@@ -26,6 +26,7 @@ import CloudSyncSettings from './pages/CloudSyncSettings/CloudSyncSettings';
 import CommunityBooks from './pages/CommunityBooks/CommunityBooks';
 import MySharedBooks from './pages/MySharedBooks/MySharedBooks';
 import ReadingGoals from './pages/ReadingGoals/ReadingGoals';
+import HardcoverSettings from './pages/HardcoverSettings/HardcoverSettings';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
@@ -33,6 +34,7 @@ import { useAppStore } from './stores/useAppStore';
 import { useAutoRestore } from './hooks/useAutoRestore';
 import { initDatabase } from './services/database';
 import { torrentService } from './services/torrentService';
+import { useHardcoverStore } from './stores/hardcoverStore';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -105,6 +107,25 @@ const AppTabs: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // Initialize Hardcover store and process sync queue when coming online
+  useEffect(() => {
+    useHardcoverStore.getState().initialize().then(() => {
+      const state = useHardcoverStore.getState();
+      if (state.isConnected && state.autoSync) {
+        state.processQueue();
+      }
+    });
+
+    const handleOnline = () => {
+      const state = useHardcoverStore.getState();
+      if (state.isConnected) {
+        state.processQueue();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   // Reload library when app resumes from background (Android)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -171,6 +192,9 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/reading-goals">
           <ReadingGoals />
+        </Route>
+        <Route exact path="/hardcover-settings">
+          <HardcoverSettings />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

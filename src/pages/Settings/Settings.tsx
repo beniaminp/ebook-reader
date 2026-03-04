@@ -34,12 +34,17 @@ import {
   refreshOutline,
   speedometerOutline,
   flameOutline,
+  bookOutline,
+  sparklesOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
+import { useHardcoverStore } from '../../stores/hardcoverStore';
+import { useAppStore } from '../../stores/useAppStore';
 import { downloadExport, importAllData } from '../../services/localExportService';
+import { enrichAllBooks } from '../../services/metadataLookupService';
 import './Settings.css';
 
 const THEME_OPTIONS: { value: ThemeType; label: string }[] = [
@@ -100,8 +105,12 @@ const Settings: React.FC = () => {
     currentStreak,
   } = useReadingGoalsStore();
 
+  const { isConnected: hardcoverConnected, username: hardcoverUsername } = useHardcoverStore();
+  const books = useAppStore((s) => s.books);
+
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,6 +146,19 @@ const Settings: React.FC = () => {
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleEnrichAll = async () => {
+    setIsEnriching(true);
+    try {
+      const count = await enrichAllBooks(books);
+      setToastMessage(count > 0 ? `Enriched ${count} books with metadata` : 'All books already have metadata');
+      if (count > 0) useAppStore.getState().loadBooks();
+    } catch (err) {
+      setToastMessage(`Enrichment failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsEnriching(false);
     }
   };
 
@@ -348,6 +370,18 @@ const Settings: React.FC = () => {
             <span className="settings-section-title">Library & Sync</span>
           </div>
 
+          <IonItem button routerLink="/hardcover-settings" detail className="settings-nav-item">
+            <IonIcon icon={bookOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Hardcover</h3>
+              <IonNote>
+                {hardcoverConnected
+                  ? `Connected as ${hardcoverUsername}`
+                  : 'Sync reading status, ratings & reviews'}
+              </IonNote>
+            </IonLabel>
+          </IonItem>
+
           <IonItem button routerLink="/calibre-web-settings" detail className="settings-nav-item">
             <IonIcon icon={serverOutline} slot="start" color="primary" />
             <IonLabel>
@@ -370,6 +404,24 @@ const Settings: React.FC = () => {
               <h3>Reading Statistics</h3>
               <IonNote>View your reading history and progress</IonNote>
             </IonLabel>
+          </IonItem>
+
+          <IonItem>
+            <IonIcon icon={sparklesOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Enrich All Books</h3>
+              <IonNote>Fetch descriptions, ratings & covers from online sources</IonNote>
+            </IonLabel>
+            <IonButton
+              slot="end"
+              fill="outline"
+              size="small"
+              onClick={handleEnrichAll}
+              disabled={isEnriching}
+              style={{ '--border-radius': '8px' }}
+            >
+              {isEnriching ? <IonSpinner name="crescent" /> : 'Enrich'}
+            </IonButton>
           </IonItem>
         </div>
 

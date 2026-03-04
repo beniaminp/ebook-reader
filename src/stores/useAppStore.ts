@@ -171,6 +171,20 @@ export const useAppStore = create<AppState>((set, get) => ({
               : state.currentBook,
           isLoading: false,
         }));
+
+        // Auto-push status/rating changes to Hardcover
+        try {
+          const { useHardcoverStore } = await import('./hardcoverStore');
+          const hcState = useHardcoverStore.getState();
+          if (hcState.isConnected && hcState.matchedBooks[bookId]) {
+            if ((updates as any).readStatus) {
+              hcState.pushBookStatus(bookId, (updates as any).readStatus);
+            }
+            if (updates.metadata?.rating !== undefined) {
+              hcState.pushBookRating(bookId, updates.metadata.rating);
+            }
+          }
+        } catch { /* ignore hardcover push failure */ }
       }
       return success;
     } catch (error) {
@@ -238,6 +252,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       markDirty();
+
+      // Auto-push progress to Hardcover if book is matched
+      try {
+        const { useHardcoverStore } = await import('./hardcoverStore');
+        const hcState = useHardcoverStore.getState();
+        if (hcState.isConnected && hcState.matchedBooks[bookId]) {
+          hcState.pushBookProgress(bookId, progressPercentage * 100);
+        }
+      } catch { /* ignore hardcover push failure */ }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update progress' });
     }

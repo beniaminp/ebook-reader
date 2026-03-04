@@ -1,0 +1,69 @@
+.hardcover-settings {
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+}
+
+.hardcover-settings .status-card {
+  margin: 16px;
+  --background: var(--ion-color-success-tint);
+}
+
+.hardcover-settings .status-card ion-card-title {
+  color: var(--ion-color-success-shade);
+}
+
+.hardcover-settings .info-card {
+  margin: 16px;
+}
+
+.hardcover-settings .info-card ion-card-title {
+  font-size: 18px;
+}
+
+.hardcover-settings .info-card p {
+  color: var(--ion-color-medium-shade);
+  line-height: 1.5;
+}
+
+.hardcover-settings .web-banner {
+  margin: 16px;
+  --background: var(--ion-color-warning-tint);
+}
+
+.hardcover-settings .web-banner ion-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hardcover-settings .sync-result {
+  margin: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--ion-color-light);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.hardcover-settings .sync-result--success {
+  background: var(--ion-color-success-tint);
+}
+
+.hardcover-settings .sync-result--error {
+  background: var(--ion-color-danger-tint);
+}
+
+.hardcover-settings .queue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--ion-color-warning);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+  margin-left: 8px;
+}

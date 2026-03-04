@@ -5,7 +5,7 @@ export * from './epub';
 export * from './reader';
 
 // Book types
-export type BookSource = 'local' | 'calibre-web' | 'opds' | 'dropbox' | 'webdav' | 'gdrive';
+export type BookSource = 'local' | 'calibre-web' | 'opds' | 'dropbox' | 'webdav' | 'gdrive' | 'hardcover';
 export type ReadStatus = 'unread' | 'reading' | 'finished' | 'dnf';
 
 export interface Book {
@@ -44,6 +44,12 @@ export interface Book {
   series?: string; // Series name (e.g., "Harry Potter")
   seriesIndex?: number; // Position in series (e.g., 1, 2, 3)
   readStatus?: ReadStatus; // Reading status (unread, reading, finished, dnf)
+  hardcoverId?: number; // Matched Hardcover book ID
+  hardcoverReview?: string; // Review text from Hardcover
+  communityRating?: number; // Community rating from Open Library/Hardcover
+  communityRatingCount?: number; // Number of community ratings
+  pageCount?: number; // Page count from metadata enrichment
+  coverUrl?: string; // Remote cover URL for enrichment
   metadata?: BookMetadata;
 }
 
@@ -60,6 +66,10 @@ export interface BookMetadata {
   series?: string;
   seriesIndex?: number;
   rating?: number; // 0-5
+  communityRating?: number;
+  communityRatingCount?: number;
+  pageCount?: number;
+  coverUrl?: string;
 }
 
 // Reader types

@@ -30,6 +30,7 @@ export const TABLES = {
   TRANSLATION_HISTORY: 'translation_history',
   SYNC_STATUS: 'sync_status',
   MIGRATIONS: 'migrations',
+  HARDCOVER_SYNC_QUEUE: 'hardcover_sync_queue',
 } as const;
 
 // Table creation SQL statements
@@ -50,7 +51,7 @@ export const CREATE_TABLES = {
       publish_date TEXT,
       isbn TEXT,
       description TEXT,
-      source TEXT NOT NULL DEFAULT 'local' CHECK(source IN ('local', 'calibre-web', 'opds', 'dropbox', 'webdav', 'gdrive')),
+      source TEXT NOT NULL DEFAULT 'local' CHECK(source IN ('local', 'calibre-web', 'opds', 'dropbox', 'webdav', 'gdrive', 'hardcover')),
       source_id TEXT,
       source_url TEXT,
       downloaded INTEGER NOT NULL DEFAULT 1,
@@ -304,6 +305,18 @@ export const CREATE_TABLES = {
       applied_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
     );
   `,
+
+  [TABLES.HARDCOVER_SYNC_QUEUE]: `
+    CREATE TABLE IF NOT EXISTS ${TABLES.HARDCOVER_SYNC_QUEUE} (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('status', 'rating', 'progress')),
+      payload TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (book_id) REFERENCES ${TABLES.BOOKS}(id) ON DELETE CASCADE
+    );
+  `,
 } as const;
 
 // Index creation SQL statements
@@ -356,6 +369,10 @@ export const CREATE_INDEXES = [
   `CREATE INDEX IF NOT EXISTS idx_translation_history_book_id ON ${TABLES.TRANSLATION_HISTORY}(book_id);`,
   `CREATE INDEX IF NOT EXISTS idx_translation_history_created_at ON ${TABLES.TRANSLATION_HISTORY}(created_at DESC);`,
   `CREATE INDEX IF NOT EXISTS idx_translation_history_langs ON ${TABLES.TRANSLATION_HISTORY}(source_lang, target_lang);`,
+
+  `CREATE INDEX IF NOT EXISTS idx_books_hardcover_id ON ${TABLES.BOOKS}(hardcover_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_hardcover_sync_queue_book_id ON ${TABLES.HARDCOVER_SYNC_QUEUE}(book_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_hardcover_sync_queue_created_at ON ${TABLES.HARDCOVER_SYNC_QUEUE}(created_at ASC);`,
 ];
 
 // Default data seeding
@@ -535,6 +552,7 @@ export const MIGRATIONS: Record<number, string> = {
   2: 'Add rects column to highlights table for PDF bounding rectangles',
   3: 'Add genre and subgenres columns to books table',
   4: 'Add read_status column to books table',
+  5: 'Add Hardcover sync columns to books and hardcover_sync_queue table',
 };
 
 // SQL statements for migrations
@@ -548,6 +566,14 @@ export const MIGRATION_SQL: Record<number, string> = {
   `,
   4: `
     ALTER TABLE ${TABLES.BOOKS} ADD COLUMN read_status TEXT DEFAULT 'unread';
+  `,
+  5: `
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN hardcover_id INTEGER;
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN hardcover_review TEXT;
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN community_rating REAL;
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN community_rating_count INTEGER;
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN page_count INTEGER;
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN cover_url TEXT;
   `,
 };
 
