@@ -85,8 +85,16 @@ async function convertDocumentToHtml(buffer: ArrayBuffer, format: string): Promi
 }
 
 const Reader: React.FC = () => {
-  const { bookId } = useParams<{ bookId?: string }>();
+  const params = useParams<{ bookId?: string }>();
   const history = useHistory();
+
+  // IonRouterOutlet can keep this component mounted when the route doesn't
+  // match, causing useParams to return undefined. Fall back to extracting the
+  // bookId from the URL path.
+  const bookId = params.bookId || (() => {
+    const match = window.location.pathname.match(/\/reader\/([^/]+)/);
+    return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+  })();
 
   const { setCurrentBook, updateProgress } = useAppStore();
 

@@ -143,9 +143,7 @@ const AppTabs: React.FC = () => {
         <Route exact path="/browse">
           <Browse />
         </Route>
-        <Route exact path="/reader/:bookId">
-          <Reader />
-        </Route>
+        <Route exact path="/reader/:bookId" render={() => <Reader />} />
         <Route exact path="/settings">
           <Settings />
         </Route>
