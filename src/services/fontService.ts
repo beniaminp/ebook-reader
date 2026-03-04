@@ -13,6 +13,7 @@ export interface CustomFont {
   name: string;
   path: string;
   filename: string;
+  source?: 'file' | 'google-fonts';
 }
 
 /**
@@ -187,23 +188,28 @@ async function deleteCustomFont(fontName: string): Promise<void> {
       throw new Error(`Font '${fontName}' not found`);
     }
 
-    // Delete file from filesystem
-    try {
-      await Filesystem.deleteFile({
-        path: `${CUSTOM_FONTS_DIR}/${fontToDelete.filename}`,
-        directory: Directory.Data,
-      });
-    } catch (error) {
-      console.warn('Failed to delete font file from filesystem:', error);
+    if (fontToDelete.source === 'google-fonts') {
+      // Remove Google Font <link> tag — no filesystem deletion needed
+      removeGoogleFont(fontName);
+    } else {
+      // Delete file from filesystem
+      try {
+        await Filesystem.deleteFile({
+          path: `${CUSTOM_FONTS_DIR}/${fontToDelete.filename}`,
+          directory: Directory.Data,
+        });
+      } catch (error) {
+        console.warn('Failed to delete font file from filesystem:', error);
+      }
+
+      // Remove @font-face rule from DOM using data attribute for reliable matching
+      const fontFamily = `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+      document.head.querySelector(`style[data-font="${fontFamily}"]`)?.remove();
     }
 
     // Update fonts list
     const updatedFonts = fonts.filter((f) => f.name !== fontName);
     await saveCustomFontsList(updatedFonts);
-
-    // Remove @font-face rule from DOM using data attribute for reliable matching
-    const fontFamily = `Custom-${fontName.replace(/[^a-zA-Z0-9-]/g, '-')}`;
-    document.head.querySelector(`style[data-font="${fontFamily}"]`)?.remove();
   } catch (error) {
     console.error('Failed to delete custom font:', error);
     throw error;
@@ -217,13 +223,26 @@ async function loadAllCustomFonts(): Promise<void> {
   try {
     const fonts = await getCustomFonts();
 
+    const fileFonts = fonts.filter((f) => f.source !== 'google-fonts');
+    const googleFonts = fonts.filter((f) => f.source === 'google-fonts');
+
+    // Load file-based fonts
     await Promise.allSettled(
-      fonts.map((font) =>
+      fileFonts.map((font) =>
         loadCustomFont(font.name, font.path).catch((error) =>
           console.warn(`Failed to load font '${font.name}':`, error)
         )
       )
     );
+
+    // Load Google Fonts via <link> tags
+    for (const font of googleFonts) {
+      try {
+        loadGoogleFont(font.name);
+      } catch (error) {
+        console.warn(`Failed to load Google Font '${font.name}':`, error);
+      }
+    }
   } catch (error) {
     console.error('Failed to load custom fonts:', error);
   }
@@ -284,13 +303,47 @@ async function loadWebFont(fontName: string, url: string, weight: string = 'norm
   });
 }
 
+/**
+ * Get Google Fonts CSS2 API URL for a font family
+ */
+function getGoogleFontCssUrl(family: string): string {
+  const encoded = family.replace(/ /g, '+');
+  return `https://fonts.googleapis.com/css2?family=${encoded}:wght@400;700&display=swap`;
+}
+
+/**
+ * Load a Google Font by injecting a <link> tag
+ */
+function loadGoogleFont(family: string): void {
+  const linkId = `google-font-${family.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  if (document.head.querySelector(`link[data-google-font="${linkId}"]`)) return;
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = getGoogleFontCssUrl(family);
+  link.dataset.googleFont = linkId;
+  document.head.appendChild(link);
+}
+
+/**
+ * Remove a Google Font <link> tag
+ */
+function removeGoogleFont(family: string): void {
+  const linkId = `google-font-${family.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  document.head.querySelector(`link[data-google-font="${linkId}"]`)?.remove();
+}
+
 // Export singleton instance
 export const fontService = {
   loadCustomFont,
   getCustomFonts,
+  saveCustomFontsList,
   importFontFile,
   deleteCustomFont,
   loadAllCustomFonts,
   getFontFamilyName,
   loadWebFont,
+  getGoogleFontCssUrl,
+  loadGoogleFont,
+  removeGoogleFont,
 };

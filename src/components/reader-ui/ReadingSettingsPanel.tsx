@@ -38,7 +38,9 @@ import {
   documentText,
   trash,
   accessibility,
+  cloudDownload,
 } from 'ionicons/icons';
+import { GoogleFontsModal } from './GoogleFontsModal';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type {
   ThemeType,
@@ -126,6 +128,7 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
   const [importingFont, setImportingFont] = useState(false);
   const [fontImportError, setFontImportError] = useState<string | null>(null);
+  const [showGoogleFonts, setShowGoogleFonts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fontInputRef = useRef<HTMLInputElement>(null);
 
@@ -506,6 +509,13 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                   <IonIcon icon={documentText} />
                   {importingFont ? 'Importing...' : 'Import Font'}
                 </button>
+                <button
+                  className="type-import-btn"
+                  onClick={() => setShowGoogleFonts(true)}
+                >
+                  <IonIcon icon={cloudDownload} />
+                  Google Fonts
+                </button>
                 {customFonts.map((font) => (
                   <div key={font.name} className="type-custom-font-chip">
                     <span>{font.name}</span>
@@ -519,6 +529,10 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                   </div>
                 ))}
               </div>
+              <GoogleFontsModal
+                isOpen={showGoogleFonts}
+                onDismiss={() => setShowGoogleFonts(false)}
+              />
               {fontImportError && (
                 <div className="type-error">{fontImportError}</div>
               )}

@@ -200,8 +200,23 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         );
       }
     }
+    // Resolve font family: Google Fonts use their actual name, file-imported use Custom- prefix
+    let resolvedFontFamily = fontFamilyRef.current;
+    if (resolvedFontFamily.startsWith('gfont-')) {
+      const googleFamily = resolvedFontFamily.slice(6);
+      resolvedFontFamily = `'${googleFamily}'`;
+      // Inject Google Font <link> into the iframe doc so the font is available
+      const linkId = `gfont-link-${googleFamily.replace(/[^a-zA-Z0-9]/g, '-')}`;
+      if (!doc.head.querySelector(`link[data-gfont-link="${linkId}"]`)) {
+        const link = doc.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = `https://fonts.googleapis.com/css2?family=${googleFamily.replace(/ /g, '+')}:wght@400;700&display=swap`;
+        link.dataset.gfontLink = linkId;
+        doc.head.appendChild(link);
+      }
+    }
     rules.push(
-      `body { font-size: ${fontSizeRef.current}px !important; font-family: ${fontFamilyRef.current} !important; }`
+      `body { font-size: ${fontSizeRef.current}px !important; font-family: ${resolvedFontFamily} !important; }`
     );
     // Suppress native context menu / text selection callout so the custom
     // TextSelectionMenu bottom bar is the only UI that appears.

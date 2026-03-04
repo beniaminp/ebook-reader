@@ -202,6 +202,7 @@ interface ThemeState extends ReadingSettings {
 
   // Custom font management
   addCustomFont: (font: CustomFont) => void;
+  addGoogleFont: (family: string) => Promise<void>;
   removeCustomFont: (fontName: string) => Promise<void>;
   loadCustomFonts: () => Promise<void>;
 
@@ -296,7 +297,7 @@ export const useThemeStore = create<ThemeState>()(
         const state = get();
         const builtInFonts = FONT_FAMILIES.map((f) => ({ ...f, isCustom: false }));
         const customFonts = state.customFonts.map((f) => ({
-          value: `custom-${f.name}`,
+          value: f.source === 'google-fonts' ? `gfont-${f.name}` : `custom-${f.name}`,
           name: f.name,
           preview: f.name,
           isCustom: true,
@@ -425,11 +426,38 @@ export const useThemeStore = create<ThemeState>()(
           customFonts: [...state.customFonts, font],
         })),
 
+      addGoogleFont: async (family) => {
+        const state = get();
+        // Skip if already added
+        if (state.customFonts.some((f) => f.name === family && f.source === 'google-fonts')) return;
+
+        // Load the font via <link> tag
+        fontService.loadGoogleFont(family);
+
+        const fontEntry: CustomFont = {
+          name: family,
+          path: '',
+          filename: '',
+          source: 'google-fonts',
+        };
+
+        // Persist to storage
+        const existing = await fontService.getCustomFonts();
+        await fontService.saveCustomFontsList([...existing, fontEntry]);
+
+        set((state) => ({
+          customFonts: [...state.customFonts, fontEntry],
+        }));
+      },
+
       removeCustomFont: async (fontName) => {
         await fontService.deleteCustomFont(fontName);
         set((state) => ({
           customFonts: state.customFonts.filter((f) => f.name !== fontName),
-          fontFamily: state.fontFamily === `custom-${fontName}` ? 'serif' : state.fontFamily,
+          fontFamily:
+            state.fontFamily === `custom-${fontName}` || state.fontFamily === `gfont-${fontName}`
+              ? 'serif'
+              : state.fontFamily,
         }));
       },
 
