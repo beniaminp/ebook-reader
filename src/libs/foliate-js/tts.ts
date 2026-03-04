@@ -11,26 +11,43 @@ const blockTags = new Set([
     'main', 'math', 'nav', 'ol', 'p', 'pre', 'section', 'tr',
 ])
 
-const getLang = el => {
-    const x = el.lang || el?.getAttributeNS?.(NS.XML, 'lang')
+const getLang = (el: Element | null): string | null => {
+    if (!el) return null
+    const x = (el as HTMLElement).lang || el?.getAttributeNS?.(NS.XML, 'lang')
     return x ? x : el.parentElement ? getLang(el.parentElement) : null
 }
 
-const getAlphabet = el => {
+const getAlphabet = (el: Element | null): string | null => {
+    if (!el) return null
     const x = el?.getAttributeNS?.(NS.XML, 'lang')
     return x ? x : el.parentElement ? getAlphabet(el.parentElement) : null
 }
 
-const getSegmenter = (lang = 'en', granularity = 'word') => {
+interface SegmentData {
+    index: number
+    segment: string
+    isWordLike?: boolean
+}
+
+type SegmenterFunction = (strs: string[], makeRange: (...args: number[]) => Range) => Generator<[string, Range]>
+
+type TextWalkerFunction = (
+    x: Range | DocumentFragment,
+    func: SegmenterFunction,
+) => Iterable<[string, Range]>
+
+type HighlightFunction = (range: Range) => void
+
+const getSegmenter = (lang: string = 'en', granularity: 'word' | 'sentence' | 'grapheme' = 'word'): SegmenterFunction => {
     const segmenter = new Intl.Segmenter(lang, { granularity })
     const granularityIsWord = granularity === 'word'
-    return function* (strs, makeRange) {
+    return function* (strs: string[], makeRange: (...args: number[]) => Range): Generator<[string, Range]> {
         const str = strs.join('').replace(/\r\n/g, '  ').replace(/\r/g, ' ').replace(/\n/g, ' ')
         let name = 0
         let strIndex = -1
         let sum = 0
-        const rawSegments = Array.from(segmenter.segment(str))
-        const mergedSegments = []
+        const rawSegments: SegmentData[] = Array.from(segmenter.segment(str))
+        const mergedSegments: SegmentData[] = []
         for (let i = 0; i < rawSegments.length; i++) {
             const current = rawSegments[i]
             const next = rawSegments[i + 1]
@@ -39,7 +56,7 @@ const getSegmenter = (lang = 'en', granularity = 'word') => {
             const endsWithAbbr = /(?:^|\s)([A-Z][a-z]{1,5})\.$/.test(segment)
             const nextStartsWithCapital = /^[A-Z]/.test(nextSegment || '')
             if (endsWithAbbr && nextStartsWithCapital) {
-                const mergedSegment = {
+                const mergedSegment: SegmentData = {
                     index: current.index,
                     segment: current.segment + (next?.segment || ''),
                     isWordLike: true,
@@ -65,37 +82,44 @@ const getSegmenter = (lang = 'en', granularity = 'word') => {
     }
 }
 
-const fragmentToSSML = (fragment, inherited) => {
+interface InheritedProps {
+    lang: string | null
+    alphabet: string | null
+}
+
+const fragmentToSSML = (fragment: DocumentFragment, inherited: InheritedProps): XMLDocument => {
     const ssml = document.implementation.createDocument(NS.SSML, 'speak')
     const { lang } = inherited
     if (lang) ssml.documentElement.setAttributeNS(NS.XML, 'lang', lang)
 
-    const convert = (node, parent, inheritedAlphabet) => {
+    const convert = (node: Node | null, parent: Element, inheritedAlphabet: string | null): Node | undefined => {
         if (!node) return
-        if (node.nodeType === 3) return ssml.createTextNode(node.textContent)
-        if (node.nodeType === 4) return ssml.createCDATASection(node.textContent)
+        if (node.nodeType === 3) return ssml.createTextNode(node.textContent ?? '')
+        if (node.nodeType === 4) return ssml.createCDATASection(node.textContent ?? '')
         if (node.nodeType !== 1) return
 
-        let el
-        const nodeName = node.nodeName.toLowerCase()
+        const element = node as Element
+
+        let el: Element | undefined
+        const nodeName = element.nodeName.toLowerCase()
         if (nodeName === 'foliate-mark') {
             el = ssml.createElementNS(NS.SSML, 'mark')
-            el.setAttribute('name', node.dataset.name)
+            el.setAttribute('name', (element as HTMLElement).dataset.name ?? '')
         }
         else if (nodeName === 'br')
             el = ssml.createElementNS(NS.SSML, 'break')
         else if (nodeName === 'em' || nodeName === 'strong')
             el = ssml.createElementNS(NS.SSML, 'emphasis')
 
-        const lang = node.lang || node.getAttributeNS(NS.XML, 'lang')
+        const lang = (element as HTMLElement).lang || element.getAttributeNS(NS.XML, 'lang')
         if (lang) {
             if (!el) el = ssml.createElementNS(NS.SSML, 'lang')
             el.setAttributeNS(NS.XML, 'lang', lang)
         }
 
-        const alphabet = node.getAttributeNS(NS.SSML, 'alphabet') || inheritedAlphabet
+        const alphabet = element.getAttributeNS(NS.SSML, 'alphabet') || inheritedAlphabet
         if (!el) {
-            const ph = node.getAttributeNS(NS.SSML, 'ph')
+            const ph = element.getAttributeNS(NS.SSML, 'ph')
             if (ph) {
                 el = ssml.createElementNS(NS.SSML, 'phoneme')
                 if (alphabet) el.setAttribute('alphabet', alphabet)
@@ -103,30 +127,32 @@ const fragmentToSSML = (fragment, inherited) => {
             }
         }
 
-        if (!el) el = parent
+        const targetEl = el ?? parent
 
-        let child = node.firstChild
+        let child = element.firstChild
         while (child) {
-            const childEl = convert(child, el, alphabet)
-            if (childEl && el !== childEl) el.append(childEl)
+            const childEl = convert(child, targetEl, alphabet)
+            if (childEl && targetEl !== childEl) targetEl.append(childEl)
             child = child.nextSibling
         }
-        return el
+        return targetEl === parent ? undefined : targetEl
     }
     convert(fragment.firstChild, ssml.documentElement, inherited.alphabet)
     return ssml
 }
 
-const getFragmentWithMarks = (range, textWalker, granularity) => {
-    const lang = getLang(range.commonAncestorContainer)
-    const alphabet = getAlphabet(range.commonAncestorContainer)
+interface FragmentWithMarks {
+    entries: [string, Range][]
+    ssml: XMLDocument
+}
 
-    const segmenter = getSegmenter(lang, granularity)
+const getFragmentWithMarks = (range: Range, textWalker: TextWalkerFunction, granularity: 'word' | 'sentence' | 'grapheme'): FragmentWithMarks => {
+    const lang = getLang(range.commonAncestorContainer as Element)
+    const alphabet = getAlphabet(range.commonAncestorContainer as Element)
+
+    const segmenter = getSegmenter(lang ?? undefined, granularity)
     const fragment = range.cloneContents()
 
-    // we need ranges on both the original document (for highlighting)
-    // and the document fragment (for inserting marks)
-    // so unfortunately need to do it twice, as you can't copy the ranges
     const entries = [...textWalker(range, segmenter)]
     const fragmentEntries = [...textWalker(fragment, segmenter)]
 
@@ -139,13 +165,13 @@ const getFragmentWithMarks = (range, textWalker, granularity) => {
     return { entries, ssml }
 }
 
-const rangeIsEmpty = range => !range.toString().trim()
+const rangeIsEmpty = (range: Range): boolean => !range.toString().trim()
 
-function* getBlocks(doc) {
-    let last
+function* getBlocks(doc: Document): Generator<Range> {
+    let last: Range | undefined
     const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT)
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        const name = node.tagName.toLowerCase()
+        const name = (node as Element).tagName.toLowerCase()
         if (blockTags.has(name)) {
             if (last) {
                 last.setEndBefore(node)
@@ -163,33 +189,33 @@ function* getBlocks(doc) {
     if (!rangeIsEmpty(last)) yield last
 }
 
-class ListIterator {
-    #arr = []
-    #iter
-    #index = -1
-    #f
-    constructor(iter, f = x => x) {
+class ListIterator<T, U> {
+    #arr: T[] = []
+    #iter: Iterator<T>
+    #index: number = -1
+    #f: (x: T) => U
+    constructor(iter: Iterator<T>, f: (x: T) => U = ((x: T) => x) as unknown as (x: T) => U) {
         this.#iter = iter
         this.#f = f
     }
-    current() {
+    current(): U | undefined {
         if (this.#arr[this.#index]) return this.#f(this.#arr[this.#index])
     }
-    first() {
+    first(): U | undefined {
         const newIndex = 0
         if (this.#arr[newIndex]) {
             this.#index = newIndex
             return this.#f(this.#arr[newIndex])
         }
     }
-    prev() {
+    prev(): U | undefined {
         const newIndex = this.#index - 1
         if (this.#arr[newIndex]) {
             this.#index = newIndex
             return this.#f(this.#arr[newIndex])
         }
     }
-    next() {
+    next(): U | undefined {
         const newIndex = this.#index + 1
         if (this.#arr[newIndex]) {
             this.#index = newIndex
@@ -205,7 +231,7 @@ class ListIterator {
             }
         }
     }
-    find(f) {
+    find(f: (x: T) => boolean): U | undefined {
         const index = this.#arr.findIndex(x => f(x))
         if (index > -1) {
             this.#index = index
@@ -224,72 +250,74 @@ class ListIterator {
 }
 
 export class TTS {
-    #list
-    #ranges
-    #lastMark
-    #serializer = new XMLSerializer()
-    constructor(doc, textWalker, highlight, granularity) {
+    #list: ListIterator<Range, [XMLDocument, Range]>
+    #ranges: Map<string, Range> = new Map()
+    #lastMark: string | null = null
+    #serializer: XMLSerializer = new XMLSerializer()
+    doc: Document
+    highlight: HighlightFunction
+    constructor(doc: Document, textWalker: TextWalkerFunction, highlight: HighlightFunction, granularity: 'word' | 'sentence' | 'grapheme') {
         this.doc = doc
         this.highlight = highlight
-        this.#list = new ListIterator(getBlocks(doc), range => {
+        this.#list = new ListIterator(getBlocks(doc), (range: Range) => {
             const { entries, ssml } = getFragmentWithMarks(range, textWalker, granularity)
             this.#ranges = new Map(entries)
-            return [ssml, range]
+            return [ssml, range] as [XMLDocument, Range]
         })
     }
-    #getMarkElement(doc, mark) {
+    #getMarkElement(doc: XMLDocument, mark: string | null): Element | null {
         if (!mark) return null
         return doc.querySelector(`mark[name="${CSS.escape(mark)}"`)
     }
-    #speak(doc, getNode) {
+    #speak(doc: XMLDocument | undefined, getNode?: (ssml: XMLDocument) => Element | null): string | undefined {
         if (!doc) return
         if (!getNode) return this.#serializer.serializeToString(doc)
         const ssml = document.implementation.createDocument(NS.SSML, 'speak')
         ssml.documentElement.replaceWith(ssml.importNode(doc.documentElement, true))
-        let node = getNode(ssml)?.previousSibling
+        let node: Node | null = getNode(ssml)?.previousSibling ?? null
         while (node) {
-            const next = node.previousSibling ?? node.parentNode?.previousSibling
-            node.parentNode.removeChild(node)
+            const next: Node | null = node.previousSibling ?? node.parentNode?.previousSibling ?? null
+            node.parentNode?.removeChild(node)
             node = next
         }
         return this.#serializer.serializeToString(ssml)
     }
-    start() {
+    start(): string | undefined {
         this.#lastMark = null
         const [doc] = this.#list.first() ?? []
         if (!doc) return this.next()
         return this.#speak(doc, ssml => this.#getMarkElement(ssml, this.#lastMark))
     }
-    resume() {
+    resume(): string | undefined {
         const [doc] = this.#list.current() ?? []
         if (!doc) return this.next()
         return this.#speak(doc, ssml => this.#getMarkElement(ssml, this.#lastMark))
     }
-    prev(paused) {
+    prev(paused?: boolean): string | undefined {
         this.#lastMark = null
         const [doc, range] = this.#list.prev() ?? []
         if (paused && range) this.highlight(range.cloneRange())
         return this.#speak(doc)
     }
-    next(paused) {
+    next(paused?: boolean): string | undefined {
         this.#lastMark = null
         const [doc, range] = this.#list.next() ?? []
         if (paused && range) this.highlight(range.cloneRange())
         return this.#speak(doc)
     }
-    from(range) {
+    from(range: Range): string | undefined {
         this.#lastMark = null
-        const [doc] = this.#list.find(range_ =>
-            range.compareBoundaryPoints(Range.END_TO_START, range_) <= 0)
-        let mark
+        const [doc] = this.#list.find((range_: Range) =>
+            range.compareBoundaryPoints(Range.END_TO_START, range_) <= 0) ?? []
+        let mark: string | undefined
         for (const [name, range_] of this.#ranges.entries())
             if (range.compareBoundaryPoints(Range.START_TO_START, range_) <= 0) {
                 mark = name
                 break
             }
-        return this.#speak(doc, ssml => this.#getMarkElement(ssml, mark))
+        return this.#speak(doc, ssml => this.#getMarkElement(ssml, mark ?? null))
     }
-    setMark(mark) {
+    setMark(mark: string): void {
         const range = this.#ranges.get(mark)
         if (range) {
             this.#lastMark = mark

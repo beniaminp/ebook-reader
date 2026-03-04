@@ -1,5 +1,6 @@
 interface TOCItem {
     id?: number
+    label?: string
     href?: string
     subitems?: TOCItem[]
 }

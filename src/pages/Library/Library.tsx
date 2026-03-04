@@ -601,7 +601,7 @@ const Library: React.FC = () => {
     fileName: string
   ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
     try {
-      const { makeBook } = await import('../../libs/foliate-js/view.js');
+      const { makeBook } = await import('../../libs/foliate-js/view');
       // Use File instead of Blob - File has a name property that foliate-js needs
       const file = new File([arrayBuffer], fileName, { type: 'application/epub+zip' });
 
@@ -779,7 +779,7 @@ const Library: React.FC = () => {
     fileName: string
   ): Promise<{ title: string; author: string; coverDataUrl?: string } | null> => {
     try {
-      const { makeBook } = await import('../../libs/foliate-js/view.js');
+      const { makeBook } = await import('../../libs/foliate-js/view');
       // MOBI/AZW3 files use the MIME type application/x-mobipocket-ebook
       const file = new File([arrayBuffer], fileName, { type: 'application/x-mobipocket-ebook' });
 

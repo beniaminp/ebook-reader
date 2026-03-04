@@ -15,7 +15,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import type { View as FoliateView, FoliateLocation, FoliateTocItem } from '../../libs/foliate-js/view.js';
+import type { View as FoliateView, FoliateLocation, FoliateTocItem } from '../../libs/foliate-js/view';
 import type { EpubTheme } from '../../types/epub';
 import type { ReaderEngineRef, Chapter, SearchResult, ReaderProgress } from '../../types/reader';
 import { comicService } from '../../services/comicService';

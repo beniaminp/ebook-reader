@@ -1,0 +1,537 @@
+import 'construct-style-sheets-polyfill'
+
+interface Viewport {
+    width: number | string;
+    height: number | string;
+}
+
+interface FrameData {
+    blank?: boolean;
+    element: HTMLDivElement;
+    iframe: HTMLIFrameElement;
+    width?: number;
+    height?: number;
+    onZoom?: (opts: { doc: Document; scale: number }) => void;
+}
+
+interface SpreadSection {
+    load?(): Promise<string>;
+    pageSpread?: string;
+    linear?: string;
+}
+
+interface Spread {
+    left?: SpreadSection;
+    right?: SpreadSection;
+    center?: SpreadSection;
+}
+
+interface FxlBook {
+    dir?: string;
+    sections: SpreadSection[];
+    rendition?: {
+        layout?: string;
+        spread?: string;
+        viewport?: string | Viewport;
+    };
+}
+
+const parseViewport = (
+    str: string | undefined,
+): [string, string][] | undefined =>
+    str
+        ?.split(/[,;\s]/)
+        ?.filter(x => x)
+        ?.map(
+            x =>
+                x.split('=').map(x => x.trim()) as [
+                    string,
+                    string,
+                ],
+        )
+
+const getViewport = (
+    doc: Document,
+    viewport?: string | Viewport,
+): Viewport => {
+    if (doc.documentElement.localName === 'svg') {
+        const [, , width, height] =
+            doc.documentElement
+                .getAttribute('viewBox')
+                ?.split(/\s/) ?? []
+        return {
+            width: width ?? 1000,
+            height: height ?? 2000,
+        }
+    }
+
+    const meta = parseViewport(
+        doc
+            .querySelector('meta[name="viewport"]')
+            ?.getAttribute('content') ?? undefined,
+    )
+    if (meta) return Object.fromEntries(meta) as unknown as Viewport
+
+    if (typeof viewport === 'string') {
+        const parsed = parseViewport(viewport)
+        if (parsed) return Object.fromEntries(parsed) as unknown as Viewport
+    }
+    if (viewport && typeof viewport === 'object') return viewport
+
+    const img = doc.querySelector('img') as HTMLImageElement | null
+    if (img)
+        return {
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+        }
+
+    console.warn(new Error('Missing viewport properties'))
+    return { width: 1000, height: 2000 }
+}
+
+export class FixedLayout extends HTMLElement {
+    static observedAttributes = ['zoom']
+
+    #root: ShadowRoot = this.attachShadow({ mode: 'closed' })
+    #observer: ResizeObserver = new ResizeObserver(() =>
+        this.#render(),
+    )
+    #spreads: Spread[] = []
+    #index = -1
+    defaultViewport?: string | Viewport
+    spread?: string
+    #portrait = false
+    #left: FrameData | null = null
+    #right: FrameData | null = null
+    #center: FrameData | null = null
+    #side: string | undefined
+    #zoom: number | string | undefined
+
+    // Public fields
+    book!: FxlBook
+    rtl = false
+
+    constructor() {
+        super()
+
+        const sheet = new CSSStyleSheet()
+        this.#root.adoptedStyleSheets = [sheet]
+        sheet.replaceSync(`:host {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+        }`)
+
+        this.#observer.observe(this)
+    }
+
+    attributeChangedCallback(
+        name: string,
+        _: string | null,
+        value: string | null,
+    ): void {
+        switch (name) {
+            case 'zoom':
+                this.#zoom =
+                    value !== 'fit-width' && value !== 'fit-page'
+                        ? parseFloat(value ?? '1')
+                        : value
+                this.#render()
+                break
+        }
+    }
+
+    async #createFrame({
+        index,
+        src: srcOption,
+    }: {
+        index: number
+        src?: string | { src?: string; onZoom?: FrameData['onZoom'] }
+    }): Promise<FrameData> {
+        const srcOptionIsString = typeof srcOption === 'string'
+        const src = srcOptionIsString
+            ? srcOption
+            : srcOption?.src
+        const onZoom = srcOptionIsString
+            ? undefined
+            : srcOption?.onZoom
+        const element = document.createElement('div')
+        const iframe = document.createElement('iframe')
+        element.append(iframe)
+        Object.assign(iframe.style, {
+            border: '0',
+            display: 'none',
+            overflow: 'hidden',
+        })
+        iframe.setAttribute(
+            'sandbox',
+            'allow-same-origin allow-scripts',
+        )
+        iframe.setAttribute('scrolling', 'no')
+        iframe.setAttribute('part', 'filter')
+        this.#root.append(element)
+        if (!src)
+            return { blank: true, element, iframe }
+        return new Promise(resolve => {
+            iframe.addEventListener(
+                'load',
+                () => {
+                    const doc = iframe.contentDocument!
+                    this.dispatchEvent(
+                        new CustomEvent('load', {
+                            detail: { doc, index },
+                        }),
+                    )
+                    const { width, height } = getViewport(
+                        doc,
+                        this.defaultViewport,
+                    )
+                    resolve({
+                        element,
+                        iframe,
+                        width: parseFloat(String(width)),
+                        height: parseFloat(String(height)),
+                        onZoom,
+                    })
+                },
+                { once: true },
+            )
+            iframe.src = src
+        })
+    }
+
+    #render(side: string | undefined = this.#side): void {
+        if (!side) return
+        const left = this.#left ?? ({} as FrameData)
+        const right = this.#center ?? this.#right
+        const target = side === 'left' ? left : right
+        const { width, height } = this.getBoundingClientRect()
+        const portrait =
+            this.spread !== 'both' &&
+            this.spread !== 'portrait' &&
+            height > width
+        this.#portrait = portrait
+        const blankWidth = left.width ?? right?.width ?? 0
+        const blankHeight = left.height ?? right?.height ?? 0
+
+        const scale =
+            typeof this.#zoom === 'number' && !isNaN(this.#zoom)
+                ? this.#zoom
+                : this.#zoom === 'fit-width'
+                  ? portrait || this.#center
+                      ? width / (target?.width ?? blankWidth)
+                      : width /
+                        ((left.width ?? blankWidth) +
+                            (right?.width ?? blankWidth))
+                  : portrait || this.#center
+                    ? Math.min(
+                          width /
+                              (target?.width ?? blankWidth),
+                          height /
+                              (target?.height ?? blankHeight),
+                      )
+                    : Math.min(
+                          width /
+                              ((left.width ?? blankWidth) +
+                                  (right?.width ?? blankWidth)),
+                          height /
+                              Math.max(
+                                  left.height ?? blankHeight,
+                                  right?.height ?? blankHeight,
+                              ),
+                      )
+
+        const transform = (frame: FrameData) => {
+            const { element, iframe, width, height, blank, onZoom } =
+                frame
+            if (onZoom)
+                onZoom({
+                    doc: frame.iframe.contentDocument!,
+                    scale,
+                })
+            const iframeScale = onZoom ? scale : 1
+            Object.assign(iframe.style, {
+                width: `${(width ?? 0) * iframeScale}px`,
+                height: `${(height ?? 0) * iframeScale}px`,
+                transform: onZoom ? 'none' : `scale(${scale})`,
+                transformOrigin: 'top left',
+                display: blank ? 'none' : 'block',
+            })
+            Object.assign(element.style, {
+                width: `${(width ?? blankWidth) * scale}px`,
+                height: `${(height ?? blankHeight) * scale}px`,
+                overflow: 'hidden',
+                display: 'block',
+                flexShrink: '0',
+                marginBlock: 'auto',
+            })
+            if (portrait && frame !== target) {
+                element.style.display = 'none'
+            }
+        }
+        if (this.#center) {
+            transform(this.#center)
+        } else {
+            transform(left)
+            if (right) transform(right)
+        }
+    }
+
+    async #showSpread({
+        left,
+        right,
+        center,
+        side,
+    }: {
+        left?: { index: number; src?: string }
+        right?: { index: number; src?: string }
+        center?: { index: number; src?: string }
+        side?: string
+    }): Promise<void> {
+        this.#root.replaceChildren()
+        this.#left = null
+        this.#right = null
+        this.#center = null
+        if (center) {
+            this.#center = await this.#createFrame(center)
+            this.#side = 'center'
+            this.#render()
+        } else {
+            this.#left = await this.#createFrame(left!)
+            this.#right = await this.#createFrame(right!)
+            this.#side = this.#left.blank
+                ? 'right'
+                : this.#right.blank
+                  ? 'left'
+                  : side
+            this.#render()
+        }
+    }
+
+    #goLeft(): boolean | undefined {
+        if (this.#center || this.#left?.blank) return
+        if (
+            this.#portrait &&
+            this.#left?.element?.style?.display === 'none'
+        ) {
+            this.#right!.element.style.display = 'none'
+            this.#left!.element.style.display = 'block'
+            this.#side = 'left'
+            return true
+        }
+    }
+
+    #goRight(): boolean | undefined {
+        if (this.#center || this.#right?.blank) return
+        if (
+            this.#portrait &&
+            this.#right?.element?.style?.display === 'none'
+        ) {
+            this.#left!.element.style.display = 'none'
+            this.#right!.element.style.display = 'block'
+            this.#side = 'right'
+            return true
+        }
+    }
+
+    open(book: FxlBook): void {
+        this.book = book
+        const { rendition } = book
+        this.spread = rendition?.spread
+        this.defaultViewport = rendition?.viewport
+
+        const rtl = book.dir === 'rtl'
+        const ltr = !rtl
+        this.rtl = rtl
+
+        if (rendition?.spread === 'none')
+            this.#spreads = book.sections.map(section => ({
+                center: section,
+            }))
+        else
+            this.#spreads = book.sections.reduce(
+                (arr: Spread[], section, i) => {
+                    const last = arr[arr.length - 1]
+                    const { pageSpread } = section
+                    const newSpread = (): Spread => {
+                        const spread: Spread = {}
+                        arr.push(spread)
+                        return spread
+                    }
+                    if (pageSpread === 'center') {
+                        const spread =
+                            last.left || last.right
+                                ? newSpread()
+                                : last
+                        spread.center = section
+                    } else if (pageSpread === 'left') {
+                        const spread =
+                            last.center ||
+                            last.left ||
+                            (ltr && i)
+                                ? newSpread()
+                                : last
+                        spread.left = section
+                    } else if (pageSpread === 'right') {
+                        const spread =
+                            last.center ||
+                            last.right ||
+                            (rtl && i)
+                                ? newSpread()
+                                : last
+                        spread.right = section
+                    } else if (ltr) {
+                        if (last.center || last.right)
+                            newSpread().left = section
+                        else if (last.left || !i)
+                            last.right = section
+                        else last.left = section
+                    } else {
+                        if (last.center || last.left)
+                            newSpread().right = section
+                        else if (last.right || !i)
+                            last.left = section
+                        else last.right = section
+                    }
+                    return arr
+                },
+                [{}],
+            )
+    }
+
+    get index(): number {
+        const spread = this.#spreads[this.#index]
+        const section =
+            spread?.center ??
+            (this.#side === 'left'
+                ? (spread.left ?? spread.right)
+                : (spread.right ?? spread.left))
+        return this.book.sections.indexOf(section!)
+    }
+
+    #reportLocation(reason: string): void {
+        this.dispatchEvent(
+            new CustomEvent('relocate', {
+                detail: {
+                    reason,
+                    range: null,
+                    index: this.index,
+                    fraction: 0,
+                    size: 1,
+                },
+            }),
+        )
+    }
+
+    getSpreadOf(
+        section: SpreadSection,
+    ):
+        | { index: number; side: string }
+        | undefined {
+        const spreads = this.#spreads
+        for (let index = 0; index < spreads.length; index++) {
+            const { left, right, center } = spreads[index]
+            if (left === section)
+                return { index, side: 'left' }
+            if (right === section)
+                return { index, side: 'right' }
+            if (center === section)
+                return { index, side: 'center' }
+        }
+    }
+
+    async goToSpread(
+        index: number,
+        side?: string,
+        reason?: string,
+    ): Promise<void> {
+        if (index < 0 || index > this.#spreads.length - 1)
+            return
+        if (index === this.#index) {
+            this.#render(side)
+            return
+        }
+        this.#index = index
+        const spread = this.#spreads[index]
+        if (spread.center) {
+            const idx = this.book.sections.indexOf(
+                spread.center,
+            )
+            const src = await spread.center?.load?.()
+            await this.#showSpread({
+                center: { index: idx, src },
+            })
+        } else {
+            const indexL = this.book.sections.indexOf(
+                spread.left!,
+            )
+            const indexR = this.book.sections.indexOf(
+                spread.right!,
+            )
+            const srcL = await spread.left?.load?.()
+            const srcR = await spread.right?.load?.()
+            const left = { index: indexL, src: srcL }
+            const right = { index: indexR, src: srcR }
+            await this.#showSpread({ left, right, side })
+        }
+        if (reason) this.#reportLocation(reason)
+    }
+
+    async select(
+        target: { index: number } | Promise<{ index: number }>,
+    ): Promise<void> {
+        await this.goTo(target)
+    }
+
+    async goTo(
+        target: { index: number } | Promise<{ index: number }>,
+    ): Promise<void> {
+        const { book } = this
+        const resolved = await target
+        const section = book.sections[resolved.index]
+        if (!section) return
+        const result = this.getSpreadOf(section)
+        if (result)
+            await this.goToSpread(result.index, result.side)
+    }
+
+    async next(): Promise<void> {
+        const s = this.rtl ? this.#goLeft() : this.#goRight()
+        if (s) this.#reportLocation('page')
+        else
+            return this.goToSpread(
+                this.#index + 1,
+                this.rtl ? 'right' : 'left',
+                'page',
+            )
+    }
+
+    async prev(): Promise<void> {
+        const s = this.rtl ? this.#goRight() : this.#goLeft()
+        if (s) this.#reportLocation('page')
+        else
+            return this.goToSpread(
+                this.#index - 1,
+                this.rtl ? 'left' : 'right',
+                'page',
+            )
+    }
+
+    getContents(): Array<{ doc: Document | null }> {
+        return Array.from(
+            this.#root.querySelectorAll('iframe'),
+            frame => ({
+                doc: frame.contentDocument,
+            }),
+        )
+    }
+
+    destroy(): void {
+        this.#observer.unobserve(this)
+    }
+}
+
+customElements.define('foliate-fxl', FixedLayout)
