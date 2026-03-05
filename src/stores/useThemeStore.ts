@@ -191,6 +191,12 @@ interface ThemeState extends ReadingSettings {
   setLetterSpacing: (spacing: number) => void;
   setPageTransitionType: (type: PageTransitionType) => void;
 
+  // Gesture sensitivity
+  tapSensitivity: number;
+  swipeThreshold: number;
+  setTapSensitivity: (sensitivity: number) => void;
+  setSwipeThreshold: (threshold: number) => void;
+
   // Bulk actions
   updateSettings: (settings: Partial<ReadingSettings>) => void;
   resetSettings: () => void;
@@ -278,6 +284,8 @@ export const useThemeStore = create<ThemeState>()(
       customBackgroundColor: undefined,
       customBackgroundImage: undefined,
       pageTransitionType: 'none' as PageTransitionType,
+      tapSensitivity: 10,
+      swipeThreshold: 50,
       isSettingsPanelOpen: false,
 
       // Computed helpers
@@ -375,6 +383,10 @@ export const useThemeStore = create<ThemeState>()(
 
       setPageTransitionType: (pageTransitionType) => set({ pageTransitionType }),
 
+      setTapSensitivity: (tapSensitivity) => set({ tapSensitivity }),
+
+      setSwipeThreshold: (swipeThreshold) => set({ swipeThreshold }),
+
       // Bulk actions
       updateSettings: (settings) => set(settings),
 
@@ -404,6 +416,8 @@ export const useThemeStore = create<ThemeState>()(
           hyphenation: DEFAULT_SETTINGS.hyphenation,
           paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
           letterSpacing: DEFAULT_SETTINGS.letterSpacing,
+          tapSensitivity: 10,
+          swipeThreshold: 50,
         }),
 
       applyPreset: (preset) => set(presets[preset]),
@@ -515,6 +529,8 @@ export const useThemeStore = create<ThemeState>()(
         customBackgroundColor: state.customBackgroundColor,
         customBackgroundImage: state.customBackgroundImage,
         pageTransitionType: state.pageTransitionType,
+        tapSensitivity: state.tapSensitivity,
+        swipeThreshold: state.swipeThreshold,
       }),
     }
   )

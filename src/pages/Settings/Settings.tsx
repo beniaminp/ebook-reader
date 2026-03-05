@@ -73,6 +73,8 @@ const Settings: React.FC = () => {
     bionicReading,
     autoScroll,
     autoScrollSpeed,
+    tapSensitivity,
+    swipeThreshold,
     setTheme,
     setFontFamily,
     setFontSize,
@@ -83,6 +85,8 @@ const Settings: React.FC = () => {
     setBionicReading,
     setAutoScroll,
     setAutoScrollSpeed,
+    setTapSensitivity,
+    setSwipeThreshold,
     resetSettings,
   } = useThemeStore();
 
@@ -344,6 +348,40 @@ const Settings: React.FC = () => {
               </div>
             </IonItem>
           )}
+
+          <IonItem>
+            <IonLabel>
+              <h3>Tap Sensitivity</h3>
+              <IonNote>How far a finger can move and still count as a tap</IonNote>
+            </IonLabel>
+            <div className="settings-range-row" slot="end" style={{ width: '55%' }}>
+              <IonRange
+                min={5}
+                max={30}
+                step={1}
+                value={tapSensitivity}
+                onIonChange={(e) => setTapSensitivity(e.detail.value as number)}
+              />
+              <span className="settings-range-value">{tapSensitivity}px</span>
+            </div>
+          </IonItem>
+
+          <IonItem>
+            <IonLabel>
+              <h3>Swipe Threshold</h3>
+              <IonNote>Minimum distance to trigger a page swipe</IonNote>
+            </IonLabel>
+            <div className="settings-range-row" slot="end" style={{ width: '55%' }}>
+              <IonRange
+                min={20}
+                max={100}
+                step={5}
+                value={swipeThreshold}
+                onIonChange={(e) => setSwipeThreshold(e.detail.value as number)}
+              />
+              <span className="settings-range-value">{swipeThreshold}px</span>
+            </div>
+          </IonItem>
         </fieldset>
 
         {/* ─── Reading Goals & Streaks ─────────────────── */}
