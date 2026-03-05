@@ -3,7 +3,7 @@
  *
  * Highlights the currently spoken word in the rendered text, synchronized
  * with TTS word boundary events. Works with both EPUB (iframe-based) and
- * scroll-based (main document) readers.
+ * scroll-based (main document) readers, and PDF text layers.
  *
  * Strategy:
  *  1. When TTS starts a sentence, we find all text nodes in the content
@@ -23,12 +23,13 @@ const HIGHLIGHT_CLASS = 'tts-word-highlight';
 /** CSS for the word highlight — injected into each content document */
 const HIGHLIGHT_STYLE = `
 .${HIGHLIGHT_CLASS} {
-  background-color: rgba(255, 213, 79, 0.6);
-  border-radius: 2px;
-  padding: 0 1px;
-  transition: background-color 0.1s ease;
+  background-color: rgba(255, 213, 79, 0.55);
+  border-radius: 3px;
+  padding: 1px 2px;
+  margin: -1px -2px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  box-shadow: 0 1px 3px rgba(255, 213, 79, 0.3);
 }
 `;
 
@@ -41,8 +42,22 @@ interface TextNodeEntry {
 }
 
 /**
- * Build an array mapping character offsets (within `body.innerText`) to
- * their owning text nodes. This lets us locate any word by char index.
+ * Check if an element or any of its ancestors is hidden (display:none, etc.)
+ */
+function isHidden(el: Element | null): boolean {
+  while (el) {
+    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'NOSCRIPT') {
+      return true;
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
+
+/**
+ * Build an array mapping character offsets to their owning text nodes.
+ * Includes text inside highlight spans so the map stays correct after
+ * wrapping a word.
  */
 function buildTextNodeMap(doc: Document): TextNodeEntry[] {
   const body = doc.body;
@@ -51,13 +66,8 @@ function buildTextNodeMap(doc: Document): TextNodeEntry[] {
   const entries: TextNodeEntry[] = [];
   const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
-      // Skip text inside our highlight spans (shouldn't exist yet, but guard)
       const parent = node.parentElement;
-      if (parent?.classList.contains(HIGHLIGHT_CLASS)) return NodeFilter.FILTER_REJECT;
-      // Skip hidden elements and script/style
-      if (parent?.tagName === 'SCRIPT' || parent?.tagName === 'STYLE') {
-        return NodeFilter.FILTER_REJECT;
-      }
+      if (isHidden(parent)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -86,10 +96,7 @@ function buildTextNodeMapFromRange(doc: Document, visibleRange: Range): TextNode
     {
       acceptNode: (node) => {
         const parent = node.parentElement;
-        if (parent?.classList.contains(HIGHLIGHT_CLASS)) return NodeFilter.FILTER_REJECT;
-        if (parent?.tagName === 'SCRIPT' || parent?.tagName === 'STYLE') {
-          return NodeFilter.FILTER_REJECT;
-        }
+        if (isHidden(parent)) return NodeFilter.FILTER_REJECT;
         // Only include nodes that intersect the visible range
         try {
           const nodeRange = doc.createRange();
@@ -134,32 +141,78 @@ function removeStyleFromDoc(doc: Document): void {
   doc.getElementById(STYLE_ID)?.remove();
 }
 
+/** Get the concatenated text from a text node map */
+function getMapText(map: TextNodeEntry[]): string {
+  let text = '';
+  for (const entry of map) {
+    text += entry.node.textContent || '';
+  }
+  return text;
+}
+
 /**
  * Find the text that matches a sentence in the document's text content.
  * Returns the character offset where the sentence starts in the document.
+ * Uses progressive normalization to handle innerText vs textContent differences.
  */
 function findSentenceInDocument(
   textNodeMap: TextNodeEntry[],
   sentence: string
 ): number {
   if (textNodeMap.length === 0) return -1;
-  // Build full text from the text node map
-  let fullText = '';
-  for (const entry of textNodeMap) {
-    fullText += entry.node.textContent || '';
-  }
+  const fullText = getMapText(textNodeMap);
 
   // Try exact match first
   const idx = fullText.indexOf(sentence);
   if (idx >= 0) return idx;
 
-  // Try with normalized whitespace
+  // Try with normalized whitespace (handles \n vs space differences)
   const normalizedFull = fullText.replace(/\s+/g, ' ');
   const normalizedSentence = sentence.replace(/\s+/g, ' ').trim();
   const normIdx = normalizedFull.indexOf(normalizedSentence);
-  if (normIdx >= 0) return normIdx;
+  if (normIdx >= 0) {
+    // Map normalized offset back to original offset
+    return mapNormalizedOffset(fullText, normIdx);
+  }
+
+  // Try a word-based fuzzy search: find the first few words of the sentence
+  const words = normalizedSentence.split(' ').slice(0, 4).join(' ');
+  if (words.length > 5) {
+    const wordIdx = normalizedFull.indexOf(words);
+    if (wordIdx >= 0) {
+      return mapNormalizedOffset(fullText, wordIdx);
+    }
+  }
 
   return -1;
+}
+
+/**
+ * Map an offset in whitespace-normalized text back to the original text.
+ */
+function mapNormalizedOffset(original: string, normalizedOffset: number): number {
+  let origIdx = 0;
+  let normCount = 0;
+  let inWhitespace = false;
+
+  while (origIdx < original.length && normCount < normalizedOffset) {
+    const ch = original[origIdx];
+    if (/\s/.test(ch)) {
+      if (!inWhitespace) {
+        normCount++; // one space in normalized
+        inWhitespace = true;
+      }
+    } else {
+      normCount++;
+      inWhitespace = false;
+    }
+    origIdx++;
+  }
+  // Skip leading whitespace at the mapped position
+  while (origIdx < original.length && /\s/.test(original[origIdx])) {
+    origIdx++;
+  }
+  return origIdx;
 }
 
 export interface UseTTSHighlighterOptions {
@@ -226,6 +279,27 @@ export function useTTSHighlighter(
     highlightSpanRef.current = null;
   }, []);
 
+  /** Remove highlight and rebuild the text node map (since normalize changes nodes) */
+  const removeHighlightAndRebuild = useCallback(() => {
+    const hadHighlight = !!highlightSpanRef.current;
+    removeCurrentHighlight();
+
+    // After removing a highlight, the DOM has changed (normalize merges nodes).
+    // Rebuild the text node map so subsequent operations use valid node refs.
+    if (hadHighlight && activeDocRef.current) {
+      const doc = activeDocRef.current;
+      try {
+        textNodeMapRef.current = buildTextNodeMap(doc);
+        sentenceDocOffsetRef.current = findSentenceInDocument(
+          textNodeMapRef.current,
+          currentSentenceRef.current
+        );
+      } catch {
+        // detached doc
+      }
+    }
+  }, [removeCurrentHighlight]);
+
   /** Clear all highlights and reset state */
   const clearHighlight = useCallback(() => {
     removeCurrentHighlight();
@@ -258,7 +332,7 @@ export function useTTSHighlighter(
   /** Called when a new sentence starts being spoken */
   const onSentenceStart = useCallback(
     (sentenceIndex: number, sentenceText: string) => {
-      removeCurrentHighlight();
+      removeHighlightAndRebuild();
       currentSentenceRef.current = sentenceText;
 
       const docs = getContentDocumentsRef.current();
@@ -312,22 +386,68 @@ export function useTTSHighlighter(
         }
       }
     },
-    [removeCurrentHighlight]
+    [removeHighlightAndRebuild]
   );
 
   /** Called on each word boundary event */
   const onWordBoundary = useCallback(
     (boundary: TTSWordBoundary) => {
-      removeCurrentHighlight();
+      // Remove old highlight and rebuild map (since DOM changed from normalize)
+      removeHighlightAndRebuild();
 
       const map = textNodeMapRef.current;
       const sentenceOffset = sentenceDocOffsetRef.current;
       const doc = activeDocRef.current;
       if (!map.length || sentenceOffset < 0 || !doc) return;
 
-      // Compute the absolute offset of this word in the document text
-      const wordStartInDoc = sentenceOffset + boundary.charIndex;
-      const wordEndInDoc = wordStartInDoc + boundary.charLength;
+      // Compute the absolute offset of this word in the text node map text.
+      // We need to account for possible whitespace normalization differences
+      // between the TTS sentence text and the actual DOM text.
+      const sentence = currentSentenceRef.current;
+      const mapText = getMapText(map);
+      const sentenceInMap = mapText.substring(sentenceOffset);
+
+      // Find the word within the sentence portion of the map text
+      let wordStartInDoc: number;
+      let wordEndInDoc: number;
+
+      if (boundary.word && boundary.word.length > 0) {
+        // Try to find the word by searching in the sentence text from charIndex
+        const normalizedSentenceMap = sentenceInMap.replace(/\s+/g, ' ');
+        const normalizedSentence = sentence.replace(/\s+/g, ' ');
+
+        // Map the boundary charIndex through normalization
+        const normWord = boundary.word.trim();
+        const searchFrom = Math.max(0, boundary.charIndex - 5);
+        const wordPosInNorm = normalizedSentence.indexOf(normWord, searchFrom);
+
+        if (wordPosInNorm >= 0) {
+          // Find this word in the map text
+          const wordInMapNorm = normalizedSentenceMap.indexOf(normWord, Math.max(0, wordPosInNorm - 10));
+          if (wordInMapNorm >= 0) {
+            const actualOffset = mapNormalizedOffset(sentenceInMap, wordInMapNorm);
+            wordStartInDoc = sentenceOffset + actualOffset;
+            wordEndInDoc = wordStartInDoc + normWord.length;
+          } else {
+            // Direct offset calculation
+            wordStartInDoc = sentenceOffset + boundary.charIndex;
+            wordEndInDoc = wordStartInDoc + boundary.charLength;
+          }
+        } else {
+          wordStartInDoc = sentenceOffset + boundary.charIndex;
+          wordEndInDoc = wordStartInDoc + boundary.charLength;
+        }
+      } else {
+        wordStartInDoc = sentenceOffset + boundary.charIndex;
+        wordEndInDoc = wordStartInDoc + boundary.charLength;
+      }
+
+      // Clamp to valid range
+      const totalLen = map[map.length - 1]?.end ?? 0;
+      wordStartInDoc = Math.max(0, Math.min(wordStartInDoc, totalLen));
+      wordEndInDoc = Math.max(wordStartInDoc, Math.min(wordEndInDoc, totalLen));
+
+      if (wordStartInDoc >= wordEndInDoc) return;
 
       // Find the text node(s) that contain this word
       for (const entry of map) {
@@ -343,7 +463,6 @@ export function useTTSHighlighter(
         if (localStart >= localEnd || localStart >= nodeText.length) continue;
 
         try {
-          // Split the text node and wrap the word in a highlight span
           const range = doc.createRange();
           range.setStart(node, localStart);
           range.setEnd(node, localEnd);
@@ -360,29 +479,18 @@ export function useTTSHighlighter(
           } else {
             scrollIntoViewIfNeeded(span, doc);
           }
-
-          // We found the word; rebuild the text node map for next boundary
-          // (since we just modified the DOM by inserting a span)
-          textNodeMapRef.current = buildTextNodeMap(doc);
-          // Adjust the sentence offset since DOM was modified - the text
-          // content of the document hasn't changed, only the nodes
-          sentenceDocOffsetRef.current = findSentenceInDocument(
-            textNodeMapRef.current,
-            currentSentenceRef.current
-          );
         } catch {
           // range operation failed (e.g. crossing node boundaries)
         }
         break;
       }
     },
-    [removeCurrentHighlight]
+    [removeHighlightAndRebuild]
   );
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      // Use a local ref copy for cleanup
       const span = highlightSpanRef.current;
       if (span) {
         try {
@@ -408,57 +516,28 @@ export function useTTSHighlighter(
   };
 }
 
-/** Scroll an element into view if it's not currently visible.
- * Works for both main-document content and iframe-embedded content.
- * For iframe content, we check visibility relative to the parent window
- * and try scrollIntoView on the iframe element itself if the word is
- * outside the parent viewport.
- */
+/** Scroll an element into view if it's not currently visible. */
 function scrollIntoViewIfNeeded(element: HTMLElement, doc: Document): void {
   try {
     const win = doc.defaultView;
     if (!win) return;
 
-    // Determine if this document is inside an iframe
     const isInIframe = win !== win.parent;
 
     if (isInIframe) {
-      // For iframe content (e.g. EPUB), the element's getBoundingClientRect
-      // is relative to the iframe's viewport. We need to also account for
-      // the iframe's position within the parent window.
       const iframeEl = win.frameElement as HTMLElement | null;
       if (!iframeEl) return;
 
       const elementRect = element.getBoundingClientRect();
       const iframeRect = iframeEl.getBoundingClientRect();
 
-      // Compute element position relative to parent window
       const absTop = iframeRect.top + elementRect.top;
       const absBottom = iframeRect.top + elementRect.bottom;
-
       const parentHeight = win.parent.innerHeight || 0;
 
-      // Check if the element is outside the parent viewport
-      const isOutOfParentView =
-        absBottom < 0 || absTop > parentHeight;
+      const isOutOfParentView = absBottom < 0 || absTop > parentHeight;
 
-      if (isOutOfParentView) {
-        // The word is off-screen in the parent viewport.
-        // For paginated EPUB, scrollIntoView inside the iframe won't help
-        // because content is laid out in CSS columns. We still attempt
-        // a scroll on the iframe container level which may help in some
-        // scroll-mode EPUBs.
-        try {
-          iframeEl.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest',
-          });
-        } catch {
-          // ignore
-        }
-      } else if (absTop < 60 || absBottom > parentHeight - 60) {
-        // Near the edge — try to scroll the iframe into better view
+      if (isOutOfParentView || absTop < 60 || absBottom > parentHeight - 60) {
         try {
           iframeEl.scrollIntoView({
             behavior: 'smooth',
@@ -470,24 +549,10 @@ function scrollIntoViewIfNeeded(element: HTMLElement, doc: Document): void {
         }
       }
     } else {
-      // Main document (ScrollEngine) — standard scrollIntoView
       const rect = element.getBoundingClientRect();
       const viewHeight = win.innerHeight || doc.documentElement.clientHeight;
-      const viewWidth = win.innerWidth || doc.documentElement.clientWidth;
 
-      const isOutOfView =
-        rect.bottom < 0 ||
-        rect.top > viewHeight ||
-        rect.right < 0 ||
-        rect.left > viewWidth;
-
-      if (isOutOfView) {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest',
-        });
-      } else if (rect.top < 50 || rect.bottom > viewHeight - 50) {
+      if (rect.bottom < 0 || rect.top > viewHeight || rect.top < 50 || rect.bottom > viewHeight - 50) {
         element.scrollIntoView({
           behavior: 'smooth',
           block: 'center',

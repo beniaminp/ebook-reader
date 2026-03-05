@@ -476,6 +476,10 @@ export const PdfEngineWithHighlights = forwardRef<ReaderEngineRef, PdfEngineWith
           }
           return '';
         },
+        getContentDocuments: (): Document[] => {
+          // PDF renders in the main document
+          return [document];
+        },
       }),
       [goToPage]
     );
