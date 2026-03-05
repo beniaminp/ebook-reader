@@ -1,4 +1,4 @@
-package com.shelfy.app;
+package com.shelfyreader.app;
 
 import android.util.Base64;
 import android.util.Log;

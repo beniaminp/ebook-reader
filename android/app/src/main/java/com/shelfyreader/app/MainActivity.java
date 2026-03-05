@@ -1,4 +1,4 @@
-package com.shelfy.app;
+package com.shelfyreader.app;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

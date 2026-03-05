@@ -1,4 +1,4 @@
-package com.shelfy.app;
+package com.shelfyreader.app;
 
 import android.content.Context;
 import android.util.Log;

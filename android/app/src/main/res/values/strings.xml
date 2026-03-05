@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Shelfy</string>
     <string name="title_activity_main">Shelfy</string>
-    <string name="package_name">com.shelfy.app</string>
-    <string name="custom_url_scheme">com.shelfy.app</string>
+    <string name="package_name">com.shelfyreader.app</string>
+    <string name="custom_url_scheme">com.shelfyreader.app</string>
 </resources>

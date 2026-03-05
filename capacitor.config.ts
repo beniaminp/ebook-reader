@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.shelfy.app',
+  appId: 'com.shelfyreader.app',
   appName: 'Shelfy',
   webDir: 'dist',
   server: {
