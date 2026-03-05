@@ -41,8 +41,10 @@ jobs:
 
       - run: npx cap sync ios
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Select Xcode and install iOS platform
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -downloadPlatform iOS
 
       - name: Decode signing certificate
         run: |
@@ -94,6 +96,7 @@ jobs:
           xcodebuild archive \
             -project App.xcodeproj \
             -scheme App \
+            -sdk iphoneos \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -destination "generic/platform=iOS" \
             CODE_SIGN_STYLE=Manual \
