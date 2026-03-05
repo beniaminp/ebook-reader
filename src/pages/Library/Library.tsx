@@ -1529,7 +1529,9 @@ const Library: React.FC = () => {
               <IonSelectOption value="lastRead">Last Read</IonSelectOption>
             </IonSelect>
             <span className="library-book-count">
-              {filteredBooks.length} book{filteredBooks.length !== 1 ? 's' : ''}
+              {searchQuery.trim() || activeFilterCount > 0
+                ? `${filteredBooks.length} of ${books.length} book${books.length !== 1 ? 's' : ''}`
+                : `${books.length} book${books.length !== 1 ? 's' : ''}`}
             </span>
           </div>
 
