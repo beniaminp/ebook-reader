@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.ebookreader.app',
-  appName: 'EBook Reader',
+  appId: 'com.shelfy.app',
+  appName: 'Shelfy',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

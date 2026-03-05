@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.ebookreader.app"
+    namespace = "com.shelfy.app"
     compileSdk = rootProject.ext.compileSdkVersion
 
     signingConfigs {
@@ -17,7 +17,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.ebookreader.app"
+        applicationId "com.shelfy.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 1

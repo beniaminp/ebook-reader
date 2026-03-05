@@ -1,4 +1,4 @@
-package com.ebookreader.app;
+package com.shelfy.app;
 
 import android.util.Base64;
 import android.util.Log;

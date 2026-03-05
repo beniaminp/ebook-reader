@@ -1,4 +1,4 @@
-# Marketing Plan — EBook Reader (Zero Budget)
+# Marketing Plan — Shelfy (Zero Budget)
 
 > **Goal:** Grow users and community for the open-source, cross-platform ebook reader with $0 spend.
 > **Platforms:** Web (GitHub Pages) + Android (APK/AAB)
@@ -11,7 +11,7 @@
 ASO is the highest-leverage free activity for an Android app. Rankings in 2026 are driven by real user engagement signals, not keyword stuffing.
 
 **Actions:**
-- **Title & Short Description:** Include primary keywords naturally — "EBook Reader - EPUB, PDF, MOBI, CBZ & More"
+- **Title & Short Description:** Include primary keywords naturally — "Shelfy - EPUB, PDF, MOBI, CBZ & More"
 - **Long Description (4000 chars):** Weave in target keywords 3-5 times: "ebook reader", "epub reader", "pdf reader", "open source reader", "free book reader", "comic reader CBZ", "read offline"
 - **Screenshots:** Create 5-8 high-quality screenshots showing key features (multi-format support, customizable themes, reading stats, TTS, dark mode). Use Canva (free tier)
 - **Feature Graphic:** Design a clean 1024x500 banner highlighting "Free & Open Source" and format icons
@@ -116,7 +116,7 @@ Drive organic traffic to the GitHub Pages site with useful content.
 **Calibre-Web Integration:**
 - Engage with the Calibre-Web community — this integration is a unique differentiator
 - Post in Calibre-Web GitHub discussions about the integration
-- Write a guide: "How to sync your Calibre-Web library to your phone with EBook Reader"
+- Write a guide: "How to sync your Calibre-Web library to your phone with Shelfy"
 
 **OPDS Ecosystem:**
 - Reach out to OPDS catalog providers for co-promotion
@@ -152,7 +152,7 @@ Build virality into the product itself.
 - Web app on GitHub Pages — zero-friction trial, no install needed
 
 **To Add (low effort, high impact):**
-- "Shared via EBook Reader" watermark option on highlights/quotes shared to social
+- "Shared via Shelfy" watermark option on highlights/quotes shared to social
 - Export reading stats as shareable cards (annual reading wrap-up, like Spotify Wrapped)
 - Referral prompt after finishing a book: "Know someone who'd love this app?"
 - Public reading lists / bookshelves that link back to the app

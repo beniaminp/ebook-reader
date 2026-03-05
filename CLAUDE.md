@@ -96,7 +96,7 @@ Zustand stores in `src/stores/`: `useAppStore.ts` (books, bookmarks, highlights)
 ## Android Build
 
 - Android project committed to `android/` directory — use `npx cap sync android`, NOT `cap add android`
-- `capacitor.config.ts`: `appId: 'com.ebookreader.app'`, `androidScheme: 'https'`
+- `capacitor.config.ts`: `appId: 'com.shelfy.app'`, `androidScheme: 'https'`
 - Splash screen uses `Theme.SplashScreen` (`androidx.core:core-splashscreen`), hidden manually in `src/main.tsx`
 - `android/app/src/main/res/values/` must contain `colors.xml`, `styles.xml`, and `strings.xml`
 - Signing driven by env vars: `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
