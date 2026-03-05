@@ -98,6 +98,8 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     hyphenation,
     paragraphSpacing,
     letterSpacing,
+    tapSensitivity,
+    swipeThreshold,
   } = useThemeStore();
 
   // Bionic reading hook
@@ -120,6 +122,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     onSwipeLeft: onNextPage,
     onSwipeRight: onPrevPage,
     enabled: swipeEnabled && (!!onNextPage || !!onPrevPage),
+    threshold: swipeThreshold,
   });
 
   // Tap zone handlers (coordinated with brightness gesture)
@@ -129,6 +132,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     onToggleToolbar,
     config: tapZoneConfig,
     enabled: tapZonesEnabled && (!!onPrevPage || !!onNextPage || !!onToggleToolbar),
+    maxTapMovement: tapSensitivity,
     wasBrightnessDrag: brightnessGesture.wasBrightnessDrag
       ? () => brightnessGesture.wasBrightnessDrag
       : undefined,
