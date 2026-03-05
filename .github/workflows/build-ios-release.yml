@@ -6,11 +6,11 @@ on:
       build_type:
         description: 'What to build'
         required: true
-        default: 'ipa'
+        default: 'unsigned'
         type: choice
         options:
+          - unsigned
           - ipa
-          - app
 
 permissions:
   contents: write
@@ -46,11 +46,57 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -downloadPlatform iOS
 
+      - name: Set version in Xcode project
+        working-directory: ios/App
+        run: |
+          agvtool new-version -all "${{ github.run_number }}"
+          agvtool new-marketing-version "${{ env.VERSION_NAME }}"
+
+      - name: Resolve SPM dependencies
+        working-directory: ios/App
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project App.xcodeproj \
+            -scheme App
+
+      # --- Unsigned build (no Apple Developer account needed) ---
+      - name: Build unsigned archive
+        if: inputs.build_type == 'unsigned'
+        working-directory: ios/App
+        run: |
+          xcodebuild archive \
+            -project App.xcodeproj \
+            -scheme App \
+            -sdk iphoneos \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package unsigned .app
+        if: inputs.build_type == 'unsigned'
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          APP_DIR="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          APP_ZIP="shelfy-v${{ env.VERSION }}-${SHORT_SHA}-unsigned.xcarchive.zip"
+
+          # Zip the entire xcarchive for inspection
+          cd "$RUNNER_TEMP"
+          zip -r "$GITHUB_WORKSPACE/$APP_ZIP" App.xcarchive
+          cd "$GITHUB_WORKSPACE"
+
+          echo "APP_ZIP=$APP_ZIP" >> $GITHUB_ENV
+          echo "UPLOAD_FILES=$APP_ZIP" >> $GITHUB_ENV
+
+      # --- Signed IPA build (requires Apple Developer secrets) ---
       - name: Decode signing certificate
+        if: inputs.build_type == 'ipa'
         run: |
           echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/certificate.p12"
 
       - name: Install certificate to keychain
+        if: inputs.build_type == 'ipa'
         run: |
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
           KEYCHAIN_PASSWORD="$(openssl rand -hex 12)"
@@ -72,25 +118,14 @@ jobs:
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
       - name: Install provisioning profile
+        if: inputs.build_type == 'ipa'
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d \
             > ~/Library/MobileDevice/Provisioning\ Profiles/build_profile.mobileprovision
 
-      - name: Set version in Xcode project
-        working-directory: ios/App
-        run: |
-          agvtool new-version -all "${{ github.run_number }}"
-          agvtool new-marketing-version "${{ env.VERSION_NAME }}"
-
-      - name: Resolve SPM dependencies
-        working-directory: ios/App
-        run: |
-          xcodebuild -resolvePackageDependencies \
-            -project App.xcodeproj \
-            -scheme App
-
-      - name: Build archive
+      - name: Build signed archive
+        if: inputs.build_type == 'ipa'
         working-directory: ios/App
         run: |
           xcodebuild archive \
@@ -105,6 +140,7 @@ jobs:
             DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}"
 
       - name: Create ExportOptions.plist
+        if: inputs.build_type == 'ipa'
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
@@ -137,50 +173,21 @@ jobs:
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
 
-      - name: Copy .app bundle
-        if: inputs.build_type == 'app'
-        run: |
-          cp -R "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" "$RUNNER_TEMP/App.app"
-
-      - name: Rename artifacts
+      - name: Package signed IPA
+        if: inputs.build_type == 'ipa'
         run: |
           SHORT_SHA=${GITHUB_SHA::7}
-          UPLOAD_FILES=""
-
           IPA_SRC="$RUNNER_TEMP/export/App.ipa"
-          if [ -f "$IPA_SRC" ]; then
-            IPA_NAME="shelfy-v${{ env.VERSION }}-${SHORT_SHA}.ipa"
-            cp "$IPA_SRC" "$IPA_NAME"
-            echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
-            UPLOAD_FILES="$IPA_NAME"
-          fi
+          IPA_NAME="shelfy-v${{ env.VERSION }}-${SHORT_SHA}-signed.ipa"
+          cp "$IPA_SRC" "$IPA_NAME"
+          echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
+          echo "UPLOAD_FILES=$IPA_NAME" >> $GITHUB_ENV
 
-          APP_SRC="$RUNNER_TEMP/App.app"
-          if [ -d "$APP_SRC" ]; then
-            APP_NAME="shelfy-v${{ env.VERSION }}-${SHORT_SHA}.app"
-            cp -R "$APP_SRC" "$APP_NAME"
-            # Zip the .app bundle for upload
-            APP_ZIP="${APP_NAME}.zip"
-            zip -r "$APP_ZIP" "$APP_NAME"
-            echo "APP_ZIP=$APP_ZIP" >> $GITHUB_ENV
-            UPLOAD_FILES="$APP_ZIP"
-          fi
-
-          echo "UPLOAD_FILES=$UPLOAD_FILES" >> $GITHUB_ENV
-
-      - name: Upload IPA artifact
-        if: env.IPA_NAME != ''
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: shelfy-ios-ipa
-          path: ${{ env.IPA_NAME }}
-
-      - name: Upload App artifact
-        if: env.APP_ZIP != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: shelfy-ios-app
-          path: ${{ env.APP_ZIP }}
+          name: shelfy-ios-${{ inputs.build_type }}
+          path: ${{ env.UPLOAD_FILES }}
 
       - name: Create or update release
         run: |
