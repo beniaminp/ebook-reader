@@ -339,7 +339,7 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.BOOKS} (
         id, title, author, file_path, file_name, file_size, format,
         cover_path, total_pages, language, publisher, publish_date, isbn,
@@ -465,7 +465,7 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await database.query(`UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`, values);
+      await database.run(`UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`, values);
     }
     return true;
   } catch (error) {
@@ -565,7 +565,7 @@ export async function updateBookMetadata(
       fields.push('updated_at = ?');
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
-      await database.query(
+      await database.run(
         `UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`,
         values
       );
@@ -589,7 +589,7 @@ export async function deleteBook(id: string): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(`DELETE FROM ${TABLES.BOOKS} WHERE id = ?;`, [id]);
+    await database.run(`DELETE FROM ${TABLES.BOOKS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting book:', error);
@@ -806,7 +806,7 @@ export async function upsertReadingProgress(
 
   try {
     const database = await getDb();
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.READING_PROGRESS} (
         id, book_id, current_page, total_pages, percentage, location,
         chapter_id, chapter_title, last_read_at, created_at, updated_at
@@ -918,7 +918,7 @@ export async function addBookmark(bookmark: DbBookmark): Promise<Bookmark | null
     const id = bookmark.id || `${bookmark.bookId}-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.BOOKMARKS} (
         id, book_id, location, page_number, chapter_id, chapter_title,
         text_preview, note, created_at, updated_at
@@ -1012,7 +1012,7 @@ export async function deleteBookmark(id: string): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(`DELETE FROM ${TABLES.BOOKMARKS} WHERE id = ?;`, [id]);
+    await database.run(`DELETE FROM ${TABLES.BOOKMARKS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting bookmark:', error);
@@ -1051,7 +1051,7 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
     const database = await getDb();
     const now = Math.floor(Date.now() / 1000);
 
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.HIGHLIGHTS} (
         id, book_id, location, text, color, note, page_number, rects,
         chapter_id, chapter_title, created_at, updated_at
@@ -1143,7 +1143,7 @@ export async function deleteHighlight(id: string): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(`DELETE FROM ${TABLES.HIGHLIGHTS} WHERE id = ?;`, [id]);
+    await database.run(`DELETE FROM ${TABLES.HIGHLIGHTS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting highlight:', error);
@@ -1186,7 +1186,7 @@ export async function updateHighlight(
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await database.query(
+      await database.run(
         `UPDATE ${TABLES.HIGHLIGHTS} SET ${fields.join(', ')} WHERE id = ?;`,
         values
       );
@@ -1226,7 +1226,7 @@ export async function recordReadingSession(
 
     if (existingResult.values && existingResult.values.length > 0) {
       const row = existingResult.values[0];
-      await database.query(
+      await database.run(
         `UPDATE ${TABLES.READING_STATS}
          SET pages_read = ?, time_spent = ?, session_count = ?, updated_at = ?
          WHERE id = ?;`,
@@ -1239,7 +1239,7 @@ export async function recordReadingSession(
         ]
       );
     } else {
-      await database.query(
+      await database.run(
         `INSERT INTO ${TABLES.READING_STATS} (
           id, book_id, date, pages_read, time_spent, session_count, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
@@ -1396,7 +1396,7 @@ export async function setSetting(key: string, value: any, category?: string): Pr
 
   try {
     const database = await getDb();
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.APP_SETTINGS} (id, key, value, category, updated_at)
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, category = excluded.category, updated_at = excluded.updated_at;`,
@@ -1536,7 +1536,7 @@ export async function addBookToCollection(
     const id = `${collectionId}-${bookId}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await database.query(
+    await database.run(
       `INSERT OR IGNORE INTO ${TABLES.BOOK_COLLECTIONS} (id, book_id, collection_id, sort_order, added_at)
        VALUES (?, ?, ?, ?, ?);`,
       [id, bookId, collectionId, sortOrder, now]
@@ -1565,7 +1565,7 @@ export async function removeBookFromCollection(
 
   try {
     const database = await getDb();
-    await database.query(
+    await database.run(
       `DELETE FROM ${TABLES.BOOK_COLLECTIONS} WHERE book_id = ? AND collection_id = ?;`,
       [bookId, collectionId]
     );
@@ -1622,7 +1622,7 @@ export async function createCollection(
     const id = `collection-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.COLLECTIONS} (id, name, description, cover_path, sort_order, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?);`,
       [id, collection.name, collection.description || null, null, collection.sortOrder, now, now]
@@ -1673,7 +1673,7 @@ export async function updateCollection(
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
 
-      await database.query(
+      await database.run(
         `UPDATE ${TABLES.COLLECTIONS} SET ${fields.join(', ')} WHERE id = ?;`,
         values
       );
@@ -1695,7 +1695,7 @@ export async function deleteCollection(id: string): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(`DELETE FROM ${TABLES.COLLECTIONS} WHERE id = ?;`, [id]);
+    await database.run(`DELETE FROM ${TABLES.COLLECTIONS} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error deleting collection:', error);
@@ -1741,7 +1741,7 @@ export async function createTag(name: string, color?: string): Promise<any | nul
     const id = `tag-${Date.now()}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await database.query(
+    await database.run(
       `INSERT INTO ${TABLES.TAGS} (id, name, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?);`,
       [id, name, color || null, now, now]
     );
@@ -1771,7 +1771,7 @@ export async function addTagToBook(bookId: string, tagId: string): Promise<boole
     const id = `${tagId}-${bookId}`;
     const now = Math.floor(Date.now() / 1000);
 
-    await database.query(
+    await database.run(
       `INSERT OR IGNORE INTO ${TABLES.BOOK_TAGS} (id, book_id, tag_id, added_at) VALUES (?, ?, ?, ?);`,
       [id, bookId, tagId, now]
     );
@@ -1794,7 +1794,7 @@ export async function removeTagFromBook(bookId: string, tagId: string): Promise<
 
   try {
     const database = await getDb();
-    await database.query(`DELETE FROM ${TABLES.BOOK_TAGS} WHERE book_id = ? AND tag_id = ?;`, [
+    await database.run(`DELETE FROM ${TABLES.BOOK_TAGS} WHERE book_id = ? AND tag_id = ?;`, [
       bookId,
       tagId,
     ]);
@@ -2124,7 +2124,7 @@ export async function updateBookHardcoverData(
       fields.push('updated_at = ?');
       values.push(Math.floor(Date.now() / 1000));
       values.push(id);
-      await database.query(`UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`, values);
+      await database.run(`UPDATE ${TABLES.BOOKS} SET ${fields.join(', ')} WHERE id = ?;`, values);
     }
     return true;
   } catch (error) {
@@ -2172,7 +2172,7 @@ export async function addToSyncQueue(item: {
 
   try {
     const database = await getDb();
-    await database.query(
+    await database.run(
       `INSERT OR REPLACE INTO ${TABLES.HARDCOVER_SYNC_QUEUE} (id, book_id, action, payload) VALUES (?, ?, ?, ?);`,
       [item.id, item.bookId, item.action, item.payload]
     );
@@ -2221,7 +2221,7 @@ export async function removeSyncQueueItem(id: string): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(`DELETE FROM ${TABLES.HARDCOVER_SYNC_QUEUE} WHERE id = ?;`, [id]);
+    await database.run(`DELETE FROM ${TABLES.HARDCOVER_SYNC_QUEUE} WHERE id = ?;`, [id]);
     return true;
   } catch (error) {
     console.error('Error removing sync queue item:', error);
@@ -2240,7 +2240,7 @@ export async function updateSyncQueueRetry(id: string): Promise<boolean> {
 
   try {
     const database = await getDb();
-    await database.query(
+    await database.run(
       `UPDATE ${TABLES.HARDCOVER_SYNC_QUEUE} SET retry_count = retry_count + 1 WHERE id = ?;`,
       [id]
     );

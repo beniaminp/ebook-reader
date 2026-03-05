@@ -204,6 +204,11 @@ const Browse: React.FC = () => {
     });
   }, [tags, bookTagMap]);
 
+  // Count books that have series metadata (must be before any conditional return)
+  const seriesBookCount = useMemo(() => {
+    return books.filter((b) => b.series || b.metadata?.series).length;
+  }, [books]);
+
   // Filter books based on active filter
   const filteredBooks = useMemo(() => {
     if (!activeFilter) return [];
@@ -305,11 +310,6 @@ const Browse: React.FC = () => {
       </IonPage>
     );
   }
-
-  // Count books that have series metadata
-  const seriesBookCount = useMemo(() => {
-    return books.filter((b) => b.series || b.metadata?.series).length;
-  }, [books]);
 
   // Main browse view
   return (
