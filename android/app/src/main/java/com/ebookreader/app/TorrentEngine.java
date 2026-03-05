@@ -15,7 +15,6 @@ import org.libtorrent4j.TorrentStatus;
 import org.libtorrent4j.alerts.AddTorrentAlert;
 import org.libtorrent4j.alerts.Alert;
 import org.libtorrent4j.alerts.AlertType;
-import org.libtorrent4j.alerts.MetadataReceivedAlert;
 import org.libtorrent4j.alerts.PieceFinishedAlert;
 import org.libtorrent4j.alerts.TorrentErrorAlert;
 import org.libtorrent4j.alerts.TorrentFinishedAlert;
@@ -112,13 +111,11 @@ public class TorrentEngine {
             downloadDir.mkdirs();
         }
 
-        CountDownLatch metadataLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(1);
         AtomicBoolean hasError = new AtomicBoolean(false);
 
         int[] alertTypes = new int[]{
                 AlertType.ADD_TORRENT.swig(),
-                AlertType.METADATA_RECEIVED.swig(),
                 AlertType.PIECE_FINISHED.swig(),
                 AlertType.TORRENT_FINISHED.swig(),
                 AlertType.TORRENT_ERROR.swig(),
@@ -139,18 +136,13 @@ public class TorrentEngine {
                         AddTorrentAlert a = (AddTorrentAlert) alert;
                         if (a.error().isError()) {
                             hasError.set(true);
-                            callback.onError("Failed to add torrent: " + a.error().message());
-                            metadataLatch.countDown();
+                            callback.onError("Failed to add torrent: " + a.error().toString());
                             doneLatch.countDown();
+                        } else {
+                            currentHandle = a.handle();
+                            currentHandle.setFlags(TorrentFlags.SEQUENTIAL_DOWNLOAD);
+                            prioritizeDownloadableFiles(currentHandle);
                         }
-                        break;
-                    }
-                    case METADATA_RECEIVED: {
-                        MetadataReceivedAlert a = (MetadataReceivedAlert) alert;
-                        currentHandle = a.handle();
-                        currentHandle.setFlags(TorrentFlags.SEQUENTIAL_DOWNLOAD);
-                        prioritizeDownloadableFiles(currentHandle);
-                        metadataLatch.countDown();
                         break;
                     }
                     case PIECE_FINISHED: {
@@ -174,7 +166,7 @@ public class TorrentEngine {
                     case TORRENT_ERROR: {
                         TorrentErrorAlert a = (TorrentErrorAlert) alert;
                         hasError.set(true);
-                        callback.onError("Torrent error: " + a.error().message());
+                        callback.onError("Torrent error: " + a.error().toString());
                         doneLatch.countDown();
                         break;
                     }
@@ -185,10 +177,9 @@ public class TorrentEngine {
         sessionManager.addListener(listener);
 
         try {
-            sessionManager.download(magnetURI, downloadDir);
-
-            // Wait for metadata
-            if (!metadataLatch.await(METADATA_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            // Fetch metadata from magnet URI (blocking call)
+            byte[] torrentData = sessionManager.fetchMagnet(magnetURI, (int)(METADATA_TIMEOUT_MS / 1000));
+            if (torrentData == null) {
                 if (!cancelled.get() && !hasError.get()) {
                     callback.onError("Timed out waiting for torrent metadata");
                 }
@@ -196,6 +187,9 @@ public class TorrentEngine {
             }
 
             if (cancelled.get() || hasError.get()) return;
+
+            TorrentInfo torrentInfo = TorrentInfo.bdecode(torrentData);
+            sessionManager.download(torrentInfo, downloadDir);
 
             // Wait for download
             if (!doneLatch.await(DOWNLOAD_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
@@ -251,7 +245,7 @@ public class TorrentEngine {
             String fileName = info.files().fileName(i);
             String ext = getFileExtension(fileName).toLowerCase();
             if (EBOOK_EXTENSIONS.contains(ext) || ARCHIVE_EXTENSIONS.contains(ext)) {
-                handle.filePriority(i, Priority.NORMAL);
+                handle.filePriority(i, Priority.DEFAULT);
             } else {
                 handle.filePriority(i, Priority.IGNORE);
             }
