@@ -2,6 +2,9 @@
  * TextSelectionMenu - Bottom action bar that appears on text selection
  * Shows as a fixed bottom bar on mobile to avoid being covered by
  * Android's native selection toolbar which renders above the WebView.
+ *
+ * Supports live selection updates: the menu shows the growing selection
+ * as the user drags without lifting their finger.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -54,7 +57,6 @@ function getIframeSelectionText(): string {
     const foliateView = document.querySelector('foliate-view');
     if (!foliateView) return '';
 
-    // Search in shadow root first
     const searchRoots: (Element | ShadowRoot)[] = [];
     if (foliateView.shadowRoot) searchRoots.push(foliateView.shadowRoot);
     searchRoots.push(foliateView);
@@ -93,6 +95,10 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   const [selectedText, setSelectedText] = useState<string>('');
   const attachedDocsRef = useRef<Set<Document>>(new Set());
   const observerRef = useRef<MutationObserver | null>(null);
+  // Track whether the user is actively dragging (finger down)
+  const isDraggingRef = useRef(false);
+  // Debounce timer for showing the menu (don't show while actively dragging)
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
@@ -109,7 +115,9 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     }
   }, [capturedText]);
 
-  // Check for text selection in both main document and iframes
+  // Check for text selection in both main document and iframes.
+  // Updates selectedText live as the user drags, but delays showing the
+  // action bar until the finger is lifted to avoid blocking the drag.
   const checkSelection = useCallback(() => {
     // If external capturedText is controlling us, skip polling
     if (capturedText !== undefined) return;
@@ -125,12 +133,35 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 
     if (text && text.length > 0) {
       setSelectedText(text);
-      setVisible(true);
+
+      // If the user is still dragging, update the preview text but
+      // don't show the action buttons yet — show after finger lifts
+      if (isDraggingRef.current) {
+        // Show just the preview so the user sees their selection growing
+        setVisible(true);
+      } else {
+        // Finger is up — show the full menu
+        if (showTimerRef.current) clearTimeout(showTimerRef.current);
+        showTimerRef.current = setTimeout(() => setVisible(true), 50);
+      }
     } else {
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
       setVisible(false);
       setSelectedText('');
     }
   }, [capturedText]);
+
+  // Track touch/mouse state to know when the user is actively dragging
+  const handlePointerDown = useCallback(() => {
+    isDraggingRef.current = true;
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    isDraggingRef.current = false;
+    // Re-check selection after finger lift
+    // Small delay to let the browser finalize the selection
+    setTimeout(checkSelection, 50);
+  }, [checkSelection]);
 
   // Attach selection listeners to an iframe document
   const attachToDoc = useCallback(
@@ -138,10 +169,12 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       if (attachedDocsRef.current.has(doc)) return;
       attachedDocsRef.current.add(doc);
       doc.addEventListener('selectionchange', checkSelection);
-      doc.addEventListener('mouseup', checkSelection);
-      doc.addEventListener('touchend', checkSelection);
+      doc.addEventListener('mousedown', handlePointerDown);
+      doc.addEventListener('mouseup', handlePointerUp);
+      doc.addEventListener('touchstart', handlePointerDown, { passive: true });
+      doc.addEventListener('touchend', handlePointerUp);
     },
-    [checkSelection]
+    [checkSelection, handlePointerDown, handlePointerUp]
   );
 
   // Scan for all iframes and attach listeners
@@ -169,8 +202,10 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   useEffect(() => {
     // Listen on main document
     document.addEventListener('selectionchange', checkSelection);
-    document.addEventListener('mouseup', checkSelection);
-    document.addEventListener('touchend', checkSelection);
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchstart', handlePointerDown, { passive: true });
+    document.addEventListener('touchend', handlePointerUp);
 
     // Scan for iframes immediately and after delays
     scanAndAttach();
@@ -197,14 +232,18 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 
     return () => {
       document.removeEventListener('selectionchange', checkSelection);
-      document.removeEventListener('mouseup', checkSelection);
-      document.removeEventListener('touchend', checkSelection);
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('touchend', handlePointerUp);
 
       for (const doc of attachedDocsRef.current) {
         try {
           doc.removeEventListener('selectionchange', checkSelection);
-          doc.removeEventListener('mouseup', checkSelection);
-          doc.removeEventListener('touchend', checkSelection);
+          doc.removeEventListener('mousedown', handlePointerDown);
+          doc.removeEventListener('mouseup', handlePointerUp);
+          doc.removeEventListener('touchstart', handlePointerDown);
+          doc.removeEventListener('touchend', handlePointerUp);
         } catch {
           // detached doc
         }
@@ -212,11 +251,12 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       attachedDocsRef.current.clear();
 
       observerRef.current?.disconnect();
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [checkSelection, scanAndAttach]);
+  }, [checkSelection, scanAndAttach, handlePointerDown, handlePointerUp]);
 
   const clearSelection = useCallback(() => {
     window.getSelection()?.removeAllRanges();
@@ -281,43 +321,47 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     return null;
   }
 
+  const isDragging = isDraggingRef.current;
+
   return createPortal(
-    <div className="text-selection-menu">
+    <div className={`text-selection-menu ${isDragging ? 'text-selection-menu--dragging' : ''}`}>
       <div className="text-selection-menu-preview">
-        &ldquo;{selectedText.length > 60 ? selectedText.slice(0, 60) + '...' : selectedText}&rdquo;
+        &ldquo;{selectedText.length > 80 ? selectedText.slice(0, 80) + '...' : selectedText}&rdquo;
       </div>
-      <div className="text-selection-menu-actions">
-        {enabledActions.includes('highlight') && (
-          <IonButton onClick={handleHighlight} color="warning" size="small" fill="solid">
-            <IonIcon icon={bookmark} slot="start" />
-            Highlight
-          </IonButton>
-        )}
-        {enabledActions.includes('copy') && (
-          <IonButton onClick={handleCopy} color="medium" size="small" fill="solid">
-            <IonIcon icon={copy} slot="start" />
-            Copy
-          </IonButton>
-        )}
-        {enabledActions.includes('translate') && (
-          <IonButton onClick={handleTranslate} color="primary" size="small" fill="solid">
-            <IonIcon icon={language} slot="start" />
-            Translate
-          </IonButton>
-        )}
-        {enabledActions.includes('define') && (
-          <IonButton onClick={handleDefine} color="success" size="small" fill="solid">
-            <IonIcon icon={glasses} slot="start" />
-            Define
-          </IonButton>
-        )}
-        {enabledActions.includes('note') && (
-          <IonButton onClick={handleAddNote} color="tertiary" size="small" fill="solid">
-            <IonIcon icon={create} slot="start" />
-            Note
-          </IonButton>
-        )}
-      </div>
+      {!isDragging && (
+        <div className="text-selection-menu-actions">
+          {enabledActions.includes('highlight') && (
+            <IonButton onClick={handleHighlight} color="warning" size="small" fill="solid">
+              <IonIcon icon={bookmark} slot="start" />
+              Highlight
+            </IonButton>
+          )}
+          {enabledActions.includes('copy') && (
+            <IonButton onClick={handleCopy} color="medium" size="small" fill="solid">
+              <IonIcon icon={copy} slot="start" />
+              Copy
+            </IonButton>
+          )}
+          {enabledActions.includes('translate') && (
+            <IonButton onClick={handleTranslate} color="primary" size="small" fill="solid">
+              <IonIcon icon={language} slot="start" />
+              Translate
+            </IonButton>
+          )}
+          {enabledActions.includes('define') && (
+            <IonButton onClick={handleDefine} color="success" size="small" fill="solid">
+              <IonIcon icon={glasses} slot="start" />
+              Define
+            </IonButton>
+          )}
+          {enabledActions.includes('note') && (
+            <IonButton onClick={handleAddNote} color="tertiary" size="small" fill="solid">
+              <IonIcon icon={create} slot="start" />
+              Note
+            </IonButton>
+          )}
+        </div>
+      )}
     </div>,
     document.body
   );
