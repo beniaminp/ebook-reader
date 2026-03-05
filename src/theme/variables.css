@@ -225,29 +225,3 @@
 .text-right {
   --reader-text-align: right;
 }
-
-/* Font families */
-.font-serif {
-  --reader-font-family: Georgia, 'Times New Roman', Times, serif;
-}
-
-.font-sans-serif {
-  --reader-font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-}
-
-.font-mono {
-  --reader-font-family: 'Courier New', Courier, monospace;
-}
-
-.font-bookerly {
-  --reader-font-family: 'Bookerly', Georgia, serif;
-}
-
-.font-literata {
-  --reader-font-family: 'Literata', Georgia, serif;
-}
-
-.font-open-dyslexic {
-  --reader-font-family: 'OpenDyslexic', 'Comic Sans MS', cursive, sans-serif;
-}
