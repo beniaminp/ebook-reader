@@ -1,0 +1,281 @@
+/**
+ * Design Tokens
+ * Centralized spacing, shadows, z-index, and typography scale.
+ * All components should reference these tokens for consistency.
+ */
+
+:root {
+  /* ─── Spacing ─────────────────────────────────────── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* ─── Shadows ─────────────────────────────────────── */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-up-md: 0 -4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-cover: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  /* ─── Z-Index Scale ───────────────────────────────── */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 300;
+  --z-overlay: 400;
+  --z-tooltip: 500;
+  --z-popover: 600;
+  --z-max: 9999;
+
+  /* ─── Typography Scale ────────────────────────────── */
+  --text-2xs: 9px;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  /* ─── Border Radius ───────────────────────────────── */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-pill: 50px;
+  --radius-full: 50%;
+
+  /* ─── Transition Durations ────────────────────────── */
+  --duration-fast: 0.15s;
+  --duration-normal: 0.25s;
+  --duration-slow: 0.3s;
+
+  /* ─── Bookshelf Colors (theme-aware) ──────────────── */
+  --shelf-bg-start: #f5efe6;
+  --shelf-bg-end: #e8ddd0;
+  --shelf-plank-1: #c9a96e;
+  --shelf-plank-2: #b5894f;
+  --shelf-plank-3: #a07844;
+  --shelf-plank-4: #8b6538;
+  --shelf-plank-border: #6d4c2a;
+  --shelf-plank-top-1: #d4b07a;
+  --shelf-plank-top-2: #c9a96e;
+  --shelf-book-title: #5d4037;
+  --shelf-placeholder-1: #6d4c41;
+  --shelf-placeholder-2: #4e342e;
+  --shelf-grain: rgba(0, 0, 0, 0.03);
+  --shelf-plank-highlight: rgba(255, 255, 255, 0.2);
+  --shelf-plank-top-highlight: rgba(255, 255, 255, 0.3);
+
+  /* ─── Placeholder Gradient ────────────────────────── */
+  --placeholder-start: #546e7a;
+  --placeholder-end: #37474f;
+
+  /* ─── Skeleton Loader ─────────────────────────────── */
+  --skeleton-base: rgba(0, 0, 0, 0.08);
+  --skeleton-shine: rgba(0, 0, 0, 0.04);
+}
+
+/* ─── Dark Mode Token Overrides ──────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-up-md: 0 -4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-cover: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.2);
+
+    --shelf-bg-start: #2c2420;
+    --shelf-bg-end: #1e1814;
+    --shelf-plank-1: #5c4530;
+    --shelf-plank-2: #4a3728;
+    --shelf-plank-3: #3d2e20;
+    --shelf-plank-4: #2e2018;
+    --shelf-plank-border: #1a120c;
+    --shelf-plank-top-1: #6b5240;
+    --shelf-plank-top-2: #5c4530;
+    --shelf-book-title: #c9a96e;
+    --shelf-placeholder-1: #4e342e;
+    --shelf-placeholder-2: #3e2723;
+    --shelf-grain: rgba(255, 255, 255, 0.02);
+    --shelf-plank-highlight: rgba(255, 255, 255, 0.08);
+    --shelf-plank-top-highlight: rgba(255, 255, 255, 0.1);
+
+    --placeholder-start: #37474f;
+    --placeholder-end: #263238;
+
+    --skeleton-base: rgba(255, 255, 255, 0.08);
+    --skeleton-shine: rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* ─── Global Focus Visible (#11) ─────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--ion-color-primary, #3880ff);
+  outline-offset: 2px;
+}
+
+/* Remove outline for mouse clicks */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Reduced Motion (#20) ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Skeleton Loader Styles (#6) ────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-cover {
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text {
+  height: 12px;
+  margin-top: var(--space-sm);
+  width: 80%;
+}
+
+.skeleton-text-short {
+  height: 10px;
+  margin-top: var(--space-xs);
+  width: 50%;
+}
+
+/* ─── Scroll Fade Indicators (#23) ───────────────────── */
+.scroll-fade-container {
+  position: relative;
+}
+
+.scroll-fade-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to right, transparent, var(--ion-background-color, #fafafa));
+  pointer-events: none;
+  z-index: var(--z-base);
+  opacity: 1;
+  transition: opacity var(--duration-fast);
+}
+
+.scroll-fade-container.scrolled-end::after {
+  opacity: 0;
+}
+
+/* ─── Toast Live Region (#13) ────────────────────────── */
+
+/* ─── Standardized Button Active Feedback (#16) ──────── */
+.btn-press:active {
+  transform: scale(0.96);
+  transition: transform var(--duration-fast);
+}
+
+.btn-press {
+  transition: transform var(--duration-fast);
+  cursor: pointer;
+}
+
+/* ─── Card Variants (#17) ────────────────────────────── */
+.card-flat {
+  background: var(--ion-card-background, #fff);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.card-elevated {
+  background: var(--ion-card-background, #fff);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.card-outlined {
+  background: var(--ion-card-background, #fff);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-outlined {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ─── Card Section Header (reusable pattern) ─────────── */
+.card-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px var(--space-lg) 6px;
+}
+
+.card-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.card-section-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ion-color-medium);
+}
+
+/* ─── Tab Bar Hidden (#22) ───────────────────────────── */
+.tab-bar-hidden {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
