@@ -133,7 +133,10 @@ const AppTabs: React.FC = () => {
 
     const listener = CapApp.addListener('appStateChange', ({ isActive }) => {
       if (isActive) {
-        useAppStore.getState().loadBooks();
+        // Re-initialize DB first — Android may close the SQLite connection when backgrounded
+        initDatabase().then(() => {
+          useAppStore.getState().loadBooks();
+        });
       }
     });
 

@@ -204,6 +204,19 @@ async function initDatabaseInternal(): Promise<boolean> {
  * Throws if initialization fails so callers never silently operate on a null db.
  */
 async function getDb(): Promise<SQLiteDBConnection> {
+  if (db) {
+    // Verify the connection is still open — Android may close it when the app is backgrounded
+    try {
+      const isOpen = await db.isDBOpen();
+      if (!isOpen.result) {
+        db = null;
+        initPromise = null;
+      }
+    } catch {
+      db = null;
+      initPromise = null;
+    }
+  }
   if (!db) await initDatabase();
   if (!db) throw new Error('Database initialization failed');
   return db;
