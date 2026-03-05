@@ -165,7 +165,7 @@
   bottom: 0;
   background-color: rgba(255, 120, 0, 0.15);
   pointer-events: none;
-  z-index: 9999;
+  z-index: var(--z-max);
   transition: opacity 0.3s ease;
 }
 
@@ -177,7 +177,7 @@
   height: 2px;
   background-color: var(--reader-accent-color);
   box-shadow: 0 0 4px var(--reader-accent-color);
-  z-index: 100;
+  z-index: var(--z-dropdown);
   transition: top 0.1s ease-out;
   pointer-events: none;
 }

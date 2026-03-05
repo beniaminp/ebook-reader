@@ -23,45 +23,11 @@
   margin-bottom: var(--reader-paragraph-spacing, 1em);
 }
 
-/* Theme-specific styles */
-.theme-light {
-  --reader-bg: #ffffff;
-  --reader-text: #1a1a1a;
-  --reader-secondary: #555555;
-  --reader-accent: #007bff;
-  --reader-link: #0066cc;
-}
-
-.theme-dark {
-  --reader-bg: #1a1a1a;
-  --reader-text: #e0e0e0;
-  --reader-secondary: #a0a0a0;
-  --reader-accent: #4da3ff;
-  --reader-link: #66b3ff;
-}
-
-.theme-sepia {
-  --reader-bg: #f4ecd8;
-  --reader-text: #5c4b37;
-  --reader-secondary: #7d6b54;
-  --reader-accent: #8b4513;
-  --reader-link: #a0522d;
-}
-
 /* Apply theme colors */
 .reader-container {
   background-color: var(--reader-bg);
   color: var(--reader-text);
   position: relative;
-}
-
-/* Custom background with image overlay for readability */
-.reader-container[style*='background-image'] {
-  /* Ensure text readability when using custom background images */
-}
-
-.reader-container[style*='box-shadow'] {
-  /* Box shadow inset is used as semi-transparent overlay */
 }
 
 .reader-container a {
@@ -162,7 +128,7 @@
   right: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 9999;
+  z-index: var(--z-max);
   transition: background-color 0.3s ease;
 }
 

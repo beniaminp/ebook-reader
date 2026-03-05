@@ -1,0 +1,200 @@
+name: Build iOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'What to build'
+        required: true
+        default: 'ipa'
+        type: choice
+        options:
+          - ipa
+          - app
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compute version
+        run: |
+          BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          VERSION="${BASE}.${{ github.run_number }}"
+          echo "VERSION_NAME=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Build web assets
+        run: npm run build
+
+      - run: npx cap sync ios
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Decode signing certificate
+        run: |
+          echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/certificate.p12"
+
+      - name: Install certificate to keychain
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 12)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+      - name: Install provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/build_profile.mobileprovision
+
+      - name: Set version in Xcode project
+        working-directory: ios/App
+        run: |
+          agvtool new-version -all "${{ github.run_number }}"
+          agvtool new-marketing-version "${{ env.VERSION_NAME }}"
+
+      - name: Resolve SPM dependencies
+        working-directory: ios/App
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project App.xcodeproj \
+            -scheme App
+
+      - name: Build archive
+        working-directory: ios/App
+        run: |
+          xcodebuild archive \
+            -project App.xcodeproj \
+            -scheme App \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="${{ secrets.IOS_CODE_SIGN_IDENTITY }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}" \
+            DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}"
+
+      - name: Create ExportOptions.plist
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ secrets.IOS_TEAM_ID }}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.shelfyreader.app</key>
+              <string>${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}</string>
+            </dict>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export IPA
+        if: inputs.build_type == 'ipa'
+        working-directory: ios/App
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Copy .app bundle
+        if: inputs.build_type == 'app'
+        run: |
+          cp -R "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" "$RUNNER_TEMP/App.app"
+
+      - name: Rename artifacts
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          UPLOAD_FILES=""
+
+          IPA_SRC="$RUNNER_TEMP/export/App.ipa"
+          if [ -f "$IPA_SRC" ]; then
+            IPA_NAME="shelfy-v${{ env.VERSION }}-${SHORT_SHA}.ipa"
+            cp "$IPA_SRC" "$IPA_NAME"
+            echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
+            UPLOAD_FILES="$IPA_NAME"
+          fi
+
+          APP_SRC="$RUNNER_TEMP/App.app"
+          if [ -d "$APP_SRC" ]; then
+            APP_NAME="shelfy-v${{ env.VERSION }}-${SHORT_SHA}.app"
+            cp -R "$APP_SRC" "$APP_NAME"
+            # Zip the .app bundle for upload
+            APP_ZIP="${APP_NAME}.zip"
+            zip -r "$APP_ZIP" "$APP_NAME"
+            echo "APP_ZIP=$APP_ZIP" >> $GITHUB_ENV
+            UPLOAD_FILES="$APP_ZIP"
+          fi
+
+          echo "UPLOAD_FILES=$UPLOAD_FILES" >> $GITHUB_ENV
+
+      - name: Upload IPA artifact
+        if: env.IPA_NAME != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: shelfy-ios-ipa
+          path: ${{ env.IPA_NAME }}
+
+      - name: Upload App artifact
+        if: env.APP_ZIP != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: shelfy-ios-app
+          path: ${{ env.APP_ZIP }}
+
+      - name: Create or update release
+        run: |
+          TAG="v${VERSION}-ios"
+          gh release create "$TAG" \
+            --title "iOS Release $TAG" \
+            --notes "iOS release build from commit ${{ github.sha }}" \
+            --latest=false 2>/dev/null || \
+          gh release edit "$TAG" \
+            --title "iOS Release $TAG" \
+            --notes "iOS release build from commit ${{ github.sha }}"
+          for f in $UPLOAD_FILES; do
+            gh release upload "$TAG" "$f" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
