@@ -178,7 +178,7 @@ public class TorrentEngine {
 
         try {
             // Fetch metadata from magnet URI (blocking call)
-            byte[] torrentData = sessionManager.fetchMagnet(magnetURI, (int)(METADATA_TIMEOUT_MS / 1000));
+            byte[] torrentData = sessionManager.fetchMagnet(magnetURI, (int)(METADATA_TIMEOUT_MS / 1000), downloadDir);
             if (torrentData == null) {
                 if (!cancelled.get() && !hasError.get()) {
                     callback.onError("Timed out waiting for torrent metadata");
