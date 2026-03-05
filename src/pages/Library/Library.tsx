@@ -79,6 +79,7 @@ import {
 } from '../../stores/useLibraryPrefsStore';
 import ReadingStreakCard from '../../components/ReadingStreakCard';
 import WelcomeBackCard from '../../components/WelcomeBackCard';
+import OnboardingOverlay from '../../components/OnboardingOverlay';
 import './Library.css';
 
 const Library: React.FC = () => {
@@ -1466,6 +1467,7 @@ const Library: React.FC = () => {
 
   return (
     <IonPage className="library-page">
+      <OnboardingOverlay />
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
