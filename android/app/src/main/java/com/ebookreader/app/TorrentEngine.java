@@ -211,6 +211,9 @@ public class TorrentEngine {
             byte[] fileData = readFile(bestFile);
             callback.onComplete(fileData, bestFile.getName());
 
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to read downloaded file", e);
+            callback.onError("Failed to read downloaded file: " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             callback.onError("Download interrupted");
