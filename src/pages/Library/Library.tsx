@@ -1291,11 +1291,11 @@ const Library: React.FC = () => {
       <h2>No books yet</h2>
       <p>Import your first ebook to get started</p>
       <div style={{ display: 'flex', gap: '8px' }}>
-        <IonButton fill="outline" size="small" onClick={() => document.getElementById('file-input')?.click()}>
+        <IonButton fill="solid" size="small" className="empty-state-action" onClick={() => document.getElementById('file-input')?.click()}>
           <IonIcon slot="start" icon={documentTextOutline} />
           Select Files
         </IonButton>
-        <IonButton fill="outline" size="small" onClick={() => document.getElementById('folder-input')?.click()}>
+        <IonButton fill="outline" size="small" className="empty-state-action" onClick={() => document.getElementById('folder-input')?.click()}>
           <IonIcon slot="start" icon={libraryOutline} />
           Select Folder
         </IonButton>
@@ -1622,9 +1622,20 @@ const Library: React.FC = () => {
         )}
 
         {isLoading ? (
-          <div className="loading-state">
-            <IonSpinner name="crescent" />
-            <p>Loading library...</p>
+          <div className="book-grid">
+            <IonGrid>
+              <IonRow>
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <IonCol size="4" key={`skeleton-${i}`}>
+                    <div className="skeleton-book-card">
+                      <div className="skeleton-book-cover skeleton" />
+                      <div className="skeleton-book-title skeleton" />
+                      <div className="skeleton-book-author skeleton" />
+                    </div>
+                  </IonCol>
+                ))}
+              </IonRow>
+            </IonGrid>
           </div>
         ) : (
           <>
@@ -2024,6 +2035,9 @@ const Library: React.FC = () => {
         position="top"
         onDidDismiss={() => setToastMessage('')}
       />
+      <div aria-live="polite" className="sr-only" role="status">
+        {toastMessage}
+      </div>
 
       {/* Create/Edit Shelf Modal */}
       <IonModal isOpen={showShelfModal} onDidDismiss={() => setShowShelfModal(false)}>
