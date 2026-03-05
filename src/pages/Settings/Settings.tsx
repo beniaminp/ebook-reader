@@ -179,12 +179,13 @@ const Settings: React.FC = () => {
         </IonHeader>
 
         {/* ─── Appearance ──────────────────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Appearance</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--blue">
               <IonIcon icon={colorPaletteOutline} />
             </div>
-            <span className="settings-section-title">Appearance</span>
+            <span className="settings-section-title" aria-hidden="true">Appearance</span>
           </div>
 
           <div className="theme-dots">
@@ -194,20 +195,25 @@ const Settings: React.FC = () => {
                   className={`theme-dot theme-dot--${t.value}${theme === t.value ? ' theme-dot--active' : ''}`}
                   onClick={() => setTheme(t.value)}
                   title={t.label}
+                  role="button"
+                  aria-label={`Select ${t.label} theme${theme === t.value ? ' (active)' : ''}`}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.value); } }}
                 />
                 <span className="theme-dot-label">{t.label}</span>
               </div>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* ─── Typography ──────────────────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Typography</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--purple">
               <IonIcon icon={textOutline} />
             </div>
-            <span className="settings-section-title">Typography</span>
+            <span className="settings-section-title" aria-hidden="true">Typography</span>
           </div>
 
           <div className={fontPreviewClass} style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}`, textAlign: textAlign }}>
@@ -269,15 +275,16 @@ const Settings: React.FC = () => {
               <IonSelectOption value="right">Right</IonSelectOption>
             </IonSelect>
           </IonItem>
-        </div>
+        </fieldset>
 
         {/* ─── Reading Features ────────────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Reading Features</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--orange">
               <IonIcon icon={eyeOutline} />
             </div>
-            <span className="settings-section-title">Reading Features</span>
+            <span className="settings-section-title" aria-hidden="true">Reading Features</span>
           </div>
 
           <IonItem>
@@ -337,15 +344,16 @@ const Settings: React.FC = () => {
               </div>
             </IonItem>
           )}
-        </div>
+        </fieldset>
 
         {/* ─── Reading Goals & Streaks ─────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Reading Goals</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--orange">
               <IonIcon icon={flameOutline} />
             </div>
-            <span className="settings-section-title">Reading Goals</span>
+            <span className="settings-section-title" aria-hidden="true">Reading Goals</span>
           </div>
 
           <IonItem button routerLink="/reading-goals" detail className="settings-nav-item">
@@ -359,15 +367,16 @@ const Settings: React.FC = () => {
               </IonNote>
             </IonLabel>
           </IonItem>
-        </div>
+        </fieldset>
 
         {/* ─── Library & Sync ──────────────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Library & Sync</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--green">
               <IonIcon icon={libraryOutline} />
             </div>
-            <span className="settings-section-title">Library & Sync</span>
+            <span className="settings-section-title" aria-hidden="true">Library & Sync</span>
           </div>
 
           <IonItem button routerLink="/hardcover-settings" detail className="settings-nav-item">
@@ -423,15 +432,16 @@ const Settings: React.FC = () => {
               {isEnriching ? <IonSpinner name="crescent" /> : 'Enrich'}
             </IonButton>
           </IonItem>
-        </div>
+        </fieldset>
 
         {/* ─── P2P Sharing ─────────────────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>P2P Sharing</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--teal">
               <IonIcon icon={peopleOutline} />
             </div>
-            <span className="settings-section-title">P2P Sharing</span>
+            <span className="settings-section-title" aria-hidden="true">P2P Sharing</span>
           </div>
 
           <IonItem button routerLink="/community-books" detail className="settings-nav-item">
@@ -449,15 +459,16 @@ const Settings: React.FC = () => {
               <IonNote>Manage books you are sharing</IonNote>
             </IonLabel>
           </IonItem>
-        </div>
+        </fieldset>
 
         {/* ─── Data & Backup ───────────────────────────── */}
-        <div className="settings-section">
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Data & Backup</legend>
           <div className="settings-section-header">
             <div className="settings-section-icon settings-section-icon--indigo">
               <IonIcon icon={shieldCheckmarkOutline} />
             </div>
-            <span className="settings-section-title">Data & Backup</span>
+            <span className="settings-section-title" aria-hidden="true">Data & Backup</span>
           </div>
 
           {isSignedIn ? (
@@ -575,7 +586,7 @@ const Settings: React.FC = () => {
               onChange={handleImport}
             />
           </IonItem>
-        </div>
+        </fieldset>
 
         {/* ─── Footer ──────────────────────────────────── */}
         <div className="settings-footer">
@@ -592,6 +603,9 @@ const Settings: React.FC = () => {
           duration={4000}
           onDidDismiss={() => setToastMessage('')}
         />
+        <div aria-live="polite" className="sr-only" role="status">
+          {toastMessage}
+        </div>
 
       </IonContent>
     </IonPage>
