@@ -20,6 +20,7 @@ import type { EpubTheme } from '../../types/epub';
 import type { ReaderEngineRef, Chapter, SearchResult, ReaderProgress } from '../../types/reader';
 import { comicService } from '../../services/comicService';
 
+import { Capacitor } from '@capacitor/core';
 import { translateParagraph, clearInterlinearCache } from '../../services/interlinearTranslationService';
 import { applyWordWise, removeWordWise, clearWordWiseCache } from '../../services/wordWiseService';
 import './EpubReader.css';
@@ -238,6 +239,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const bionicReadingRef = useRef<boolean>(false);
   const interlinearEnabledRef = useRef<boolean>(false);
   const interlinearLanguageRef = useRef<string>('en');
+  const bookLanguageRef = useRef<string>('auto');
   const wordWiseEnabledRef = useRef<boolean>(false);
   const wordWiseLevelRef = useRef<number>(3);
   const wordWiseTargetLangRef = useRef<string | undefined>(undefined);
@@ -368,8 +370,13 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const applyInterlinear = useCallback(async (doc: Document) => {
     if (!interlinearEnabledRef.current) return;
     const targetLang = interlinearLanguageRef.current;
+    // On Android, use the detected book language so MLKit gets a concrete
+    // source language instead of 'auto' (which it doesn't support).
+    const sourceLang = Capacitor.isNativePlatform() && bookLanguageRef.current !== 'auto'
+      ? bookLanguageRef.current
+      : 'auto';
     const elements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
-    console.log(`[Interlinear] Applying to ${elements.length} elements, target: ${targetLang}`);
+    console.log(`[Interlinear] Applying to ${elements.length} elements, source: ${sourceLang}, target: ${targetLang}`);
     let translated_count = 0;
     for (const el of elements) {
       if (el.getAttribute('data-interlinear-processed')) continue;
@@ -377,7 +384,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       if (!text || text.length < 2) continue;
       el.setAttribute('data-interlinear-processed', 'true');
       try {
-        const translated = await translateParagraph(text, 'auto', targetLang);
+        const translated = await translateParagraph(text, sourceLang, targetLang);
         if (translated && translated !== text) {
           const div = doc.createElement('div');
           div.className = 'interlinear-translation';
@@ -689,6 +696,13 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
         // Extract metadata
         const meta = view.book?.metadata;
+        // Extract book language for interlinear translation (e.g. ["en"] → "en")
+        const bookLangs = (meta as any)?.language;
+        if (Array.isArray(bookLangs) && bookLangs.length > 0 && bookLangs[0]) {
+          // Normalize to 2-letter code (e.g. "en-US" → "en")
+          bookLanguageRef.current = bookLangs[0].split('-')[0].toLowerCase();
+          console.log(`[Interlinear] Detected book language: ${bookLanguageRef.current}`);
+        }
         onLoadCompleteRef.current?.({
           title: metaString(meta?.title) || 'Unknown Title',
           author: metaAuthor(meta?.author),

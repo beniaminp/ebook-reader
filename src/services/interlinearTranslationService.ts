@@ -137,7 +137,9 @@ export async function translateParagraph(
 
   let translated: string;
 
-  if (Capacitor.isNativePlatform()) {
+  if (Capacitor.isNativePlatform() && sourceLang !== 'auto') {
+    // MLKit requires a specific source language — it does not support 'auto'.
+    // When sourceLang is 'auto', we fall through to web-based translation below.
     const mlkit = await getMlkit();
 
     // Ensure target language model is downloaded before translating
@@ -148,8 +150,7 @@ export async function translateParagraph(
       console.log(`[Interlinear] Model for "${targetLang}" ready`);
     }
 
-    // Also ensure source language model if not auto-detect
-    if (sourceLang !== 'auto' && !downloadedModels.has(sourceLang)) {
+    if (!downloadedModels.has(sourceLang)) {
       await mlkit.Translation.downloadModel({ language: sourceLang as any });
       downloadedModels.add(sourceLang);
     }
