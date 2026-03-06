@@ -65,6 +65,7 @@ import {
   createOutline,
   flashOutline,
   sparklesOutline,
+  settingsOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -125,6 +126,10 @@ const Library: React.FC = () => {
   const [allTags, setAllTags] = useState<Array<{ id: string; name: string; color?: string }>>([]);
   const [bookTagMap, setBookTagMap] = useState<Record<string, string[]>>({});
   const [bookCollectionMap, setBookCollectionMap] = useState<Record<string, string[]>>({});
+
+  // Shelves panel visibility
+  const [showShelvesPanel, setShowShelvesPanel] = useState(false);
+  const [showManageShelves, setShowManageShelves] = useState(false);
 
   // Shelf management state
   const [showShelfModal, setShowShelfModal] = useState(false);
@@ -1871,94 +1876,112 @@ const Library: React.FC = () => {
           )}
         </div>
 
-        {/* Shelf chips bar */}
-        {collections.length > 0 && (
-          <div className="shelf-chips-bar">
-            <IonChip
-              color={filters.collectionId === 'all' ? 'primary' : undefined}
-              outline={filters.collectionId !== 'all'}
-              onClick={() => setFilters((p) => ({ ...p, collectionId: 'all' }))}
-            >
-              All
-            </IonChip>
-            {collections.map((shelf) => (
-              <IonChip
-                key={shelf.id}
-                color={filters.collectionId === shelf.id ? 'primary' : undefined}
-                outline={filters.collectionId !== shelf.id}
-                onClick={() => setFilters((p) => ({ ...p, collectionId: shelf.id }))}
-                onContextMenu={(e) => handleShelfLongPress(shelf, e)}
-              >
-                {shelf.name}
-                {filters.collectionId === shelf.id && bookCollectionMap[shelf.id] && (
-                  <IonBadge color="light" style={{ marginLeft: 6, fontSize: '10px' }}>
-                    {bookCollectionMap[shelf.id].length}
-                  </IonBadge>
-                )}
-              </IonChip>
-            ))}
-            <IonChip outline onClick={() => openShelfModal()}>
-              <IonIcon icon={addOutline} />
-            </IonChip>
-          </div>
-        )}
-
-        {/* Smart Shelves chip bar */}
-        <div className="smart-shelves-bar">
-          <IonIcon
-            icon={sparklesOutline}
-            style={{
-              fontSize: '16px',
-              color: 'var(--ion-color-medium)',
-              marginRight: '4px',
-              flexShrink: 0,
-            }}
-          />
-          <div className="smart-shelves-scroll">
-            {activeSmartShelfId && (
-              <IonChip
-                color="medium"
-                onClick={() => setActiveSmartShelf(null)}
-                style={{ fontSize: '12px' }}
-              >
-                All Books
-              </IonChip>
+        {/* Shelves toggle button + active shelf indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px 4px' }}>
+          <IonButton
+            fill={showShelvesPanel ? 'solid' : 'outline'}
+            size="small"
+            onClick={() => setShowShelvesPanel((v) => !v)}
+          >
+            <IonIcon icon={libraryOutline} slot="start" />
+            Shelves
+            {(filters.collectionId !== 'all' || activeSmartShelfId) && (
+              <IonBadge color="danger" style={{ marginLeft: 6, fontSize: '9px', minWidth: 8, height: 8, padding: 0, borderRadius: '50%' }} />
             )}
-            {smartShelves.map((shelf) => (
-              <IonChip
-                key={shelf.id}
-                color={activeSmartShelfId === shelf.id ? 'primary' : undefined}
-                outline={activeSmartShelfId !== shelf.id}
-                onClick={() =>
-                  setActiveSmartShelf(activeSmartShelfId === shelf.id ? null : shelf.id)
-                }
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setEditingSmartShelf(shelf);
-                  setShowSmartShelfEditor(true);
-                }}
-                style={{ fontSize: '12px' }}
-              >
-                {shelf.name}
-                {activeSmartShelfId === shelf.id && (
-                  <IonBadge color="light" style={{ marginLeft: 6, fontSize: '10px' }}>
-                    {evaluateShelf(shelf, books).length}
-                  </IonBadge>
-                )}
-              </IonChip>
-            ))}
+          </IonButton>
+          {filters.collectionId !== 'all' && (
             <IonChip
-              outline
-              onClick={() => {
-                setEditingSmartShelf(null);
-                setShowSmartShelfEditor(true);
-              }}
+              color="primary"
+              onClick={() => setFilters((p) => ({ ...p, collectionId: 'all' }))}
               style={{ fontSize: '12px' }}
             >
-              <IonIcon icon={addOutline} />
+              {collections.find((c) => c.id === filters.collectionId)?.name}
+              <IonIcon icon={closeOutline} />
             </IonChip>
-          </div>
+          )}
+          {activeSmartShelfId && (
+            <IonChip
+              color="primary"
+              onClick={() => setActiveSmartShelf(null)}
+              style={{ fontSize: '12px' }}
+            >
+              {smartShelves.find((s) => s.id === activeSmartShelfId)?.name}
+              <IonIcon icon={closeOutline} />
+            </IonChip>
+          )}
         </div>
+
+        {/* Shelves panel (toggled) */}
+        {showShelvesPanel && (
+          <div className="shelves-panel" style={{ padding: '0 12px 8px' }}>
+            {/* Collections */}
+            {collections.length > 0 && (
+              <div className="shelf-chips-bar" style={{ marginBottom: 4 }}>
+                <IonChip
+                  color={filters.collectionId === 'all' && !activeSmartShelfId ? 'primary' : undefined}
+                  outline={filters.collectionId !== 'all' || !!activeSmartShelfId}
+                  onClick={() => { setFilters((p) => ({ ...p, collectionId: 'all' })); setActiveSmartShelf(null); }}
+                  style={{ fontSize: '12px' }}
+                >
+                  All
+                </IonChip>
+                {collections.map((shelf) => (
+                  <IonChip
+                    key={shelf.id}
+                    color={filters.collectionId === shelf.id ? 'primary' : undefined}
+                    outline={filters.collectionId !== shelf.id}
+                    onClick={() => { setActiveSmartShelf(null); setFilters((p) => ({ ...p, collectionId: shelf.id })); }}
+                    style={{ fontSize: '12px' }}
+                  >
+                    {shelf.name}
+                    {filters.collectionId === shelf.id && bookCollectionMap[shelf.id] && (
+                      <IonBadge color="light" style={{ marginLeft: 6, fontSize: '10px' }}>
+                        {bookCollectionMap[shelf.id].length}
+                      </IonBadge>
+                    )}
+                  </IonChip>
+                ))}
+              </div>
+            )}
+            {/* Smart Shelves */}
+            <div className="shelf-chips-bar">
+              <IonIcon
+                icon={sparklesOutline}
+                style={{ fontSize: '14px', color: 'var(--ion-color-medium)', marginRight: 2, flexShrink: 0 }}
+              />
+              {smartShelves.map((shelf) => (
+                <IonChip
+                  key={shelf.id}
+                  color={activeSmartShelfId === shelf.id ? 'primary' : undefined}
+                  outline={activeSmartShelfId !== shelf.id}
+                  onClick={() => {
+                    setFilters((p) => ({ ...p, collectionId: 'all' }));
+                    setActiveSmartShelf(activeSmartShelfId === shelf.id ? null : shelf.id);
+                  }}
+                  style={{ fontSize: '12px' }}
+                >
+                  {shelf.name}
+                  {activeSmartShelfId === shelf.id && (
+                    <IonBadge color="light" style={{ marginLeft: 6, fontSize: '10px' }}>
+                      {evaluateShelf(shelf, books).length}
+                    </IonBadge>
+                  )}
+                </IonChip>
+              ))}
+            </div>
+            {/* Manage button */}
+            <div style={{ textAlign: 'right', marginTop: 4 }}>
+              <IonButton
+                fill="clear"
+                size="small"
+                onClick={() => setShowManageShelves(true)}
+              >
+                <IonIcon icon={settingsOutline} slot="start" />
+                Manage Shelves
+              </IonButton>
+            </div>
+          </div>
+        )}
 
         {importingCount > 0 && (
           <div className="loading-state" style={{ paddingBottom: 0 }}>
@@ -2827,6 +2850,126 @@ const Library: React.FC = () => {
           setEditingSmartShelf(null);
         }}
       />
+
+      {/* Manage Shelves Modal */}
+      <IonModal isOpen={showManageShelves} onDidDismiss={() => setShowManageShelves(false)}>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Manage Shelves</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowManageShelves(false)}>Done</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent>
+          {/* Collections section */}
+          <div style={{ padding: '16px 16px 8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Collections</h2>
+              <IonButton
+                fill="clear"
+                size="small"
+                onClick={() => { setShowManageShelves(false); openShelfModal(); }}
+              >
+                <IonIcon icon={addOutline} slot="start" />
+                Add
+              </IonButton>
+            </div>
+          </div>
+          <IonList>
+            {collections.length === 0 && (
+              <IonItem>
+                <IonLabel color="medium">No collections yet</IonLabel>
+              </IonItem>
+            )}
+            {collections.map((shelf) => (
+              <IonItem key={shelf.id}>
+                <IonLabel>
+                  <h3>{shelf.name}</h3>
+                  {shelf.description && <p>{shelf.description}</p>}
+                  <p style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                    {bookCollectionMap[shelf.id]?.length || 0} book{(bookCollectionMap[shelf.id]?.length || 0) !== 1 ? 's' : ''}
+                  </p>
+                </IonLabel>
+                <IonButton
+                  fill="clear"
+                  slot="end"
+                  onClick={() => { setShowManageShelves(false); openShelfModal(shelf); }}
+                >
+                  <IonIcon icon={createOutline} />
+                </IonButton>
+                <IonButton
+                  fill="clear"
+                  color="danger"
+                  slot="end"
+                  onClick={() => {
+                    setShelfToDelete(shelf);
+                    setShowDeleteShelfAlert(true);
+                    setShowManageShelves(false);
+                  }}
+                >
+                  <IonIcon icon={trashOutline} />
+                </IonButton>
+              </IonItem>
+            ))}
+          </IonList>
+
+          {/* Smart Shelves section */}
+          <div style={{ padding: '16px 16px 8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
+                <IonIcon icon={sparklesOutline} style={{ marginRight: 6, verticalAlign: 'middle', fontSize: '16px' }} />
+                Smart Shelves
+              </h2>
+              <IonButton
+                fill="clear"
+                size="small"
+                onClick={() => { setShowManageShelves(false); setEditingSmartShelf(null); setShowSmartShelfEditor(true); }}
+              >
+                <IonIcon icon={addOutline} slot="start" />
+                Add
+              </IonButton>
+            </div>
+          </div>
+          <IonList>
+            {smartShelves.length === 0 && (
+              <IonItem>
+                <IonLabel color="medium">No smart shelves yet</IonLabel>
+              </IonItem>
+            )}
+            {smartShelves.map((shelf) => (
+              <IonItem key={shelf.id}>
+                <IonLabel>
+                  <h3>{shelf.name}</h3>
+                  <p style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
+                    {shelf.rules.length} rule{shelf.rules.length !== 1 ? 's' : ''}
+                    {' · '}
+                    {evaluateShelf(shelf, books).length} book{evaluateShelf(shelf, books).length !== 1 ? 's' : ''}
+                    {shelf.isDefault && ' · Default'}
+                  </p>
+                </IonLabel>
+                <IonButton
+                  fill="clear"
+                  slot="end"
+                  onClick={() => { setShowManageShelves(false); setEditingSmartShelf(shelf); setShowSmartShelfEditor(true); }}
+                >
+                  <IonIcon icon={createOutline} />
+                </IonButton>
+                {!shelf.isDefault && (
+                  <IonButton
+                    fill="clear"
+                    color="danger"
+                    slot="end"
+                    onClick={() => { removeSmartShelf(shelf.id); }}
+                  >
+                    <IonIcon icon={trashOutline} />
+                  </IonButton>
+                )}
+              </IonItem>
+            ))}
+          </IonList>
+        </IonContent>
+      </IonModal>
     </IonPage>
   );
 };
