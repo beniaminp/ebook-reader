@@ -6,6 +6,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { Preferences } from '@capacitor/preferences';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { ensureNoMedia } from './noMediaService';
 import {
   CalibreWebServerConfig,
   CalibreWebBook,
@@ -322,6 +323,7 @@ export class CalibreWebService {
       const fileName = `cover_${bookId}_${this.currentConfig.id}.jpg`;
       const filePath = `${COVER_DIR}/${fileName}`;
 
+      await ensureNoMedia(Directory.Cache, COVER_DIR);
       await Filesystem.writeFile({
         path: filePath,
         data: this.arrayBufferToBase64(response.data),
@@ -392,6 +394,7 @@ export class CalibreWebService {
       const fileName = `${this.sanitizeFileName(book.title)}_${book.id}.${ext}`;
       const filePath = `${BOOKS_DIR}/${fileName}`;
 
+      await ensureNoMedia(Directory.Data, BOOKS_DIR);
       await Filesystem.writeFile({
         path: filePath,
         data: this.arrayBufferToBase64(response.data),

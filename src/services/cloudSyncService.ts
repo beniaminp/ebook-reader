@@ -7,6 +7,7 @@ import { Dropbox } from 'dropbox';
 import { createClient, WebDAVClient } from 'webdav';
 import { Preferences } from '@capacitor/preferences';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { ensureNoMedia } from './noMediaService';
 import type {
   CloudProvider,
   CloudProviderType,
@@ -205,6 +206,8 @@ class DropboxProvider implements CloudProvider {
       const base64 = await this.blobToBase64(fileBlob);
 
       // Save to local filesystem
+      const dir = localPath.includes('/') ? localPath.substring(0, localPath.lastIndexOf('/')) : '.';
+      await ensureNoMedia(Directory.Data, dir);
       await Filesystem.writeFile({
         path: localPath,
         data: base64.split(',')[1], // Remove data URL prefix
@@ -475,6 +478,8 @@ class WebDAVProvider implements CloudProvider {
       const buffer = await this.client.getFileContents(remotePath, { format: 'text' });
 
       // Save to local filesystem
+      const dir = localPath.includes('/') ? localPath.substring(0, localPath.lastIndexOf('/')) : '.';
+      await ensureNoMedia(Directory.Data, dir);
       await Filesystem.writeFile({
         path: localPath,
         data: buffer as string,

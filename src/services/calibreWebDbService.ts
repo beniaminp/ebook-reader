@@ -4,6 +4,7 @@
  */
 
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { ensureNoMedia } from './noMediaService';
 import { calibreWebService } from './calibreWebService';
 import { addBook, updateBook, getBookById, getAllBooks } from './database';
 import type { Book } from '../types/index';
@@ -164,6 +165,7 @@ export async function cacheBookCover(
     const fileName = `cover_${serverConfig.id}_${bookId}.jpg`;
     const filePath = `${CALIBRE_WEB_CACHE_DIR}/${fileName}`;
 
+    await ensureNoMedia(Directory.Cache, CALIBRE_WEB_CACHE_DIR);
     await Filesystem.writeFile({
       path: filePath,
       data: base64,
