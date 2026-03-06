@@ -118,6 +118,7 @@
 .reader-content {
   font-family: var(--reader-font-family, Georgia, serif);
   font-size: var(--reader-font-size, 16px);
+  font-weight: var(--reader-font-weight, 400);
   line-height: var(--reader-line-height, 1.6);
   text-align: var(--reader-text-align, justify);
   padding: var(--reader-padding);

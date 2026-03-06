@@ -666,6 +666,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   }, [themeStore.letterSpacing, isFoliate]);
 
   useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setFontWeight?.(themeStore.fontWeight);
+  }, [themeStore.fontWeight, isFoliate]);
+
+  useEffect(() => {
     if (isPdf) return;
     console.log(`[Interlinear] Effect fired: enabled=${themeStore.interlinearMode}, lang=${themeStore.interlinearLanguage}, hasEngine=${!!engineRef.current}`);
     engineRef.current?.setInterlinearMode?.(

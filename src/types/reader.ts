@@ -109,6 +109,8 @@ export interface ReaderEngineRef {
   setParagraphSpacing?(spacing: number): void;
   /** Set letter spacing (em units). */
   setLetterSpacing?(spacing: number): void;
+  /** Set font weight (100-900). */
+  setFontWeight?(weight: number): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
   /** Enable/disable interlinear translation mode. */

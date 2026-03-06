@@ -116,6 +116,8 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setLetterSpacing,
     setFocusMode,
     setFocusModeOpacity,
+    fontWeight,
+    setFontWeight,
     pageTransitionType,
     setPageTransitionType,
     setAutoScroll,
@@ -491,6 +493,26 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                     </IonSelectOption>
                   ))}
                 </IonSelect>
+              </div>
+
+              <div className="type-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <IonLabel className="type-row-label">Font Weight</IonLabel>
+                  <span style={{ fontSize: '13px', opacity: 0.7 }}>{fontWeight}</span>
+                </div>
+                <IonRange
+                  min={100}
+                  max={900}
+                  step={100}
+                  value={fontWeight}
+                  onIonChange={(e) => setFontWeight(e.detail.value as number)}
+                  className="type-compact-range"
+                  pin
+                  pinFormatter={(value: number) => {
+                    const labels: Record<number, string> = { 100: 'Thin', 200: 'ExLight', 300: 'Light', 400: 'Normal', 500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExBold', 900: 'Black' };
+                    return labels[value] || String(value);
+                  }}
+                />
               </div>
 
               {/* Custom font import */}

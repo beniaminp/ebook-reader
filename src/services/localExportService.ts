@@ -158,13 +158,13 @@ export async function importAllData(file: File): Promise<ImportResult> {
           blueLightFilter, blueLightIntensity, readingRuler, readingRulerSettings,
           bionicReading, focusMode, focusModeSettings, autoScroll, autoScrollSpeed,
           customThemes, customFonts, customBackgroundColor, customBackgroundImage,
-          pageTransitionType } = stores.theme;
+          pageTransitionType, fontWeight } = stores.theme;
         useThemeStore.setState({
           theme, fontFamily, fontSize, lineHeight, textAlign, marginSize,
           blueLightFilter, blueLightIntensity, readingRuler, readingRulerSettings,
           bionicReading, focusMode, focusModeSettings, autoScroll, autoScrollSpeed,
           customThemes, customFonts, customBackgroundColor, customBackgroundImage,
-          pageTransitionType,
+          pageTransitionType, fontWeight,
         });
         result.settingsRestored++;
       }

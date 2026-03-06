@@ -88,14 +88,14 @@ export async function restoreFromBackup(userId: string): Promise<void> {
       blueLightFilter, blueLightIntensity, readingRuler, readingRulerSettings,
       bionicReading, focusMode, focusModeSettings, autoScroll, autoScrollSpeed,
       customThemes, customFonts, customBackgroundColor, customBackgroundImage,
-      pageTransitionType,
+      pageTransitionType, fontWeight,
     } = storeExports.theme;
     useThemeStore.setState({
       theme, fontFamily, fontSize, lineHeight, textAlign, marginSize,
       blueLightFilter, blueLightIntensity, readingRuler, readingRulerSettings,
       bionicReading, focusMode, focusModeSettings, autoScroll, autoScrollSpeed,
       customThemes, customFonts, customBackgroundColor, customBackgroundImage,
-      pageTransitionType,
+      pageTransitionType, fontWeight,
     });
   }
 

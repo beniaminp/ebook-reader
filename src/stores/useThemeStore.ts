@@ -189,6 +189,7 @@ interface ThemeState extends ReadingSettings {
   setHyphenation: (enabled: boolean) => void;
   setParagraphSpacing: (spacing: number) => void;
   setLetterSpacing: (spacing: number) => void;
+  setFontWeight: (weight: number) => void;
   setPageTransitionType: (type: PageTransitionType) => void;
 
   // Gesture sensitivity
@@ -279,6 +280,7 @@ export const useThemeStore = create<ThemeState>()(
       hyphenation: DEFAULT_SETTINGS.hyphenation,
       paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
       letterSpacing: DEFAULT_SETTINGS.letterSpacing,
+      fontWeight: DEFAULT_SETTINGS.fontWeight,
       customThemes: [],
       customFonts: [],
       customBackgroundColor: undefined,
@@ -381,6 +383,8 @@ export const useThemeStore = create<ThemeState>()(
 
       setLetterSpacing: (letterSpacing) => set({ letterSpacing }),
 
+      setFontWeight: (fontWeight) => set({ fontWeight }),
+
       setPageTransitionType: (pageTransitionType) => set({ pageTransitionType }),
 
       setTapSensitivity: (tapSensitivity) => set({ tapSensitivity }),
@@ -416,6 +420,7 @@ export const useThemeStore = create<ThemeState>()(
           hyphenation: DEFAULT_SETTINGS.hyphenation,
           paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
           letterSpacing: DEFAULT_SETTINGS.letterSpacing,
+          fontWeight: DEFAULT_SETTINGS.fontWeight,
           tapSensitivity: 10,
           swipeThreshold: 50,
         }),
@@ -524,6 +529,7 @@ export const useThemeStore = create<ThemeState>()(
         hyphenation: state.hyphenation,
         paragraphSpacing: state.paragraphSpacing,
         letterSpacing: state.letterSpacing,
+        fontWeight: state.fontWeight,
         customThemes: state.customThemes,
         customFonts: state.customFonts,
         customBackgroundColor: state.customBackgroundColor,

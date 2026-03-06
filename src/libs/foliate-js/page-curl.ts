@@ -80,6 +80,8 @@ export function drawPageCurl(
     config: CurlConfig = { pageColor: '#f5f5f0', rtl: false },
 ): void {
     ctx.clearRect(0, 0, W, H)
+    // Guard against non-finite dimensions (canvas not yet sized)
+    if (!W || !H || !isFinite(W) || !isFinite(H)) return
     const p = Math.min(1, Math.max(0, progress))
     if (p <= 0.002) return
 

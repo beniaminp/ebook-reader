@@ -76,6 +76,7 @@ export interface ReadingSettings {
   hyphenation: boolean;
   paragraphSpacing: number;
   letterSpacing: number;
+  fontWeight: number;
 }
 
 export interface Theme {
@@ -231,6 +232,7 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   hyphenation: false,
   paragraphSpacing: 1,
   letterSpacing: 0,
+  fontWeight: 400,
 };
 
 class ThemeServiceClass {

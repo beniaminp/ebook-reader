@@ -953,11 +953,13 @@ export class Paginator extends HTMLElement {
 
     #sizeCurlCanvas(): void {
         const rect = this.#top.getBoundingClientRect()
+        if (!rect.width || !rect.height) return
         const dpr = devicePixelRatio || 1
-        this.#curlCanvas.width = rect.width * dpr
-        this.#curlCanvas.height = rect.height * dpr
+        this.#curlCanvas.width = Math.round(rect.width * dpr)
+        this.#curlCanvas.height = Math.round(rect.height * dpr)
         this.#curlCanvas.style.width = `${rect.width}px`
         this.#curlCanvas.style.height = `${rect.height}px`
+        this.#curlCtx = this.#curlCanvas.getContext('2d')
         this.#curlCtx?.scale(dpr, dpr)
     }
 
@@ -981,6 +983,7 @@ export class Paginator extends HTMLElement {
     #drawCurl(): void {
         if (!this.#curlCtx) return
         const rect = this.#top.getBoundingClientRect()
+        if (!rect.width || !rect.height) return
         const dpr = devicePixelRatio || 1
         this.#curlCtx.setTransform(1, 0, 0, 1, 0, 0)
         this.#curlCtx.scale(dpr, dpr)

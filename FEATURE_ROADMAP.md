@@ -28,7 +28,7 @@
 | **Two-Column Layout** | In landscape/tablet mode, render text in two columns to reduce excessive line length | Apple Books (iPad), Kindle Scribe, Google Play Books |
 | **Column Width / Max Line Length** | Cap the maximum readable column width (60-75 chars/line) on large screens | Kobo, Readwise Reader |
 | **Drop Caps** | Render decorative enlarged first letter of chapters from EPUB metadata | Kindle Enhanced Typesetting, Apple Books |
-| **Font Weight / Bold Intensity** | Slider to increase/decrease font weight without switching font families | Moon+ Reader Pro, Kobo TypeGenius |
+| **Font Weight / Bold Intensity** ✅ | Slider (100-900) to increase/decrease font weight without switching font families | Moon+ Reader Pro, Kobo TypeGenius |
 | **Typography Presets / Profiles** | Named, saveable profiles (e.g., "Night Comfort", "Speed Reading", "Dyslexia Friendly") that bundle font, spacing, and color settings | Kobo, Apple Books (page themes) |
 | **Custom CSS Injection** ✅ | Allow advanced users to inject custom CSS to override EPUB rendering | KOReader, Moon+ Reader Pro |
 

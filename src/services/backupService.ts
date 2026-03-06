@@ -193,6 +193,7 @@ export async function fullBackup(provider: CloudProviderType): Promise<BackupRes
       focusModeSettings: themeState.focusModeSettings,
       autoScroll: themeState.autoScroll,
       autoScrollSpeed: themeState.autoScrollSpeed,
+      fontWeight: themeState.fontWeight,
       customThemes: themeState.customThemes,
       pageTransitionType: themeState.pageTransitionType,
     };
@@ -414,6 +415,9 @@ export async function restoreBackup(
           }
           if (themeSettings.pageTransitionType) {
             themeStore.setPageTransitionType(themeSettings.pageTransitionType);
+          }
+          if (typeof themeSettings.fontWeight === 'number') {
+            themeStore.setFontWeight(themeSettings.fontWeight);
           }
 
           // Restore custom themes

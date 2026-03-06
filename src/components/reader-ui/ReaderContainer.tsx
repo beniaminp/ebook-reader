@@ -98,6 +98,7 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     hyphenation,
     paragraphSpacing,
     letterSpacing,
+    fontWeight,
     tapSensitivity,
     swipeThreshold,
   } = useThemeStore();
@@ -179,8 +180,9 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     root.style.setProperty('--reader-line-height', lineHeight.toString());
     root.style.setProperty('--reader-letter-spacing', `${letterSpacing}em`);
     root.style.setProperty('--reader-paragraph-spacing', `${paragraphSpacing}em`);
+    root.style.setProperty('--reader-font-weight', fontWeight.toString());
     root.style.setProperty('--reader-hyphens', hyphenation ? 'auto' : 'manual');
-  }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize, hyphenation, paragraphSpacing, letterSpacing]);
+  }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize, hyphenation, paragraphSpacing, letterSpacing, fontWeight]);
 
   // Apply bionic reading to text content
 

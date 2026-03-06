@@ -246,6 +246,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const hyphenationRef = useRef<boolean>(false);
   const paragraphSpacingRef = useRef<number>(1);
   const letterSpacingRef = useRef<number>(0);
+  const fontWeightRef = useRef<number>(400);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Track highlight annotations applied to the view
@@ -325,6 +326,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     }
     if (letterSpacingRef.current) {
       rules.push(`body { letter-spacing: ${letterSpacingRef.current}em !important; }`);
+    }
+    if (fontWeightRef.current !== 400) {
+      rules.push(`body, p, div, span, li, td, th, dd, dt, blockquote { font-weight: ${fontWeightRef.current} !important; }`);
     }
     if (bionicReadingRef.current) {
       rules.push(`
@@ -846,6 +850,10 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setLetterSpacing: (spacing: number) => {
         letterSpacingRef.current = spacing;
+        reapplyStyles();
+      },
+      setFontWeight: (weight: number) => {
+        fontWeightRef.current = weight;
         reapplyStyles();
       },
       setBionicReading: (enabled: boolean) => {
