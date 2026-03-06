@@ -426,6 +426,24 @@ const Reader: React.FC = () => {
     []
   );
 
+  const handleSubmitReview = useCallback(async () => {
+    if (!book) return;
+    try {
+      if (reviewRating > 0) {
+        await databaseService.updateBookMetadata(book.id, { rating: reviewRating });
+      }
+      if (reviewText.trim()) {
+        await databaseService.updateBook(book.id, { review: reviewText.trim() } as any);
+      }
+      if (reviewRating > 0 || reviewText.trim()) {
+        setToastMessage('Review saved!');
+      }
+    } catch {
+      setToastMessage('Failed to save review');
+    }
+    setShowReviewModal(false);
+  }, [book, reviewRating, reviewText]);
+
   // Loading state
   if (loadState === 'loading') {
     return (
@@ -511,24 +529,6 @@ const Reader: React.FC = () => {
       </IonPage>
     );
   }
-
-  const handleSubmitReview = useCallback(async () => {
-    if (!book) return;
-    try {
-      if (reviewRating > 0) {
-        await databaseService.updateBookMetadata(book.id, { rating: reviewRating });
-      }
-      if (reviewText.trim()) {
-        await databaseService.updateBook(book.id, { review: reviewText.trim() } as any);
-      }
-      if (reviewRating > 0 || reviewText.trim()) {
-        setToastMessage('Review saved!');
-      }
-    } catch {
-      setToastMessage('Failed to save review');
-    }
-    setShowReviewModal(false);
-  }, [book, reviewRating, reviewText]);
 
   // Loaded — render unified reader
   if (!book) return null;
