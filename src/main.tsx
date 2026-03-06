@@ -4,6 +4,14 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import App from './App';
 
+// Suppress benign ResizeObserver loop error (common with Ionic/foliate layout)
+// See: https://github.com/WICG/resize-observer/issues/38
+window.addEventListener('error', (e) => {
+  if (e.message === 'ResizeObserver loop completed with undelivered notifications.') {
+    e.stopImmediatePropagation();
+  }
+});
+
 const container = document.getElementById('root');
 const root = createRoot(container!);
 root.render(
