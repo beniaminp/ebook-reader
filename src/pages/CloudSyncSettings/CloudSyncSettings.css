@@ -1,280 +1,241 @@
 /**
  * Cloud Sync Settings Page Styles
+ * Uses the shared settings-section pattern from Settings.css
  */
 
-.cloud-sync-settings {
-  --padding-top: var(--ion-spacing-md);
-  --padding-bottom: var(--ion-spacing-xl);
-  --padding-start: var(--ion-spacing-md);
-  --padding-end: var(--ion-spacing-md);
+.cloud-sync-page {
+  --background: var(--ion-background-color, #f5f5f5);
 }
 
-/* Connection Card */
-.connect-card {
-  margin: var(--ion-spacing-md);
+.cloud-sync-page ion-toolbar {
+  --background: var(--ion-toolbar-background, var(--ion-color-primary));
+  --color: var(--ion-toolbar-color, #fff);
 }
 
-.connect-card ion-card-header {
-  text-align: center;
+/* ─── Fieldset reset (mirrors Settings.css) ─────────── */
+.cloud-sync-page .settings-fieldset {
+  border: none;
+  padding: 0;
 }
 
-.provider-description {
-  margin: var(--ion-spacing-md) 0;
-  text-align: center;
+.cloud-sync-page .settings-fieldset > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.auth-help-text {
-  display: block;
-  margin-top: var(--ion-spacing-md);
-  font-size: 0.9em;
-  line-height: 1.4;
-  color: var(--ion-color-medium);
+/* ─── Section (mirrors Settings.css) ────────────────── */
+.cloud-sync-page .settings-section {
+  margin: 12px 16px;
+  background: var(--ion-card-background, #fff);
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-/* Status Card */
-.status-card {
-  margin: var(--ion-spacing-md);
-}
-
-.status-card.connected {
-  --background: var(--ion-color-success-tint);
-}
-
-.status-card ion-card-title {
+.cloud-sync-page .settings-section-header {
   display: flex;
   align-items: center;
-  gap: var(--ion-spacing-sm);
+  gap: 10px;
+  padding: 14px 16px 6px;
 }
 
-.sync-info {
-  margin: var(--ion-spacing-md) 0;
-}
-
-.info-row {
+.cloud-sync-page .settings-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--ion-spacing-sm) 0;
-}
-
-.info-row .label {
-  font-weight: 500;
-  color: var(--ion-color-medium);
-}
-
-.info-row .value {
-  font-weight: 600;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ion-spacing-sm);
-  margin-top: var(--ion-spacing-md);
-}
-
-/* Progress Card */
-.progress-card {
-  margin: var(--ion-spacing-md);
-  --background: var(--ion-color-light-tint);
-}
-
-.progress-card ion-card-title {
-  display: flex;
-  align-items: center;
-  gap: var(--ion-spacing-sm);
-}
-
-.progress-details {
-  margin-top: var(--ion-spacing-md);
-}
-
-.progress-details p {
-  margin: 0;
-  font-weight: 600;
-}
-
-.progress-details .file-name {
-  display: block;
-  margin-top: var(--ion-spacing-xs);
-  font-size: 0.85em;
-  word-break: break-all;
-}
-
-/* Cloud Book Items */
-.cloud-book-item {
-  --padding-start: var(--ion-spacing-md);
-  --padding-end: var(--ion-spacing-md);
-}
-
-.cloud-book-item ion-label h3 {
-  font-weight: 600;
-  margin-bottom: var(--ion-spacing-xs);
-}
-
-/* Info Card */
-.info-card {
-  margin: var(--ion-spacing-md);
-}
-
-.info-card ul {
-  margin: var(--ion-spacing-md) 0;
-  padding-left: var(--ion-spacing-lg);
-}
-
-.info-card li {
-  margin-bottom: var(--ion-spacing-xs);
-}
-
-/* Modal Actions */
-.modal-actions {
-  padding: var(--ion-spacing-md);
-}
-
-.modal-actions ion-button {
-  margin-bottom: var(--ion-spacing-sm);
-}
-
-/* Segmented Control Styling */
-ion-segment {
-  --background: var(--ion-color-light);
-  margin-bottom: var(--ion-spacing-md);
-  border-radius: var(--ion-border-radius);
-}
-
-ion-segment-button {
-  --background: transparent;
-  --background-checked: var(--ion-color-primary);
-  --color-checked: var(--ion-color-primary-contrast);
-  --border-radius: var(--ion-border-radius);
-  min-height: 48px;
-}
-
-ion-segment-button ion-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-/* Chip Styling */
-ion-chip {
-  margin: 2px;
-}
-
-/* Responsive adjustments */
-@media (min-width: 768px) {
-  .action-buttons {
-    flex-direction: row;
-  }
-
-  .action-buttons ion-button {
-    flex: 1;
-  }
-}
-
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .progress-card {
-    --background: var(--ion-color-dark-shade);
-  }
-
-  .status-card.connected {
-    --background: rgba(16, 185, 129, 0.15);
-  }
-}
-
-/* Loading state */
-.loading-container {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--ion-spacing-xl);
-  gap: var(--ion-spacing-md);
+  font-size: 17px;
+  color: #fff;
+  flex-shrink: 0;
 }
 
-.loading-container ion-spinner {
-  width: 48px;
-  height: 48px;
+.cloud-sync-page .settings-section-icon--green {
+  background: linear-gradient(135deg, #43a047, #2e7d32);
+}
+.cloud-sync-page .settings-section-icon--blue {
+  background: linear-gradient(135deg, #4a90d9, #357abd);
+}
+.cloud-sync-page .settings-section-icon--indigo {
+  background: linear-gradient(135deg, #5c6bc0, #3949ab);
 }
 
-/* Empty state */
-.empty-state {
-  text-align: center;
-  padding: var(--ion-spacing-xl);
+.cloud-sync-page .settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--ion-color-medium);
 }
 
-.empty-state ion-icon {
-  font-size: 64px;
-  margin-bottom: var(--ion-spacing-md);
-  opacity: 0.5;
+/* ─── Items ─────────────────────────────────────────── */
+.cloud-sync-page .settings-section ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 48px;
+  font-size: 15px;
 }
 
-.empty-state h3 {
-  margin-bottom: var(--ion-spacing-sm);
+.cloud-sync-page .settings-section ion-item:last-child {
+  --border-style: none;
 }
 
-.empty-state p {
-  font-size: 0.9em;
+.cloud-sync-page .settings-section ion-item ion-label h3 {
+  font-size: 15px;
+  font-weight: 500;
 }
 
-/* Animation */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+.cloud-sync-page .settings-section ion-item ion-note {
+  font-size: 12px;
+  margin-top: 2px;
 }
 
-.syncing .progress-bar {
-  animation: pulse 1.5s ease-in-out infinite;
+.cloud-sync-page .settings-section ion-item ion-select {
+  font-size: 14px;
+  --placeholder-opacity: 0.6;
 }
 
-/* Backup Card */
-.backup-card {
-  margin: var(--ion-spacing-md);
+.cloud-sync-page .settings-section ion-item ion-toggle {
+  --track-background: #ccc;
 }
 
-.backup-card ion-card-header {
-  text-align: center;
-}
-
-.backup-card .backups-list {
-  margin-top: var(--ion-spacing-md);
-}
-
-.backup-item {
-  --padding-start: var(--ion-spacing-md);
-  --padding-end: var(--ion-spacing-sm);
-}
-
-.backup-item ion-label h3 {
-  font-weight: 600;
-  margin-bottom: var(--ion-spacing-xs);
-  font-size: 0.95em;
-}
-
-.backup-item ion-label p {
+/* ─── Provider Tiles ────────────────────────────────── */
+.provider-tiles {
   display: flex;
-  align-items: center;
-  gap: var(--ion-spacing-xs);
-  font-size: 0.85em;
+  gap: 12px;
+  padding: 12px 16px;
 }
 
+.provider-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--ion-color-light-shade, #d7d8da);
+  background: var(--ion-color-light, #f4f5f8);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.provider-tile:active {
+  transform: scale(0.97);
+}
+
+.provider-tile ion-icon {
+  font-size: 32px;
+  color: var(--ion-color-medium);
+  transition: color 0.2s;
+}
+
+.provider-tile span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  transition: color 0.2s;
+}
+
+.provider-tile--selected {
+  border-color: var(--ion-color-primary);
+  background: rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.08);
+}
+
+.provider-tile--selected ion-icon,
+.provider-tile--selected span {
+  color: var(--ion-color-primary);
+}
+
+/* ─── Credential Fields ─────────────────────────────── */
+.credential-fields {
+  background: transparent;
+  padding: 0;
+}
+
+.credential-help {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ion-color-medium);
+  padding: 4px 0 8px;
+}
+
+/* ─── Section Action Button ─────────────────────────── */
+.section-action {
+  padding: 8px 16px 16px;
+}
+
+.section-action ion-button {
+  --border-radius: 10px;
+}
+
+/* ─── Connection Actions ────────────────────────────── */
+.connection-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+/* ─── Sync Progress Inline ──────────────────────────── */
+.sync-progress-inline {
+  padding: 8px 16px 12px;
+}
+
+.sync-progress-inline ion-progress-bar {
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.sync-progress-inline ion-note {
+  font-size: 12px;
+}
+
+/* ─── Loading Backups ───────────────────────────────── */
 .loading-backups {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--ion-spacing-lg);
-  gap: var(--ion-spacing-sm);
+  padding: 20px 16px;
+  gap: 8px;
   color: var(--ion-color-medium);
 }
 
 .loading-backups ion-spinner {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
+}
+
+/* ─── Dark Mode ─────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .cloud-sync-page {
+    --background: #1a1a1a;
+  }
+
+  .cloud-sync-page .settings-section {
+    background: #252525;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .provider-tile {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .provider-tile--selected {
+    border-color: var(--ion-color-primary);
+    background: rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.15);
+  }
 }

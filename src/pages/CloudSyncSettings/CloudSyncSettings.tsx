@@ -15,13 +15,7 @@ import {
   IonItem,
   IonLabel,
   IonList,
-  IonListHeader,
   IonIcon,
-  IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
   IonSpinner,
   IonAlert,
   IonToast,
@@ -29,30 +23,28 @@ import {
   IonNote,
   IonSelect,
   IonSelectOption,
-  IonSegment,
-  IonSegmentButton,
-  IonModal,
   IonButtons,
   IonBackButton,
   IonProgressBar,
-  IonChip,
   IonText,
   IonActionSheet,
   IonLoading,
 } from '@ionic/react';
 import {
   cloudUploadOutline,
-  cloudDownloadOutline,
   checkmarkCircle,
-  alertCircle,
   refreshOutline,
   trashOutline,
   logoDropbox,
   cloudOutline,
-  wifiOutline,
   saveOutline,
   timeOutline,
   downloadOutline,
+  logOutOutline,
+  settingsOutline,
+  shieldCheckmarkOutline,
+  personOutline,
+  serverOutline,
 } from 'ionicons/icons';
 import { useCloudSyncStore } from '../../stores/cloudSyncStore';
 import { useAppStore } from '../../stores/useAppStore';
@@ -77,14 +69,11 @@ const CloudSyncSettings: React.FC = () => {
     lastSyncTime,
     lastSyncResult,
     syncProgress,
-    cloudBooks,
     error,
     initialize,
     connect,
     disconnect,
     syncData,
-    listCloudBooks,
-    deleteCloudBook,
     setAutoSync,
     setSyncInterval,
     setSyncOnWifiOnly,
@@ -97,7 +86,6 @@ const CloudSyncSettings: React.FC = () => {
 
   // UI state
   const [selectedProvider, setSelectedProvider] = useState<CloudProviderType>('dropbox');
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSyncResult, setShowSyncResult] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -123,14 +111,12 @@ const CloudSyncSettings: React.FC = () => {
     loadBackups();
   }, []);
 
-  // Load backups when connected
   useEffect(() => {
     if (isConnected) {
       loadBackups();
     }
   }, [isConnected, selectedProvider]);
 
-  // Format bytes
   const formatBytes = (bytes: number | null): string => {
     if (!bytes) return '0 B';
     const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -138,13 +124,11 @@ const CloudSyncSettings: React.FC = () => {
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  // Format date
   const formatDate = (timestamp: number): string => {
     if (!timestamp) return 'Never';
     return new Date(timestamp).toLocaleString();
   };
 
-  // Handle connect
   const handleConnect = async () => {
     setIsConnecting(true);
     clearError();
@@ -176,7 +160,6 @@ const CloudSyncSettings: React.FC = () => {
     setIsConnecting(false);
 
     if (success) {
-      setShowAuthModal(false);
       setDropboxToken('');
       setWebdavUrl('');
       setWebdavUsername('');
@@ -184,15 +167,12 @@ const CloudSyncSettings: React.FC = () => {
     }
   };
 
-  // Handle disconnect
   const handleDisconnect = async () => {
     await disconnect();
   };
 
-  // Handle manual sync
   const handleSync = async () => {
     try {
-      // Get all bookmarks, highlights, and progress from database
       const allBookmarks: any[] = [];
       const allHighlights: any[] = [];
       const allProgress: any[] = [];
@@ -210,20 +190,13 @@ const CloudSyncSettings: React.FC = () => {
         }
       }
 
-      const result = await syncData(allBookmarks, allHighlights, allProgress);
+      await syncData(allBookmarks, allHighlights, allProgress);
       setShowSyncResult(true);
     } catch (err) {
       console.error('Sync failed:', err);
     }
   };
 
-  // Handle delete cloud book
-  const handleDeleteBook = async (path: string) => {
-    await deleteCloudBook(path);
-    await listCloudBooks();
-  };
-
-  // Load available backups
   const loadBackups = async () => {
     if (!isConnected) return;
 
@@ -238,7 +211,6 @@ const CloudSyncSettings: React.FC = () => {
     }
   };
 
-  // Handle create backup
   const handleCreateBackup = async () => {
     setIsCreatingBackup(true);
     clearError();
@@ -259,13 +231,11 @@ const CloudSyncSettings: React.FC = () => {
     }
   };
 
-  // Handle restore backup
   const handleRestoreBackup = async (backup: BackupInfo) => {
     setSelectedBackup(backup);
     setShowBackupActionSheet(true);
   };
 
-  // Confirm restore backup
   const confirmRestoreBackup = async (mergeStrategy?: 'merge' | 'replace') => {
     if (!selectedBackup) return;
 
@@ -282,7 +252,6 @@ const CloudSyncSettings: React.FC = () => {
       setRestoreResult(result);
       setShowBackupResult(true);
 
-      // Refresh app data
       if (result.success) {
         window.location.reload();
       }
@@ -295,7 +264,6 @@ const CloudSyncSettings: React.FC = () => {
     }
   };
 
-  // Handle delete backup
   const handleDeleteBackup = async (backup: BackupInfo) => {
     const success = await backupService.deleteBackup(selectedProvider, backup.path);
     if (success) {
@@ -303,20 +271,18 @@ const CloudSyncSettings: React.FC = () => {
     }
   };
 
-  // Get backup size as formatted string
   const formatBackupSize = (bytes: number): string => {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  // Get backup date as formatted string
   const formatBackupDate = (timestamp: number): string => {
     return new Date(timestamp).toLocaleString();
   };
 
   return (
-    <IonPage>
+    <IonPage className="cloud-sync-page">
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
@@ -326,142 +292,199 @@ const CloudSyncSettings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="cloud-sync-settings">
-        {/* Connection Status Card */}
-        {!isConnected ? (
-          <IonCard className="connect-card">
-            <IonCardHeader>
-              <IonCardTitle>Connect to Cloud Storage</IonCardTitle>
-              <IonCardSubtitle>
-                Sync your reading progress, bookmarks, and highlights across devices
-              </IonCardSubtitle>
-            </IonCardHeader>
-            <IonCardContent>
-              <IonSegment
-                value={selectedProvider}
-                onIonChange={(e) => setSelectedProvider(e.detail.value as CloudProviderType)}
-                mode="md"
-              >
-                <IonSegmentButton value="dropbox">
+      <IonContent>
+        {/* Connection Section */}
+        <fieldset className="settings-section settings-fieldset">
+          <legend>Connection</legend>
+          <div className="settings-section-header">
+            <div className="settings-section-icon settings-section-icon--green">
+              <IonIcon icon={cloudOutline} />
+            </div>
+            <span className="settings-section-title" aria-hidden="true">Connection</span>
+          </div>
+
+          {!isConnected ? (
+            <>
+              <div className="provider-tiles">
+                <button
+                  className={`provider-tile${selectedProvider === 'dropbox' ? ' provider-tile--selected' : ''}`}
+                  onClick={() => setSelectedProvider('dropbox')}
+                  type="button"
+                >
                   <IonIcon icon={logoDropbox} />
-                  <IonLabel>Dropbox</IonLabel>
-                </IonSegmentButton>
-                <IonSegmentButton value="webdav">
-                  <IonIcon icon={cloudOutline} />
-                  <IonLabel>WebDAV</IonLabel>
-                </IonSegmentButton>
-              </IonSegment>
+                  <span>Dropbox</span>
+                </button>
+                <button
+                  className={`provider-tile${selectedProvider === 'webdav' ? ' provider-tile--selected' : ''}`}
+                  onClick={() => setSelectedProvider('webdav')}
+                  type="button"
+                >
+                  <IonIcon icon={serverOutline} />
+                  <span>WebDAV</span>
+                </button>
+              </div>
 
-              <div className="provider-description">
+              <IonList className="credential-fields">
                 {selectedProvider === 'dropbox' ? (
-                  <IonNote>
-                    Connect to your Dropbox account to sync your reading data. You'll need a Dropbox
-                    access token.
-                  </IonNote>
+                  <>
+                    <IonItem>
+                      <IonLabel position="stacked">Access Token</IonLabel>
+                      <IonInput
+                        type="password"
+                        value={dropboxToken}
+                        placeholder="Enter your Dropbox access token"
+                        onIonInput={(e) => setDropboxToken(e.detail.value || '')}
+                      />
+                    </IonItem>
+                    <IonItem lines="none">
+                      <IonNote className="credential-help">
+                        Go to the Dropbox App Console, create an app, and generate an access token
+                        with "Files" permissions.
+                      </IonNote>
+                    </IonItem>
+                  </>
                 ) : (
-                  <IonNote>
-                    Connect to any WebDAV-compatible cloud storage (Nextcloud, ownCloud, etc.) to
-                    sync your reading data.
-                  </IonNote>
+                  <>
+                    <IonItem>
+                      <IonLabel position="stacked">Server URL</IonLabel>
+                      <IonInput
+                        value={webdavUrl}
+                        placeholder="https://cloud.example.com/remote.php/webdav"
+                        onIonInput={(e) => setWebdavUrl(e.detail.value || '')}
+                      />
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel position="stacked">Username</IonLabel>
+                      <IonInput
+                        value={webdavUsername}
+                        placeholder="Your username"
+                        onIonInput={(e) => setWebdavUsername(e.detail.value || '')}
+                      />
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel position="stacked">Password</IonLabel>
+                      <IonInput
+                        type="password"
+                        value={webdavPassword}
+                        placeholder="Your password or app password"
+                        onIonInput={(e) => setWebdavPassword(e.detail.value || '')}
+                      />
+                    </IonItem>
+                    <IonItem lines="none">
+                      <IonNote className="credential-help">
+                        For Nextcloud, use: https://your-domain.com/remote.php/webdav/
+                      </IonNote>
+                    </IonItem>
+                  </>
                 )}
-              </div>
+              </IonList>
 
-              <IonButton expand="block" onClick={() => setShowAuthModal(true)}>
-                <IonIcon
-                  icon={selectedProvider === 'dropbox' ? logoDropbox : cloudOutline}
-                  slot="start"
-                />
-                Connect to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}
-              </IonButton>
-            </IonCardContent>
-          </IonCard>
-        ) : (
-          <IonCard className="status-card connected">
-            <IonCardHeader>
-              <IonCardTitle>
-                <IonIcon icon={checkmarkCircle} color="success" />
-                Connected to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}
-              </IonCardTitle>
-              {accountName && <IonCardSubtitle>{accountName}</IonCardSubtitle>}
-              {accountEmail && <IonCardSubtitle>{accountEmail}</IonCardSubtitle>}
-            </IonCardHeader>
-            <IonCardContent>
-              <div className="sync-info">
-                <div className="info-row">
-                  <span className="label">Last synced:</span>
-                  <span className="value">{formatDate(lastSyncTime)}</span>
-                </div>
-                {(quotaUsed !== null || quotaTotal !== null) && (
-                  <div className="info-row">
-                    <span className="label">Storage used:</span>
-                    <span className="value">
-                      {formatBytes(quotaUsed)} / {formatBytes(quotaTotal)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="action-buttons">
-                <IonButton expand="block" onClick={handleSync} disabled={syncStatus === 'syncing'}>
-                  {syncStatus === 'syncing' ? (
+              <div className="section-action">
+                <IonButton expand="block" onClick={handleConnect} disabled={isConnecting}>
+                  {isConnecting ? (
                     <>
                       <IonSpinner name="crescent" slot="start" />
-                      Syncing...
+                      Connecting...
                     </>
                   ) : (
-                    <>
-                      <IonIcon icon={refreshOutline} slot="start" />
-                      Sync Now
-                    </>
+                    'Connect'
                   )}
                 </IonButton>
-
-                <IonButton expand="block" fill="outline" color="danger" onClick={handleDisconnect}>
-                  <IonIcon icon={trashOutline} slot="start" />
-                  Disconnect
-                </IonButton>
               </div>
-            </IonCardContent>
-          </IonCard>
-        )}
+            </>
+          ) : (
+            <>
+              <IonItem>
+                <IonIcon icon={checkmarkCircle} slot="start" color="success" />
+                <IonLabel>
+                  <h3>Connected to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}</h3>
+                  <IonNote>
+                    {[accountName, accountEmail].filter(Boolean).join(' \u00B7 ') || 'Connected'}
+                  </IonNote>
+                </IonLabel>
+              </IonItem>
 
-        {/* Sync Progress */}
-        {syncStatus === 'syncing' && syncProgress && (
-          <IonCard className="progress-card">
-            <IonCardHeader>
-              <IonCardTitle>
-                <IonSpinner name="crescent" />
-                Syncing...
-              </IonCardTitle>
-            </IonCardHeader>
-            <IonCardContent>
-              <IonProgressBar value={syncProgress.progress / 100} />
-              <div className="progress-details">
-                <p>
-                  {syncProgress.currentOperation && formatOperation(syncProgress.currentOperation)}
-                </p>
-                {syncProgress.currentFile && (
-                  <IonNote className="file-name">{syncProgress.currentFile}</IonNote>
-                )}
-                <IonText>
-                  {syncProgress.itemsCompleted} / {syncProgress.itemsTotal} items
-                </IonText>
-              </div>
-            </IonCardContent>
-          </IonCard>
-        )}
+              <IonItem>
+                <IonIcon icon={timeOutline} slot="start" color="medium" />
+                <IonLabel>
+                  <h3>Last Synced</h3>
+                  <IonNote>{formatDate(lastSyncTime)}</IonNote>
+                </IonLabel>
+              </IonItem>
 
-        {/* Sync Settings */}
+              {(quotaUsed !== null || quotaTotal !== null) && (
+                <IonItem>
+                  <IonIcon icon={cloudUploadOutline} slot="start" color="medium" />
+                  <IonLabel>
+                    <h3>Storage</h3>
+                    <IonNote>
+                      {formatBytes(quotaUsed)} / {formatBytes(quotaTotal)}
+                    </IonNote>
+                  </IonLabel>
+                </IonItem>
+              )}
+
+              {syncStatus === 'syncing' && syncProgress && (
+                <div className="sync-progress-inline">
+                  <IonProgressBar value={syncProgress.progress / 100} />
+                  <IonNote>
+                    {syncProgress.currentOperation && formatOperation(syncProgress.currentOperation)}
+                    {' '}{syncProgress.itemsCompleted} / {syncProgress.itemsTotal} items
+                  </IonNote>
+                </div>
+              )}
+
+              <IonItem>
+                <IonLabel>
+                  <div className="connection-actions">
+                    <IonButton
+                      fill="outline"
+                      size="small"
+                      onClick={handleSync}
+                      disabled={syncStatus === 'syncing'}
+                      style={{ '--border-radius': '8px' } as any}
+                    >
+                      {syncStatus === 'syncing' ? (
+                        <IonSpinner name="crescent" />
+                      ) : (
+                        <>
+                          <IonIcon icon={refreshOutline} slot="start" />
+                          Sync Now
+                        </>
+                      )}
+                    </IonButton>
+                    <IonButton
+                      fill="outline"
+                      size="small"
+                      color="danger"
+                      onClick={handleDisconnect}
+                      style={{ '--border-radius': '8px' } as any}
+                    >
+                      <IonIcon icon={logOutOutline} slot="start" />
+                      Disconnect
+                    </IonButton>
+                  </div>
+                </IonLabel>
+              </IonItem>
+            </>
+          )}
+        </fieldset>
+
+        {/* Sync Settings Section */}
         {isConnected && (
-          <IonList>
-            <IonListHeader>
-              <IonLabel>Sync Settings</IonLabel>
-            </IonListHeader>
+          <fieldset className="settings-section settings-fieldset">
+            <legend>Sync Settings</legend>
+            <div className="settings-section-header">
+              <div className="settings-section-icon settings-section-icon--blue">
+                <IonIcon icon={settingsOutline} />
+              </div>
+              <span className="settings-section-title" aria-hidden="true">Sync Settings</span>
+            </div>
 
             <IonItem>
               <IonLabel>
                 <h3>Auto Sync</h3>
-                <p>Automatically sync your reading data</p>
+                <IonNote>Automatically sync your reading data</IonNote>
               </IonLabel>
               <IonToggle checked={autoSync} onIonChange={(e) => setAutoSync(e.detail.checked)} />
             </IonItem>
@@ -485,7 +508,7 @@ const CloudSyncSettings: React.FC = () => {
             <IonItem>
               <IonLabel>
                 <h3>WiFi Only</h3>
-                <p>Only sync when connected to WiFi</p>
+                <IonNote>Only sync when connected to WiFi</IonNote>
               </IonLabel>
               <IonToggle
                 checked={syncOnWifiOnly}
@@ -504,213 +527,82 @@ const CloudSyncSettings: React.FC = () => {
                 <IonSelectOption value="server-wins">Cloud Wins</IonSelectOption>
               </IonSelect>
             </IonItem>
-          </IonList>
-        )}
-
-        {/* Cloud Books */}
-        {isConnected && cloudBooks.length > 0 && (
-          <IonList>
-            <IonListHeader>
-              <IonLabel>Cloud Books ({cloudBooks.length})</IonLabel>
-            </IonListHeader>
-
-            {cloudBooks.map((book) => (
-              <IonItem key={book.id} className="cloud-book-item">
-                <IonLabel>
-                  <h3>{book.name}</h3>
-                  <p>
-                    {book.format.toUpperCase()} · {formatBytes(book.size)}
-                  </p>
-                </IonLabel>
-                <IonButton fill="clear" color="danger" onClick={() => handleDeleteBook(book.path)}>
-                  <IonIcon icon={trashOutline} />
-                </IonButton>
-              </IonItem>
-            ))}
-          </IonList>
+          </fieldset>
         )}
 
         {/* Backup & Restore Section */}
         {isConnected && (
-          <IonCard className="backup-card">
-            <IonCardHeader>
-              <IonCardTitle>Backup & Restore</IonCardTitle>
-              <IonCardSubtitle>
-                Create full backups or restore from previous backups
-              </IonCardSubtitle>
-            </IonCardHeader>
-            <IonCardContent>
-              <IonButton expand="block" onClick={handleCreateBackup} disabled={isCreatingBackup}>
-                {isCreatingBackup ? (
-                  <>
-                    <IonSpinner name="crescent" slot="start" />
-                    Creating Backup...
-                  </>
-                ) : (
-                  <>
-                    <IonIcon icon={saveOutline} slot="start" />
-                    Create Backup
-                  </>
-                )}
+          <fieldset className="settings-section settings-fieldset">
+            <legend>Backup & Restore</legend>
+            <div className="settings-section-header">
+              <div className="settings-section-icon settings-section-icon--indigo">
+                <IonIcon icon={shieldCheckmarkOutline} />
+              </div>
+              <span className="settings-section-title" aria-hidden="true">Backup & Restore</span>
+            </div>
+
+            <IonItem>
+              <IonIcon icon={saveOutline} slot="start" color="primary" />
+              <IonLabel>
+                <h3>Create Backup</h3>
+                <IonNote>Save all data to cloud storage</IonNote>
+              </IonLabel>
+              <IonButton
+                slot="end"
+                fill="outline"
+                size="small"
+                onClick={handleCreateBackup}
+                disabled={isCreatingBackup}
+                style={{ '--border-radius': '8px' } as any}
+              >
+                {isCreatingBackup ? <IonSpinner name="crescent" /> : 'Backup'}
               </IonButton>
+            </IonItem>
 
-              {isLoadingBackups && (
-                <div className="loading-backups">
-                  <IonSpinner name="crescent" />
-                  <IonText>Loading backups...</IonText>
-                </div>
-              )}
+            {isLoadingBackups && (
+              <div className="loading-backups">
+                <IonSpinner name="crescent" />
+                <IonNote>Loading backups...</IonNote>
+              </div>
+            )}
 
-              {!isLoadingBackups && backups.length > 0 && (
-                <IonList className="backups-list">
-                  <IonListHeader>
-                    <IonLabel>Available Backups ({backups.length})</IonLabel>
-                  </IonListHeader>
-
-                  {backups.map((backup) => (
-                    <IonItem key={backup.path} className="backup-item">
-                      <IonLabel>
-                        <h3>{formatBackupDate(backup.timestamp)}</h3>
-                        <p>
-                          <IonIcon icon={timeOutline} />
-                          {formatBackupSize(backup.size)}
-                        </p>
-                      </IonLabel>
-                      <IonButton fill="clear" onClick={() => handleRestoreBackup(backup)}>
-                        <IonIcon icon={downloadOutline} />
-                      </IonButton>
-                      <IonButton
-                        fill="clear"
-                        color="danger"
-                        onClick={() => handleDeleteBackup(backup)}
-                      >
-                        <IonIcon icon={trashOutline} />
-                      </IonButton>
-                    </IonItem>
-                  ))}
-                </IonList>
-              )}
-
-              {!isLoadingBackups && backups.length === 0 && (
-                <IonNote>No backups found. Create a backup to save your current data.</IonNote>
-              )}
-            </IonCardContent>
-          </IonCard>
-        )}
-
-        {/* Info Card */}
-        <IonCard className="info-card">
-          <IonCardHeader>
-            <IonCardTitle>About Cloud Sync</IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <p>
-              Cloud sync keeps your reading progress, bookmarks, and highlights synchronized across
-              all your devices.
-            </p>
-            <p>
-              <strong>What gets synced:</strong>
-            </p>
-            <ul>
-              <li>Reading progress (current page, percentage)</li>
-              <li>Bookmarks with their locations</li>
-              <li>Highlights with colors and notes</li>
-            </ul>
-            <IonNote>
-              <IonIcon icon={wifiOutline} />
-              For best results, sync over a WiFi connection to avoid data charges.
-            </IonNote>
-          </IonCardContent>
-        </IonCard>
-      </IonContent>
-
-      {/* Authentication Modal */}
-      <IonModal isOpen={showAuthModal} onDidDismiss={() => setShowAuthModal(false)}>
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>Connect to {selectedProvider === 'dropbox' ? 'Dropbox' : 'WebDAV'}</IonTitle>
-            <IonButtons slot="end">
-              <IonButton onClick={() => setShowAuthModal(false)}>Close</IonButton>
-            </IonButtons>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent>
-          <IonList>
-            {selectedProvider === 'dropbox' ? (
+            {!isLoadingBackups && backups.length > 0 && (
               <>
-                <IonItem>
-                  <IonLabel position="stacked">Access Token</IonLabel>
-                  <IonInput
-                    type="password"
-                    value={dropboxToken}
-                    placeholder="Enter your Dropbox access token"
-                    onIonInput={(e) => setDropboxToken(e.detail.value || '')}
-                  />
-                </IonItem>
-                <IonItem lines="none">
-                  <IonNote className="auth-help-text">
-                    To get an access token, go to the Dropbox App Console, create an app, and
-                    generate an access token. The app needs "Files" permissions.
-                  </IonNote>
-                </IonItem>
-              </>
-            ) : (
-              <>
-                <IonItem>
-                  <IonLabel position="stacked">Server URL</IonLabel>
-                  <IonInput
-                    value={webdavUrl}
-                    placeholder="https://cloud.example.com/remote.php/webdav"
-                    onIonInput={(e) => setWebdavUrl(e.detail.value || '')}
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Username</IonLabel>
-                  <IonInput
-                    value={webdavUsername}
-                    placeholder="Your username"
-                    onIonInput={(e) => setWebdavUsername(e.detail.value || '')}
-                  />
-                </IonItem>
-                <IonItem>
-                  <IonLabel position="stacked">Password</IonLabel>
-                  <IonInput
-                    type="password"
-                    value={webdavPassword}
-                    placeholder="Your password or app password"
-                    onIonInput={(e) => setWebdavPassword(e.detail.value || '')}
-                  />
-                </IonItem>
-                <IonItem lines="none">
-                  <IonNote className="auth-help-text">
-                    Enter your WebDAV server URL and credentials. For Nextcloud, use the format:
-                    https://your-domain.com/remote.php/webdav/
-                  </IonNote>
-                </IonItem>
+                {backups.map((backup) => (
+                  <IonItem key={backup.path}>
+                    <IonIcon icon={timeOutline} slot="start" color="medium" />
+                    <IonLabel>
+                      <h3>{formatBackupDate(backup.timestamp)}</h3>
+                      <IonNote>{formatBackupSize(backup.size)}</IonNote>
+                    </IonLabel>
+                    <IonButton
+                      fill="clear"
+                      size="small"
+                      onClick={() => handleRestoreBackup(backup)}
+                    >
+                      <IonIcon icon={downloadOutline} />
+                    </IonButton>
+                    <IonButton
+                      fill="clear"
+                      size="small"
+                      color="danger"
+                      onClick={() => handleDeleteBackup(backup)}
+                    >
+                      <IonIcon icon={trashOutline} />
+                    </IonButton>
+                  </IonItem>
+                ))}
               </>
             )}
-          </IonList>
 
-          <div className="modal-actions">
-            <IonButton expand="block" onClick={handleConnect} disabled={isConnecting}>
-              {isConnecting ? (
-                <>
-                  <IonSpinner name="crescent" slot="start" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <IonIcon
-                    icon={selectedProvider === 'dropbox' ? logoDropbox : cloudOutline}
-                    slot="start"
-                  />
-                  Connect
-                </>
-              )}
-            </IonButton>
-          </div>
-        </IonContent>
-      </IonModal>
+            {!isLoadingBackups && backups.length === 0 && (
+              <IonItem lines="none">
+                <IonNote>No backups yet. Create one to save your current data.</IonNote>
+              </IonItem>
+            )}
+          </fieldset>
+        )}
+      </IonContent>
 
       {/* Sync Result Alert */}
       <IonAlert
