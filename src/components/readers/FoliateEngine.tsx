@@ -731,6 +731,14 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         await view.open(file);
         if (destroyed) return;
 
+        // Remove the paginator's built-in gap/margin so only the body
+        // padding (from customMargins) controls content spacing.
+        const renderer = (view as any)?.renderer;
+        if (renderer) {
+          renderer.setAttribute('margin', '0px');
+          renderer.setAttribute('gap', '0%');
+        }
+
         if (initialLocationRef.current) {
           await view.goTo(initialLocationRef.current);
         } else {
@@ -878,6 +886,14 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setCustomMargins: (margins: { top: number; bottom: number; left: number; right: number }) => {
         customMarginsRef.current = margins;
+        // Update the paginator's outer gap/margin to match.
+        // The body padding inside the iframe handles content spacing,
+        // so set paginator gap/margin to 0 to avoid double spacing.
+        const renderer = (viewRef.current as any)?.renderer;
+        if (renderer) {
+          renderer.setAttribute('margin', '0px');
+          renderer.setAttribute('gap', '0%');
+        }
         reapplyStyles();
       },
       setHyphenation: (enabled: boolean) => {
