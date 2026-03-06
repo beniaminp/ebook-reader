@@ -59,13 +59,9 @@ export {
   TranslationServiceError,
 } from './translationService';
 export type {
-  TranslationServiceConfig,
   LanguageCode,
-  TranslationRequest,
   TranslationResponse,
-  LanguageDetectionResponse,
 } from './translationService';
-// Note: TranslationError is available through TranslationServiceError class
 
 // Dictionary
 export { dictionaryService } from './dictionaryService';

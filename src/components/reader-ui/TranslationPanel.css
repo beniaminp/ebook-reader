@@ -1,156 +1,215 @@
 /**
- * TranslationPanel Styles
+ * TranslationPanel Styles — compact bottom sheet
  */
 
-.translation-panel-content {
-  padding: 16px;
+.translation-modal {
+  --border-radius: 16px 16px 0 0;
 }
 
-/* Language Selector Card */
-.language-selector-card {
-  margin: 0 0 16px 0;
+.translation-modal::part(content) {
+  border-radius: 16px 16px 0 0;
 }
 
-.language-row {
+.tp-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Header: language selectors + close */
+.tp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.tp-lang-bar {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+  background: var(--ion-color-light, #f4f5f8);
+  border-radius: 10px;
+  padding: 2px 4px;
+}
+
+.tp-lang-select {
+  flex: 1;
+  min-width: 0;
+  --padding-start: 8px;
+  --padding-end: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tp-swap-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--ion-color-primary);
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.15s;
+}
+
+.tp-swap-btn:active {
+  background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
+}
+
+.tp-swap-btn:disabled {
+  opacity: 0.3;
+}
+
+.tp-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--ion-color-light, #f4f5f8);
+  color: var(--ion-color-medium);
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+/* Language label above text */
+.tp-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ion-color-medium);
+  margin-bottom: 4px;
+}
+
+/* Source text */
+.tp-source {
+  flex-shrink: 0;
+}
+
+.tp-source-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ion-text-color);
+  max-height: 120px;
+  overflow-y: auto;
+  word-wrap: break-word;
+}
+
+/* Divider */
+.tp-divider {
+  height: 1px;
+  background: var(--ion-color-light-shade, #d7d8da);
+  margin: 12px 0;
+  flex-shrink: 0;
+}
+
+/* Result */
+.tp-result {
+  flex: 1;
+  min-height: 60px;
+}
+
+.tp-translated-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ion-color-primary);
+  font-weight: 500;
+  word-wrap: break-word;
+  animation: tpFadeIn 0.25s ease-out;
+}
+
+.tp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.tp-error {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.language-select {
+.tp-error p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ion-color-danger);
   flex: 1;
 }
 
-.language-label {
-  font-size: 12px;
+.tp-retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--ion-color-medium);
+  background: transparent;
   color: var(--ion-color-medium);
-  margin-bottom: 4px;
-}
-
-.swap-button {
-  --padding-start: 8px;
-  --padding-end: 8px;
-  margin-top: 20px;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
   flex-shrink: 0;
 }
 
-.detected-lang-chip {
-  margin-top: 8px;
-  height: 24px;
-  font-size: 12px;
+/* Action buttons */
+.tp-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--ion-color-light-shade, #d7d8da);
+  padding-top: 10px;
 }
 
-/* Text Cards */
-.text-card,
-.translation-result-card {
-  margin: 0 0 16px 0;
+.tp-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--ion-color-light, #f4f5f8);
+  color: var(--ion-text-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-.text-card-subtitle {
-  font-size: 12px;
-  color: var(--ion-color-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.tp-action-btn:active {
+  background: var(--ion-color-light-shade);
 }
 
-.original-text,
-.translated-text {
+.tp-action-btn ion-icon {
   font-size: 16px;
-  line-height: 1.6;
-}
-
-.original-text p,
-.translated-text p {
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.translated-text {
   color: var(--ion-color-primary);
 }
 
-/* Loading State */
-.translation-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  color: var(--ion-color-medium);
-}
-
-.translation-loading p {
-  margin-top: 16px;
-  font-size: 14px;
-}
-
-/* Error Card */
-.error-card {
-  --background: var(--ion-color-danger-tint);
-  margin: 0 0 16px 0;
-}
-
-.error-card ion-text p {
-  margin: 0 0 16px 0;
-}
-
-.retry-button {
-  margin: 0;
-}
-
-/* Translation Actions */
-.translation-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-.translation-actions ion-button {
-  --padding-start: 12px;
-  --padding-end: 12px;
-}
-
-/* Settings List */
-.translation-settings-list {
-  margin-top: 16px;
-}
-
-/* Dark Mode Adjustments */
-@media (prefers-color-scheme: dark) {
-  .text-card,
-  .translation-result-card {
-    --background: var(--ion-color-step-50);
-  }
-}
-
-/* Responsive */
-@media (max-width: 576px) {
-  .language-row {
-    flex-wrap: wrap;
-  }
-
-  .swap-button {
-    order: -1;
-    width: 100%;
-    margin: 8px 0;
-  }
-
-  .translation-actions {
-    flex-direction: column;
-  }
-
-  .translation-actions ion-button {
-    width: 100%;
-  }
-}
-
-/* Animation for result card */
-@keyframes fadeIn {
+@keyframes tpFadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -158,6 +217,17 @@
   }
 }
 
-.translation-result-card {
-  animation: fadeIn 0.3s ease-out;
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .tp-lang-bar {
+    background: var(--ion-color-step-100, #1e1e1e);
+  }
+
+  .tp-close-btn {
+    background: var(--ion-color-step-100, #1e1e1e);
+  }
+
+  .tp-action-btn {
+    background: var(--ion-color-step-100, #1e1e1e);
+  }
 }

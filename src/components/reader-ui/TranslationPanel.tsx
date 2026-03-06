@@ -1,46 +1,24 @@
 /**
- * TranslationPanel - Modal for translating selected text
- * Shows source/target language selection, translation result, and options
+ * TranslationPanel - Bottom sheet for translating selected text.
+ * Compact design: shows source text, language pair, and translation result.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   IonModal,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonButtons,
   IonButton,
   IonIcon,
-  IonContent,
-  IonList,
-  IonItem,
-  IonLabel,
+  IonSpinner,
   IonSelect,
   IonSelectOption,
-  IonSpinner,
-  IonText,
-  IonCard,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
-  IonCardContent,
-  IonSegment,
-  IonSegmentButton,
-  IonToggle,
-  IonTextarea,
-  IonChip,
   IonToast,
 } from '@ionic/react';
 import {
   close,
-  language,
   swapHorizontal,
   copyOutline,
-  bookmarkOutline,
-  arrowForward,
+  volumeHighOutline,
   refresh,
-  checkmark,
 } from 'ionicons/icons';
 import {
   useTranslationStore,
@@ -48,19 +26,17 @@ import {
   getTargetLanguages,
 } from '../../stores/useTranslationStore';
 import { translationService, type TranslationError } from '../../services/translationService';
-import type { TranslationResult, TranslationLanguageCode } from '../../types';
+import type { TranslationLanguageCode } from '../../types';
 import './TranslationPanel.css';
 
 export interface TranslationPanelProps {
   bookId: string;
-  location?: string; // CFI or page number for history tracking
-  onReplaceText?: (originalText: string, translatedText: string) => void; // For editable docs
+  location?: string;
 }
 
 export const TranslationPanel: React.FC<TranslationPanelProps> = ({
   bookId,
   location,
-  onReplaceText,
 }) => {
   const {
     isTranslationPanelOpen,
@@ -68,13 +44,10 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
     currentTranslation,
     detectedLanguage,
     targetLanguage,
-    autoDetectSource,
     saveHistory,
     isLoading,
     error,
     setTargetLanguage,
-    setAutoDetectSource,
-    setSaveHistory,
     closeTranslationPanel,
     setCurrentTranslation,
     clearCurrentTranslation,
@@ -83,33 +56,17 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
     addToHistory,
   } = useTranslationStore();
 
-  // Local state
   const [sourceLanguage, setSourceLanguage] = useState<TranslationLanguageCode>('auto');
   const [currentTargetLanguage, setCurrentTargetLanguage] =
     useState<TranslationLanguageCode>(targetLanguage);
-  const [swappedLanguages, setSwappedLanguages] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
-  const [showSaveToast, setShowSaveToast] = useState(false);
-  const [autoTranslate, setAutoTranslate] = useState(true);
 
-  // Sync target language with store
   useEffect(() => {
     setCurrentTargetLanguage(targetLanguage);
   }, [targetLanguage]);
 
-  // Auto-translate when selection changes
-  useEffect(() => {
-    if (autoTranslate && currentSelection && isTranslationPanelOpen) {
-      handleTranslate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSelection, sourceLanguage, currentTargetLanguage, isTranslationPanelOpen]);
-
   const handleTranslate = useCallback(async () => {
-    if (!currentSelection || currentSelection.trim().length === 0) {
-      setError('Please select some text to translate');
-      return;
-    }
+    if (!currentSelection || currentSelection.trim().length === 0) return;
 
     clearCurrentTranslation();
     setLoading(true);
@@ -124,7 +81,6 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
 
       setCurrentTranslation(result.translatedText, result.sourceLang);
 
-      // Save to history if enabled
       if (saveHistory) {
         addToHistory({
           bookId,
@@ -138,11 +94,9 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
     } catch (err) {
       const translationError = err as TranslationError;
       if (translationError.isRateLimit) {
-        setError('Rate limit exceeded. Please try again later.');
-      } else if (translationError.isUnsupported) {
-        setError('This language pair is not supported.');
+        setError('Rate limit exceeded. Try again shortly.');
       } else {
-        setError(translationError.message || 'Translation failed. Please try again.');
+        setError(translationError.message || 'Translation failed.');
       }
     } finally {
       setLoading(false);
@@ -161,61 +115,57 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
     addToHistory,
   ]);
 
-  const handleSwapLanguages = useCallback(() => {
-    if (sourceLanguage === 'auto' || !detectedLanguage) {
-      setError('Cannot swap with auto-detect. Wait for detection to complete.');
-      return;
+  // Auto-translate when opened or languages change
+  useEffect(() => {
+    if (currentSelection && isTranslationPanelOpen) {
+      handleTranslate();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSelection, sourceLanguage, currentTargetLanguage, isTranslationPanelOpen]);
 
-    setSourceLanguage(currentTargetLanguage);
-    setCurrentTargetLanguage(sourceLanguage as TranslationLanguageCode);
-    setSwappedLanguages(!swappedLanguages);
-  }, [sourceLanguage, currentTargetLanguage, detectedLanguage, swappedLanguages, setError]);
+  const handleSwapLanguages = useCallback(() => {
+    if (sourceLanguage === 'auto' && detectedLanguage) {
+      setSourceLanguage(currentTargetLanguage);
+      setCurrentTargetLanguage(detectedLanguage as TranslationLanguageCode);
+      setTargetLanguage(detectedLanguage as TranslationLanguageCode);
+    } else if (sourceLanguage !== 'auto') {
+      const prevSource = sourceLanguage;
+      setSourceLanguage(currentTargetLanguage);
+      setCurrentTargetLanguage(prevSource);
+      setTargetLanguage(prevSource);
+    }
+  }, [sourceLanguage, currentTargetLanguage, detectedLanguage, setTargetLanguage]);
 
-  const handleCopyTranslation = useCallback(async () => {
+  const handleCopy = useCallback(async () => {
     if (!currentTranslation) return;
-
     try {
       await navigator.clipboard.writeText(currentTranslation);
       setShowCopyToast(true);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    } catch {
+      // Fallback for Android WebView
+      const textarea = document.createElement('textarea');
+      textarea.value = currentTranslation;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setShowCopyToast(true);
     }
   }, [currentTranslation]);
 
-  const handleSaveToNotes = useCallback(() => {
-    if (!currentTranslation || !currentSelection) return;
+  const handleSpeak = useCallback(() => {
+    if (!currentTranslation) return;
+    const utterance = new SpeechSynthesisUtterance(currentTranslation);
+    utterance.lang = currentTargetLanguage;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }, [currentTranslation, currentTargetLanguage]);
 
-    // This would integrate with the annotations service
-    // For now, just show a toast
-    setShowSaveToast(true);
-  }, [currentTranslation, currentSelection]);
-
-  const handleReplaceText = useCallback(() => {
-    if (!onReplaceText || !currentSelection || !currentTranslation) return;
-
-    onReplaceText(currentSelection, currentTranslation);
-    closeTranslationPanel();
-  }, [onReplaceText, currentSelection, currentTranslation, closeTranslationPanel]);
-
-  const handleSourceLanguageChange = (e: CustomEvent) => {
-    setSourceLanguage(e.detail.value as TranslationLanguageCode);
-    setSwappedLanguages(false);
-  };
-
-  const handleTargetLanguageChange = (e: CustomEvent) => {
-    const newLang = e.detail.value as TranslationLanguageCode;
-    setCurrentTargetLanguage(newLang);
-    setTargetLanguage(newLang);
-    setSwappedLanguages(false);
-  };
-
-  const getSourceLanguageName = (): string => {
-    if (sourceLanguage === 'auto') {
-      return detectedLanguage ? getLanguageName(detectedLanguage) + ' (Detected)' : 'Auto Detect';
-    }
-    return getLanguageName(sourceLanguage);
-  };
+  const sourceLangLabel = sourceLanguage === 'auto'
+    ? (detectedLanguage ? getLanguageName(detectedLanguage) : 'Detect')
+    : getLanguageName(sourceLanguage);
 
   const targetLanguages = getTargetLanguages();
 
@@ -224,197 +174,115 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
       <IonModal
         isOpen={isTranslationPanelOpen}
         onDidDismiss={closeTranslationPanel}
-        breakpoints={[0, 0.5, 0.75, 1]}
-        initialBreakpoint={0.75}
+        breakpoints={[0, 0.45, 0.7]}
+        initialBreakpoint={0.45}
+        backdropDismiss
+        className="translation-modal"
       >
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>Translate</IonTitle>
-            <IonButtons slot="end">
-              <IonButton onClick={closeTranslationPanel}>
-                <IonIcon icon={close} />
-              </IonButton>
-            </IonButtons>
-          </IonToolbar>
-        </IonHeader>
+        <div className="tp-container">
+          {/* Header bar */}
+          <div className="tp-header">
+            <div className="tp-lang-bar">
+              <IonSelect
+                value={sourceLanguage}
+                onIonChange={(e) => setSourceLanguage(e.detail.value)}
+                interface="popover"
+                className="tp-lang-select"
+              >
+                <IonSelectOption value="auto">
+                  Auto{detectedLanguage ? ` (${getLanguageName(detectedLanguage)})` : ''}
+                </IonSelectOption>
+                {targetLanguages.map((lang) => (
+                  <IonSelectOption key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
 
-        <IonContent>
-          <div className="translation-panel-content">
-            {/* Language Selection */}
-            <IonCard className="language-selector-card">
-              <IonCardContent>
-                <div className="language-row">
-                  <div className="language-select">
-                    <IonLabel position="stacked" className="language-label">
-                      From
-                    </IonLabel>
-                    <IonSelect
-                      value={sourceLanguage}
-                      onIonChange={handleSourceLanguageChange}
-                      placeholder="Auto Detect"
-                    >
-                      <IonSelectOption value="auto">Auto Detect</IonSelectOption>
-                      {targetLanguages.map((lang) => (
-                        <IonSelectOption key={lang.code} value={lang.code}>
-                          {lang.name}
-                        </IonSelectOption>
-                      ))}
-                    </IonSelect>
-                    {detectedLanguage && sourceLanguage === 'auto' && (
-                      <IonChip className="detected-lang-chip" outline={true}>
-                        <IonIcon icon={checkmark} />
-                        <IonLabel>{getLanguageName(detectedLanguage)}</IonLabel>
-                      </IonChip>
-                    )}
-                  </div>
+              <button
+                className="tp-swap-btn"
+                onClick={handleSwapLanguages}
+                disabled={sourceLanguage === 'auto' && !detectedLanguage}
+              >
+                <IonIcon icon={swapHorizontal} />
+              </button>
 
-                  <IonButton
-                    fill="clear"
-                    onClick={handleSwapLanguages}
-                    disabled={sourceLanguage === 'auto' || !detectedLanguage}
-                    className="swap-button"
-                  >
-                    <IonIcon icon={swapHorizontal} />
-                  </IonButton>
+              <IonSelect
+                value={currentTargetLanguage}
+                onIonChange={(e) => {
+                  const lang = e.detail.value as TranslationLanguageCode;
+                  setCurrentTargetLanguage(lang);
+                  setTargetLanguage(lang);
+                }}
+                interface="popover"
+                className="tp-lang-select"
+              >
+                {targetLanguages.map((lang) => (
+                  <IonSelectOption key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
+            </div>
 
-                  <div className="language-select">
-                    <IonLabel position="stacked" className="language-label">
-                      To
-                    </IonLabel>
-                    <IonSelect
-                      value={currentTargetLanguage}
-                      onIonChange={handleTargetLanguageChange}
-                    >
-                      {targetLanguages.map((lang) => (
-                        <IonSelectOption key={lang.code} value={lang.code}>
-                          {lang.name}
-                        </IonSelectOption>
-                      ))}
-                    </IonSelect>
-                  </div>
-                </div>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Original Text */}
-            {currentSelection && (
-              <IonCard className="text-card">
-                <IonCardHeader>
-                  <IonCardSubtitle className="text-card-subtitle">
-                    {getSourceLanguageName()}
-                  </IonCardSubtitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <IonText className="original-text">
-                    <p>{currentSelection}</p>
-                  </IonText>
-                </IonCardContent>
-              </IonCard>
-            )}
-
-            {/* Loading State */}
-            {isLoading && (
-              <div className="translation-loading">
-                <IonSpinner name="crescent" />
-                <p>Translating...</p>
-              </div>
-            )}
-
-            {/* Error State */}
-            {error && !isLoading && (
-              <IonCard className="error-card">
-                <IonCardContent>
-                  <IonText color="danger">
-                    <p>{error}</p>
-                  </IonText>
-                  <IonButton
-                    expand="block"
-                    fill="outline"
-                    onClick={handleTranslate}
-                    className="retry-button"
-                  >
-                    <IonIcon icon={refresh} slot="start" />
-                    Retry
-                  </IonButton>
-                </IonCardContent>
-              </IonCard>
-            )}
-
-            {/* Translation Result */}
-            {currentTranslation && !isLoading && (
-              <IonCard className="translation-result-card">
-                <IonCardHeader>
-                  <IonCardSubtitle className="text-card-subtitle">
-                    {getLanguageName(currentTargetLanguage)}
-                  </IonCardSubtitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <IonText className="translated-text">
-                    <p>{currentTranslation}</p>
-                  </IonText>
-
-                  {/* Action Buttons */}
-                  <div className="translation-actions">
-                    <IonButton size="small" fill="outline" onClick={handleCopyTranslation}>
-                      <IonIcon icon={copyOutline} slot="start" />
-                      Copy
-                    </IonButton>
-
-                    <IonButton size="small" fill="outline" onClick={handleSaveToNotes}>
-                      <IonIcon icon={bookmarkOutline} slot="start" />
-                      Save
-                    </IonButton>
-
-                    {onReplaceText && (
-                      <IonButton size="small" fill="outline" onClick={handleReplaceText}>
-                        <IonIcon icon={arrowForward} slot="start" />
-                        Replace
-                      </IonButton>
-                    )}
-                  </div>
-                </IonCardContent>
-              </IonCard>
-            )}
-
-            {/* Settings */}
-            <IonList className="translation-settings-list">
-              <IonItem>
-                <IonLabel>Auto-translate on selection</IonLabel>
-                <IonToggle
-                  checked={autoTranslate}
-                  onIonChange={(e) => setAutoTranslate(e.detail.checked)}
-                />
-              </IonItem>
-
-              <IonItem>
-                <IonLabel>Save translation history</IonLabel>
-                <IonToggle
-                  checked={saveHistory}
-                  onIonChange={(e) => setSaveHistory(e.detail.checked)}
-                />
-              </IonItem>
-            </IonList>
+            <button className="tp-close-btn" onClick={closeTranslationPanel}>
+              <IonIcon icon={close} />
+            </button>
           </div>
-        </IonContent>
+
+          {/* Source text */}
+          {currentSelection && (
+            <div className="tp-source">
+              <span className="tp-label">{sourceLangLabel}</span>
+              <p className="tp-source-text">{currentSelection}</p>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="tp-divider" />
+
+          {/* Translation result */}
+          <div className="tp-result">
+            <span className="tp-label">{getLanguageName(currentTargetLanguage)}</span>
+            {isLoading ? (
+              <div className="tp-loading">
+                <IonSpinner name="dots" />
+              </div>
+            ) : error ? (
+              <div className="tp-error">
+                <p>{error}</p>
+                <button className="tp-retry-btn" onClick={handleTranslate}>
+                  <IonIcon icon={refresh} />
+                  Retry
+                </button>
+              </div>
+            ) : currentTranslation ? (
+              <p className="tp-translated-text">{currentTranslation}</p>
+            ) : null}
+          </div>
+
+          {/* Action bar */}
+          {currentTranslation && !isLoading && (
+            <div className="tp-actions">
+              <button className="tp-action-btn" onClick={handleCopy}>
+                <IonIcon icon={copyOutline} />
+                <span>Copy</span>
+              </button>
+              <button className="tp-action-btn" onClick={handleSpeak}>
+                <IonIcon icon={volumeHighOutline} />
+                <span>Listen</span>
+              </button>
+            </div>
+          )}
+        </div>
       </IonModal>
 
-      {/* Toast Notifications */}
       <IonToast
         isOpen={showCopyToast}
         onDidDismiss={() => setShowCopyToast(false)}
-        message="Translation copied to clipboard"
-        duration={2000}
+        message="Copied to clipboard"
+        duration={1500}
         position="bottom"
-        icon={checkmark}
-      />
-
-      <IonToast
-        isOpen={showSaveToast}
-        onDidDismiss={() => setShowSaveToast(false)}
-        message="Translation saved to notes"
-        duration={2000}
-        position="bottom"
-        icon={bookmarkOutline}
       />
     </>
   );
