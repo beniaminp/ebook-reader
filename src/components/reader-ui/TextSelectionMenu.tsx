@@ -101,6 +101,12 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   const isDraggingRef = useRef(false);
   // Debounce timer for showing the menu (don't show while actively dragging)
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Long-press detection: only show selection menu after a sustained press
+  const LONG_PRESS_MS = 400;
+  const isTouchRef = useRef(false);
+  const longPressDetectedRef = useRef(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartTimeRef = useRef(0);
 
   const openTranslationPanel = useTranslationStore((state) => state.openTranslationPanel);
 
@@ -134,6 +140,9 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     }
 
     if (text && text.length > 0) {
+      // For touch interactions, only show the menu on long press (not short taps)
+      if (isTouchRef.current && !longPressDetectedRef.current) return;
+
       setSelectedText(text);
 
       // If the user is still dragging, update the preview text but
@@ -153,16 +162,35 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     }
   }, [capturedText]);
 
-  // Track touch/mouse state to know when the user is actively dragging
-  const handlePointerDown = useCallback(() => {
+  // Track touch/mouse state to know when the user is actively dragging.
+  // Touch events use long-press detection; mouse events always allow selection.
+  const handleTouchStart = useCallback(() => {
     isDraggingRef.current = true;
+    isTouchRef.current = true;
+    longPressDetectedRef.current = false;
+    touchStartTimeRef.current = Date.now();
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressDetectedRef.current = true;
+    }, LONG_PRESS_MS);
+  }, []);
+
+  const handleMouseDown = useCallback(() => {
+    isDraggingRef.current = true;
+    isTouchRef.current = false;
+    longPressDetectedRef.current = true; // mouse selections always allowed
   }, []);
 
   const handlePointerUp = useCallback(() => {
     isDraggingRef.current = false;
-    // Re-check selection after finger lift
-    // Small delay to let the browser finalize the selection
-    setTimeout(checkSelection, 50);
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    // Only show selection menu if it was a long press (or mouse)
+    if (!isTouchRef.current || longPressDetectedRef.current) {
+      setTimeout(checkSelection, 50);
+    }
   }, [checkSelection]);
 
   // Attach selection listeners to an iframe document
@@ -171,12 +199,12 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
       if (attachedDocsRef.current.has(doc)) return;
       attachedDocsRef.current.add(doc);
       doc.addEventListener('selectionchange', checkSelection);
-      doc.addEventListener('mousedown', handlePointerDown);
+      doc.addEventListener('mousedown', handleMouseDown);
       doc.addEventListener('mouseup', handlePointerUp);
-      doc.addEventListener('touchstart', handlePointerDown, { passive: true });
+      doc.addEventListener('touchstart', handleTouchStart, { passive: true });
       doc.addEventListener('touchend', handlePointerUp);
     },
-    [checkSelection, handlePointerDown, handlePointerUp]
+    [checkSelection, handleMouseDown, handleTouchStart, handlePointerUp]
   );
 
   // Scan for all iframes and attach listeners
@@ -204,9 +232,9 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   useEffect(() => {
     // Listen on main document
     document.addEventListener('selectionchange', checkSelection);
-    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handlePointerUp);
-    document.addEventListener('touchstart', handlePointerDown, { passive: true });
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchend', handlePointerUp);
 
     // Scan for iframes immediately and after delays
@@ -234,17 +262,17 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 
     return () => {
       document.removeEventListener('selectionchange', checkSelection);
-      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handlePointerUp);
-      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handlePointerUp);
 
       for (const doc of attachedDocsRef.current) {
         try {
           doc.removeEventListener('selectionchange', checkSelection);
-          doc.removeEventListener('mousedown', handlePointerDown);
+          doc.removeEventListener('mousedown', handleMouseDown);
           doc.removeEventListener('mouseup', handlePointerUp);
-          doc.removeEventListener('touchstart', handlePointerDown);
+          doc.removeEventListener('touchstart', handleTouchStart);
           doc.removeEventListener('touchend', handlePointerUp);
         } catch {
           // detached doc
@@ -254,11 +282,12 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
 
       observerRef.current?.disconnect();
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [checkSelection, scanAndAttach, handlePointerDown, handlePointerUp]);
+  }, [checkSelection, scanAndAttach, handleMouseDown, handleTouchStart, handlePointerUp]);
 
   const clearSelection = useCallback(() => {
     window.getSelection()?.removeAllRanges();

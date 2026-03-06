@@ -530,12 +530,19 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
           // ─── Selection notification (keeps native selection alive for extending) ───
           let selectionNotifyDebounce: ReturnType<typeof setTimeout> | null = null;
+          let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+          let longPressDetected = false;
+          const LONG_PRESS_MS = 400;
 
           doc.addEventListener('touchstart', (ev: TouchEvent) => {
             const t = ev.touches[0];
             touchStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+            longPressDetected = false;
+            if (longPressTimer) clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(() => { longPressDetected = true; }, LONG_PRESS_MS);
           }, { passive: true });
           doc.addEventListener('touchend', (ev: TouchEvent) => {
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
             if (!touchStart) return;
             const t = ev.changedTouches[0];
             const dx = Math.abs(t.clientX - touchStart.x);
@@ -584,6 +591,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
 
           // Notify parent of selection changes so the menu shows/hides.
           // Native selection stays alive — user can still extend with handles.
+          // Only activate on long press (touch held >= LONG_PRESS_MS) to prevent
+          // the highlight menu from appearing on accidental short taps.
           doc.addEventListener('selectionchange', () => {
             if (selectionNotifyDebounce) clearTimeout(selectionNotifyDebounce);
             const sel = doc.getSelection?.();
@@ -595,6 +604,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
               }
               return;
             }
+            // For touch: only show selection menu on long press, not short taps.
+            // Mouse selections (touchStart is null) are always allowed.
+            if (touchStart && !longPressDetected) return;
             // Debounce to let user finish adjusting selection handles
             selectionNotifyDebounce = setTimeout(() => {
               const text = sel.toString().trim();
