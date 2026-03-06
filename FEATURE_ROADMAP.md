@@ -21,10 +21,10 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Hyphenation Control** | Automatic word hyphenation at line breaks to prevent wide gaps in justified text ("rivers" effect) | Kobo, Kindle Enhanced Typesetting, Apple Books |
-| **Kerning & Letter Spacing** | Fine-grained control over character spacing via a slider in the typography panel | Kindle Enhanced Typesetting, Apple Books, Kobo TypeGenius |
+| **Hyphenation Control** ✅ | Automatic word hyphenation at line breaks to prevent wide gaps in justified text ("rivers" effect) | Kobo, Kindle Enhanced Typesetting, Apple Books |
+| **Kerning & Letter Spacing** ✅ | Fine-grained control over character spacing via a slider in the typography panel | Kindle Enhanced Typesetting, Apple Books, Kobo TypeGenius |
 | **Word Spacing Control** | Dedicated slider for adjusting inter-word spacing, separate from letter spacing. Helpful for dyslexic readers | Apple Books, Libby, Kindle |
-| **Paragraph Spacing Control** | Independent control of space above/below paragraphs (currently only line height is exposed) | Apple Books, Kobo, Kindle |
+| **Paragraph Spacing Control** ✅ | Independent control of space above/below paragraphs (slider 0-4em in Reading Settings panel) | Apple Books, Kobo, Kindle |
 | **Two-Column Layout** | In landscape/tablet mode, render text in two columns to reduce excessive line length | Apple Books (iPad), Kindle Scribe, Google Play Books |
 | **Column Width / Max Line Length** | Cap the maximum readable column width (60-75 chars/line) on large screens | Kobo, Readwise Reader |
 | **Drop Caps** | Render decorative enlarged first letter of chapters from EPUB metadata | Kindle Enhanced Typesetting, Apple Books |
@@ -50,8 +50,8 @@
 | **Time Left in Chapter/Book** ✅ | Display estimated reading time remaining, calculated from user's measured reading speed | Kindle, Kobo, Apple Books |
 | **Reading Speed Calibration** | Explicit calibration step or auto-calibrate over first pages to measure user's WPM | Kindle, Kobo |
 | **Chapter Thumbnail Navigation** | Visual grid/strip of chapter thumbnails for quick visual scanning | Apple Books, Google Play Books |
-| **Smart Return-to-Reading** | "Welcome back" prompt with context snippet after an extended break, showing last paragraph read | Kindle |
-| **Scrubber with Chapter Markers** | Horizontal progress bar showing chapter boundaries as draggable markers | Apple Books, Kindle, Kobo |
+| **Smart Return-to-Reading** ✅ | "Welcome back" prompt with context snippet after an extended break, showing last paragraph read | Kindle |
+| **Scrubber with Chapter Markers** ✅ | Horizontal progress bar showing chapter boundaries as draggable markers | Apple Books, Kindle, Kobo |
 | **Cross-Device Position Sync** | Cloud sync for reading position, bookmarks, and highlights across devices | Kindle Whispersync, Kobo Sync, Apple Books iCloud |
 | **Furthest-Read Tracking** | Track both current position AND furthest page reached; prevent accidental progress overwrite | Kindle, Kobo |
 | **Estimated Completion Date** | "At your current pace, you'll finish this book on [date]" | Kindle, Kobo Reading Life |
@@ -60,9 +60,9 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **TTS Word-Level Highlighting** | Highlight the current word being spoken in the rendered text, synchronized with TTS audio | Kindle Assistive Reader (2025), Apple Books, Libby |
-| **TTS Auto-Scroll** | Automatically scroll the page to keep the currently spoken sentence visible | Apple Books, Kindle Assistive Reader |
-| **Dyslexia Layout Preset** | One-tap preset: OpenDyslexic + increased letter/word/line spacing + left-align + short column | Libby, Kobo |
+| **TTS Word-Level Highlighting** ✅ | Highlight the current word being spoken in the rendered text, synchronized with TTS audio | Kindle Assistive Reader (2025), Apple Books, Libby |
+| **TTS Auto-Scroll** ✅ | Automatically scroll the page to keep the currently spoken sentence visible | Apple Books, Kindle Assistive Reader |
+| **Dyslexia Layout Preset** ✅ | One-tap preset: OpenDyslexic + increased letter/word/line spacing + left-align + short column | Libby, Kobo |
 | **Line Focus / Active Line Highlight** ✅ | Highlight the current line being read while dimming adjacent content, moving as user reads | Microsoft Immersive Reader, Readest |
 | **Color Vision Deficiency Filters** | Protanopia, deuteranopia, tritanopia color filters for the reading surface | Apple Books, KOReader |
 | **Global Bold Toggle** | Apply `font-weight: bold` globally independent of font family for low-vision users | Kindle, Kobo TypeGenius, Moon+ Reader |
@@ -125,10 +125,10 @@
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
 | **Smart / Dynamic Shelves** | Rules-based shelves that auto-populate by format, status, rating, genre, date added, or author | BookShelves, BookLore, Libby |
-| **Series Grouping & Browse** | Dedicated "Series" view grouping multi-book series under a single cover with progress tracking | Kobo, Calibre, Moon+ Reader |
-| **Author Browse View** | Browsable "Authors" list with book counts and grouped books per author | Calibre, Google Play Books, Apple Books |
-| **Genre / Subject Browse** | Browse-by-genre view derived from metadata genres with auto-grouped sub-shelves | Calibre, Google Play Books, Kindle |
-| **"Did Not Finish" (DNF) Status** | Dedicated read status beyond unread/reading/finished for abandoned books | StoryStack, Bookly, Goodreads, Moon+ Reader |
+| **Series Grouping & Browse** ✅ | Dedicated "Series" view grouping multi-book series under a single cover with progress tracking | Kobo, Calibre, Moon+ Reader |
+| **Author Browse View** ✅ | Browsable "Authors" list with book counts and grouped books per author | Calibre, Google Play Books, Apple Books |
+| **Genre / Subject Browse** ✅ | Browse-by-genre view derived from metadata genres with auto-grouped sub-shelves | Calibre, Google Play Books, Kindle |
+| **"Did Not Finish" (DNF) Status** ✅ | Dedicated read status beyond unread/reading/finished for abandoned books | StoryStack, Bookly, Goodreads, Moon+ Reader |
 | **Drag-and-Drop Manual Ordering** | Manually reorder books within a collection by long-press-and-drag | Apple Books, Kindle Collections, Kobo |
 | **"Want to Read" Wishlist** | Wishlist for books not yet imported (title, author, ISBN/URL); auto-matched when imported | Libby, Goodreads, Apple Books, Google Play Books |
 
@@ -148,7 +148,7 @@
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
 | **Full-Text Search Across Library** | Search for words/phrases inside all book contents, not just title/author metadata | Calibre (plugin), Google Play Books |
-| **Advanced Composable Filters** | Combine multiple filters simultaneously (format AND status AND genre AND rating) | Calibre, Libby, Moon+ Reader |
+| **Advanced Composable Filters** ✅ | Combine multiple filters simultaneously (format AND status AND genre AND rating) | Calibre, Libby, Moon+ Reader |
 | **Search Within Collection** | Scope search bar to the current collection/tag rather than the whole library | Apple Books, Kindle Collections, Kobo |
 | **"Recently Finished" View** | Virtual smart view surfacing books finished in the last 30/90 days | Google Play Books, Kobo Reading Life, Libby |
 | **"Similar Books" Suggestions** ✅ | "Find similar" action that opens OPDS pre-filtered by same author/genre | Kindle, Google Play Books, Kobo |
@@ -244,10 +244,10 @@
 2. ~~**Reading Goals & Streaks**~~ ✅ — strong retention/engagement driver
 3. ~~**Immersive Full-Screen Mode**~~ ✅ — key for focused reading
 4. ~~**Sleep Timer**~~ ✅ — essential for bedtime reading with TTS
-5. **TTS Word-Level Highlighting** — major accessibility improvement
-6. **Series Grouping** — metadata fields already exist, just needs UI
-7. **Smart Return-to-Reading** — reduces friction for casual readers
-8. **Scrubber with Chapter Markers** — improves navigation significantly
+5. ~~**TTS Word-Level Highlighting**~~ ✅ — major accessibility improvement
+6. ~~**Series Grouping**~~ ✅ — Browse page with SeriesView component
+7. ~~**Smart Return-to-Reading**~~ ✅ — reduces friction for casual readers (WelcomeBackCard)
+8. ~~**Scrubber with Chapter Markers**~~ ✅ — improves navigation significantly (ChapterScrubber)
 
 ### High Impact, Higher Effort
 9. **Cross-Device Position Sync** — table-stakes for multi-device users
@@ -258,12 +258,12 @@
 14. **Annual Year in Review** — shareable viral feature
 
 ### Quick Wins
-15. **Hyphenation Control** — CSS `hyphens: auto` for EPUB
-16. **Paragraph Spacing Control** — single CSS property
-17. **Dyslexia Layout Preset** — bundle existing settings
-18. **DNF Status** — minor DB/UI addition
-19. **Duplicate Detection** — check on import
-20. **Star Ratings in Library View** — metadata field already exists (DB field ✅, UI widget pending)
+15. ~~**Hyphenation Control**~~ ✅ — CSS `hyphens: auto` for EPUB
+16. ~~**Paragraph Spacing Control**~~ ✅ — slider 0-4em in settings panel
+17. ~~**Dyslexia Layout Preset**~~ ✅ — bundle existing settings
+18. ~~**DNF Status**~~ ✅ — minor DB/UI addition
+19. ~~**Duplicate Detection**~~ ✅ — check on import
+20. ~~**Star Ratings in Library View**~~ ✅ — DB field + UI widget
 
 ---
 

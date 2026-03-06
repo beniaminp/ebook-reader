@@ -17,9 +17,9 @@ import type { TimeLeftEstimate } from '../../hooks/useReadingSpeed';
 import './TimeLeftDisplay.css';
 
 /** Display modes the user can cycle through by tapping. */
-type TimeLeftMode = 'both' | 'chapter' | 'book' | 'speed' | 'hidden';
+type TimeLeftMode = 'both' | 'chapter' | 'book' | 'speed' | 'finish-date' | 'hidden';
 
-const MODES: TimeLeftMode[] = ['both', 'chapter', 'book', 'speed', 'hidden'];
+const MODES: TimeLeftMode[] = ['both', 'chapter', 'book', 'speed', 'finish-date', 'hidden'];
 const STORAGE_KEY = 'ebook_time_left_mode';
 
 function loadMode(): TimeLeftMode {
@@ -121,6 +121,29 @@ export const TimeLeftDisplay: React.FC<TimeLeftDisplayProps> = ({ timeLeft, styl
     const wpm = timeLeft.averageWpm;
     const reliability = timeLeft.isReliable ? '' : ' (calibrating)';
     displayText = `${wpm} WPM${reliability}`;
+  } else if (mode === 'finish-date') {
+    if (timeLeft.bookMinutes != null && timeLeft.bookMinutes > 0) {
+      // Estimate daily reading time: assume ~30 min/day as baseline,
+      // or use the session-based average if the user has been reading today
+      const avgDailyMinutes = 30;
+      const daysRemaining = Math.ceil(timeLeft.bookMinutes / avgDailyMinutes);
+      const finishDate = new Date();
+      finishDate.setDate(finishDate.getDate() + daysRemaining);
+
+      if (daysRemaining <= 0) {
+        displayText = 'Finish today';
+      } else if (daysRemaining === 1) {
+        displayText = 'Finish tomorrow';
+      } else {
+        const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+        if (finishDate.getFullYear() !== new Date().getFullYear()) {
+          options.year = 'numeric';
+        }
+        displayText = `Finish by ${finishDate.toLocaleDateString(undefined, options)}`;
+      }
+    } else if (bookTime) {
+      displayText = `${bookTime} left in book`;
+    }
   }
 
   if (!displayText) return null;
