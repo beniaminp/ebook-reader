@@ -10,6 +10,7 @@ import { createClient, WebDAVClient } from 'webdav';
 import { Preferences } from '@capacitor/preferences';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { databaseService } from './database';
+import { blobToBase64 } from '../utils/converters';
 import { useThemeStore } from '../stores/useThemeStore';
 import type { CloudProviderType } from '../types/cloudSync';
 
@@ -234,13 +235,7 @@ export async function fullBackup(provider: CloudProviderType): Promise<BackupRes
     const zipBlob = await zip.generateAsync({ type: 'blob' });
 
     // Convert blob to base64
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(zipBlob);
-    });
-
+    const base64 = await blobToBase64(zipBlob);
     const base64Data = base64.split(',')[1];
     result.size = base64Data.length;
 
@@ -321,13 +316,7 @@ export async function restoreBackup(
       const fileBlob = (response.result as any).fileBlob;
 
       // Convert blob to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(fileBlob);
-      });
-
+      const base64 = await blobToBase64(fileBlob);
       zipData = base64.split(',')[1];
     } else {
       const client = await createWebDAVProvider();
@@ -556,13 +545,7 @@ export async function getBackupMetadata(
       const response = await dbx.filesDownload({ path: backupPath });
       const fileBlob = (response.result as any).fileBlob;
 
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(fileBlob);
-      });
-
+      const base64 = await blobToBase64(fileBlob);
       zipData = base64.split(',')[1];
     } else {
       const client = await createWebDAVProvider();

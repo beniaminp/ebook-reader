@@ -58,8 +58,6 @@ import {
   imageOutline,
   searchOutline,
   layersOutline,
-  star,
-  starOutline,
   checkboxOutline,
   squareOutline,
   createOutline,
@@ -92,6 +90,7 @@ import SmartShelfEditor from '../../components/SmartShelfEditor';
 import ReadingStreakCard from '../../components/ReadingStreakCard';
 import WelcomeBackCard from '../../components/WelcomeBackCard';
 import OnboardingOverlay from '../../components/OnboardingOverlay';
+import StarRating from '../../components/common/StarRating';
 import './Library.css';
 
 const Library: React.FC = () => {
@@ -247,9 +246,7 @@ const Library: React.FC = () => {
     removeSmartShelf(shelfId);
   }, [removeSmartShelf]);
 
-  const handleRateBook = useCallback(async (bookId: string, rating: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleRateBook = useCallback(async (bookId: string, rating: number) => {
     try {
       await databaseService.updateBookMetadata(bookId, { rating });
       const updatedBooks = books.map((b) =>
@@ -261,29 +258,6 @@ const Library: React.FC = () => {
     }
   }, [books, setBooks]);
 
-  const renderStarRating = (book: Book, size: number = 14) => {
-    const rating = book.metadata?.rating ?? 0;
-    return (
-      <div
-        className="star-rating"
-        style={{ display: 'flex', gap: '1px' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {[1, 2, 3, 4, 5].map((s) => (
-          <IonIcon
-            key={s}
-            icon={s <= rating ? star : starOutline}
-            style={{
-              fontSize: `${size}px`,
-              color: s <= rating ? '#f5a623' : 'var(--ion-color-medium)',
-              cursor: 'pointer',
-            }}
-            onClick={(e) => handleRateBook(book.id, s === rating ? 0 : s, e)}
-          />
-        ))}
-      </div>
-    );
-  };
 
   const activeFilterCount =
     (filters.format !== 'all' ? 1 : 0) +
@@ -1428,7 +1402,7 @@ const Library: React.FC = () => {
               <IonCardHeader className="ion-no-padding">
                 <IonCardTitle className="book-title">{book.title}</IonCardTitle>
                 <IonCardSubtitle className="book-author">{book.author}</IonCardSubtitle>
-                {renderStarRating(book, 12)}
+                <StarRating rating={book.metadata?.rating ?? 0} size={12} onRate={(r) => handleRateBook(book.id, r)} />
               </IonCardHeader>
             </IonCard>
           </IonCol>
@@ -1471,7 +1445,7 @@ const Library: React.FC = () => {
           <IonLabel>
             <h2>{book.title}</h2>
             <p>{book.author}</p>
-            {renderStarRating(book, 13)}
+            <StarRating rating={book.metadata?.rating ?? 0} size={13} onRate={(r) => handleRateBook(book.id, r)} />
             <div className="book-list-meta">
               <span className="book-list-format">{book.format.toUpperCase()}</span>
               {book.fileSize ? (
@@ -2153,19 +2127,8 @@ const Library: React.FC = () => {
             </IonItem>
             <IonItem>
               <IonLabel>Rating</IonLabel>
-              <div style={{ display: 'flex', gap: 4, padding: '8px 0' }}>
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <IonIcon
-                    key={s}
-                    icon={s <= bulkRating ? star : starOutline}
-                    style={{
-                      fontSize: 24,
-                      color: s <= bulkRating ? '#f5a623' : 'var(--ion-color-medium)',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setBulkRating(s === bulkRating ? 0 : s)}
-                  />
-                ))}
+              <div style={{ padding: '8px 0' }}>
+                <StarRating rating={bulkRating} size={24} gap="4px" onRate={(r) => setBulkRating(r)} />
               </div>
             </IonItem>
           </IonList>
@@ -2379,7 +2342,7 @@ const Library: React.FC = () => {
                   {selectedBook.author}
                 </p>
                 <div style={{ marginTop: '8px' }}>
-                  {renderStarRating(selectedBook, 22)}
+                  <StarRating rating={selectedBook.metadata?.rating ?? 0} size={22} onRate={(r) => handleRateBook(selectedBook.id, r)} />
                 </div>
               </div>
 

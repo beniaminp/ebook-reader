@@ -27,6 +27,7 @@ import {
 import { bookmark, bookmarkOutline, trashOutline, createOutline, close } from 'ionicons/icons';
 
 import type { EpubBookmark } from '../../services/annotationsService';
+import { useToast } from '../../hooks/useToast';
 
 interface BookmarksPanelProps {
   isOpen: boolean;
@@ -47,8 +48,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const toast = useToast();
 
   const handleEditNote = (bookmark: EpubBookmark) => {
     setEditingId(bookmark.id);
@@ -60,8 +60,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
       onUpdateNote(editingId, noteText);
       setEditingId(null);
       setNoteText('');
-      setToastMessage('Note updated');
-      setShowToast(true);
+      toast.show('Note updated');
     }
   };
 
@@ -72,8 +71,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
 
   const handleDelete = (id: string) => {
     onDeleteBookmark(id);
-    setToastMessage('Bookmark removed');
-    setShowToast(true);
+    toast.show('Bookmark removed');
   };
 
   const handleGoToBookmark = (cfi: string) => {
@@ -165,9 +163,9 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
       </IonModal>
 
       <IonToast
-        isOpen={showToast}
-        onDidDismiss={() => setShowToast(false)}
-        message={toastMessage}
+        isOpen={toast.isOpen}
+        onDidDismiss={toast.dismiss}
+        message={toast.message}
         duration={2000}
       />
     </>

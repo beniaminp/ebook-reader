@@ -16,7 +16,7 @@ import {
   IonButtons,
   IonTextarea,
 } from '@ionic/react';
-import { arrowBack, star, starOutline, closeOutline } from 'ionicons/icons';
+import { arrowBack, closeOutline } from 'ionicons/icons';
 
 import { useAppStore } from '../../stores/useAppStore';
 import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
@@ -28,6 +28,7 @@ import { chmService } from '../../services/chmService';
 import { docxService } from '../../services/docxService';
 import { odtService } from '../../services/odtService';
 import { UnifiedReaderContainer } from '../../components/readers/UnifiedReaderContainer';
+import StarRating from '../../components/common/StarRating';
 import type { Book } from '../../types/index';
 import type { ReadingProgress } from '../../types/database';
 import type { ReaderFormat } from '../../types/reader';
@@ -580,19 +581,8 @@ const Reader: React.FC = () => {
               How would you rate it?
             </p>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
-            {[1, 2, 3, 4, 5].map((s) => (
-              <IonIcon
-                key={s}
-                icon={s <= reviewRating ? star : starOutline}
-                style={{
-                  fontSize: '36px',
-                  color: s <= reviewRating ? '#f5a623' : 'var(--ion-color-medium)',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setReviewRating(s === reviewRating ? 0 : s)}
-              />
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <StarRating rating={reviewRating} size="medium" onRate={(r) => setReviewRating(r)} />
           </div>
           <IonTextarea
             placeholder="Write a review (optional)..."

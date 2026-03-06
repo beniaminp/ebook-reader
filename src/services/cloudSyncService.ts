@@ -8,6 +8,7 @@ import { createClient, WebDAVClient } from 'webdav';
 import { Preferences } from '@capacitor/preferences';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { ensureNoMedia } from './noMediaService';
+import { blobToBase64, blobToText } from '../utils/converters';
 import type {
   CloudProvider,
   CloudProviderType,
@@ -203,7 +204,7 @@ class DropboxProvider implements CloudProvider {
       const fileBlob = (response.result as any).fileBlob;
 
       // Convert blob to base64
-      const base64 = await this.blobToBase64(fileBlob);
+      const base64 = await blobToBase64(fileBlob);
 
       // Save to local filesystem
       const dir = localPath.includes('/') ? localPath.substring(0, localPath.lastIndexOf('/')) : '.';
@@ -267,7 +268,7 @@ class DropboxProvider implements CloudProvider {
     try {
       const response = await this.client.filesDownload({ path: SYNC_DATA_PATH });
       const fileBlob = (response.result as any).fileBlob;
-      const text = await this.blobToText(fileBlob);
+      const text = await blobToText(fileBlob);
       return JSON.parse(text);
     } catch (error: any) {
       if (error.status === 404) {
@@ -295,23 +296,6 @@ class DropboxProvider implements CloudProvider {
     return 0;
   }
 
-  private async blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  private async blobToText(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsText(blob);
-    });
-  }
 }
 
 /**

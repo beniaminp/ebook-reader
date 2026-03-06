@@ -31,6 +31,7 @@ import { colorPalette, trashOutline, createOutline, close, chatbubbleOutline, ch
 import type { EpubHighlight } from '../../services/annotationsService';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { TagInput, TagBadges, saveTagsToSuggestions } from '../reader-ui/TagInput';
+import { useToast } from '../../hooks/useToast';
 
 interface HighlightsPanelProps {
   isOpen: boolean;
@@ -53,8 +54,7 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
   const [noteText, setNoteText] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>(HIGHLIGHT_COLORS[0].value);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const toast = useToast();
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [filterTags, setFilterTags] = useState<string[]>([]);
 
@@ -93,8 +93,7 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
       setEditingId(null);
       setNoteText('');
       setEditTags([]);
-      setToastMessage('Highlight updated');
-      setShowToast(true);
+      toast.show('Highlight updated');
     }
   };
 
@@ -106,8 +105,7 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
 
   const handleDelete = (id: string) => {
     onDeleteHighlight(id);
-    setToastMessage('Highlight removed');
-    setShowToast(true);
+    toast.show('Highlight removed');
   };
 
   const handleGoToHighlight = (cfiRange: string) => {
@@ -404,9 +402,9 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
       </IonModal>
 
       <IonToast
-        isOpen={showToast}
-        onDidDismiss={() => setShowToast(false)}
-        message={toastMessage}
+        isOpen={toast.isOpen}
+        onDidDismiss={toast.dismiss}
+        message={toast.message}
         duration={2000}
       />
     </>

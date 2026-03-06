@@ -77,7 +77,7 @@ export default defineConfig({
       modernTargets: ['chrome>=87', 'firefox>=78', 'safari>=14', 'edge>=88'],
     }),
     nodePolyfills({
-      include: ['events', 'buffer', 'process', 'util', 'stream', 'path', 'crypto'],
+      include: ['events', 'buffer', 'process', 'crypto'],
       globals: { Buffer: true, global: true, process: true },
     }),
     corsProxyPlugin(),
