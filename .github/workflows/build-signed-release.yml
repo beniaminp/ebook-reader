@@ -43,9 +43,11 @@ jobs:
       - name: Compute version
         run: |
           BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
-          VERSION="${BASE}.${{ github.run_number }}"
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION="${BASE}.${COMMIT_COUNT}"
           echo "VERSION_NAME=${VERSION}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${COMMIT_COUNT}" >> $GITHUB_ENV
 
       - name: Build web assets
         run: npm run build
@@ -64,6 +66,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: ./gradlew assembleRelease
 
       - name: Build signed release AAB
@@ -75,6 +78,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: ./gradlew bundleRelease
 
       - name: Rename artifacts
