@@ -247,6 +247,11 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const paragraphSpacingRef = useRef<number>(1);
   const letterSpacingRef = useRef<number>(0);
   const fontWeightRef = useRef<number>(400);
+  const wordSpacingRef = useRef<number>(0);
+  const maxLineWidthRef = useRef<number>(0);
+  const dropCapsRef = useRef<boolean>(false);
+  const twoColumnRef = useRef<boolean>(false);
+  const globalBoldRef = useRef<boolean>(false);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Track highlight annotations applied to the view
@@ -329,6 +334,21 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     }
     if (fontWeightRef.current !== 400) {
       rules.push(`body, p, div, span, li, td, th, dd, dt, blockquote { font-weight: ${fontWeightRef.current} !important; }`);
+    }
+    if (wordSpacingRef.current) {
+      rules.push(`body { word-spacing: ${wordSpacingRef.current}em !important; }`);
+    }
+    if (maxLineWidthRef.current > 0) {
+      rules.push(`body { max-width: ${maxLineWidthRef.current}ch !important; margin-left: auto !important; margin-right: auto !important; }`);
+    }
+    if (dropCapsRef.current) {
+      rules.push(`p:first-of-type::first-letter, .chapter p:first-of-type::first-letter, section > p:first-child::first-letter { float: left !important; font-size: 3.2em !important; line-height: 0.8 !important; padding-right: 0.08em !important; font-weight: bold !important; }`);
+    }
+    if (twoColumnRef.current) {
+      rules.push(`body { column-count: 2 !important; column-gap: 2em !important; }`);
+    }
+    if (globalBoldRef.current) {
+      rules.push(`body, p, div, span, li, td, th, dd, dt, blockquote, a { font-weight: bold !important; }`);
     }
     if (bionicReadingRef.current) {
       rules.push(`
@@ -854,6 +874,26 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setFontWeight: (weight: number) => {
         fontWeightRef.current = weight;
+        reapplyStyles();
+      },
+      setWordSpacing: (spacing: number) => {
+        wordSpacingRef.current = spacing;
+        reapplyStyles();
+      },
+      setMaxLineWidth: (chars: number) => {
+        maxLineWidthRef.current = chars;
+        reapplyStyles();
+      },
+      setDropCaps: (enabled: boolean) => {
+        dropCapsRef.current = enabled;
+        reapplyStyles();
+      },
+      setTwoColumnLayout: (enabled: boolean) => {
+        twoColumnRef.current = enabled;
+        reapplyStyles();
+      },
+      setGlobalBold: (enabled: boolean) => {
+        globalBoldRef.current = enabled;
         reapplyStyles();
       },
       setBionicReading: (enabled: boolean) => {

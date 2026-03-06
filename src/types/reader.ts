@@ -111,6 +111,16 @@ export interface ReaderEngineRef {
   setLetterSpacing?(spacing: number): void;
   /** Set font weight (100-900). */
   setFontWeight?(weight: number): void;
+  /** Set word spacing (em units). */
+  setWordSpacing?(spacing: number): void;
+  /** Set max line width (ch units, 0=auto). */
+  setMaxLineWidth?(chars: number): void;
+  /** Enable/disable drop caps. */
+  setDropCaps?(enabled: boolean): void;
+  /** Enable/disable two-column layout. */
+  setTwoColumnLayout?(enabled: boolean): void;
+  /** Enable/disable global bold. */
+  setGlobalBold?(enabled: boolean): void;
   /** Enable/disable bionic reading mode. */
   setBionicReading?(enabled: boolean): void;
   /** Enable/disable interlinear translation mode. */

@@ -209,6 +209,12 @@ interface ThemeState extends ReadingSettings {
   setParagraphSpacing: (spacing: number) => void;
   setLetterSpacing: (spacing: number) => void;
   setFontWeight: (weight: number) => void;
+  setWordSpacing: (spacing: number) => void;
+  setMaxLineWidth: (chars: number) => void;
+  setDropCaps: (enabled: boolean) => void;
+  setTwoColumnLayout: (enabled: boolean) => void;
+  setGlobalBold: (enabled: boolean) => void;
+  setColorVisionFilter: (filter: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia') => void;
   setPageTransitionType: (type: PageTransitionType) => void;
 
   // Gesture sensitivity
@@ -306,6 +312,12 @@ export const useThemeStore = create<ThemeState>()(
       paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
       letterSpacing: DEFAULT_SETTINGS.letterSpacing,
       fontWeight: DEFAULT_SETTINGS.fontWeight,
+      wordSpacing: DEFAULT_SETTINGS.wordSpacing,
+      maxLineWidth: DEFAULT_SETTINGS.maxLineWidth,
+      dropCaps: DEFAULT_SETTINGS.dropCaps,
+      twoColumnLayout: DEFAULT_SETTINGS.twoColumnLayout,
+      globalBold: DEFAULT_SETTINGS.globalBold,
+      colorVisionFilter: DEFAULT_SETTINGS.colorVisionFilter,
       customThemes: [],
       customFonts: [],
       customBackgroundColor: undefined,
@@ -411,6 +423,18 @@ export const useThemeStore = create<ThemeState>()(
 
       setFontWeight: (fontWeight) => set({ fontWeight }),
 
+      setWordSpacing: (wordSpacing) => set({ wordSpacing }),
+
+      setMaxLineWidth: (maxLineWidth) => set({ maxLineWidth }),
+
+      setDropCaps: (dropCaps) => set({ dropCaps }),
+
+      setTwoColumnLayout: (twoColumnLayout) => set({ twoColumnLayout }),
+
+      setGlobalBold: (globalBold) => set({ globalBold }),
+
+      setColorVisionFilter: (colorVisionFilter) => set({ colorVisionFilter }),
+
       setPageTransitionType: (pageTransitionType) => set({ pageTransitionType }),
 
       setTapSensitivity: (tapSensitivity) => set({ tapSensitivity }),
@@ -447,6 +471,12 @@ export const useThemeStore = create<ThemeState>()(
           paragraphSpacing: DEFAULT_SETTINGS.paragraphSpacing,
           letterSpacing: DEFAULT_SETTINGS.letterSpacing,
           fontWeight: DEFAULT_SETTINGS.fontWeight,
+          wordSpacing: DEFAULT_SETTINGS.wordSpacing,
+          maxLineWidth: DEFAULT_SETTINGS.maxLineWidth,
+          dropCaps: DEFAULT_SETTINGS.dropCaps,
+          twoColumnLayout: DEFAULT_SETTINGS.twoColumnLayout,
+          globalBold: DEFAULT_SETTINGS.globalBold,
+          colorVisionFilter: DEFAULT_SETTINGS.colorVisionFilter,
           tapSensitivity: 10,
           swipeThreshold: 50,
         }),
@@ -605,6 +635,12 @@ export const useThemeStore = create<ThemeState>()(
         paragraphSpacing: state.paragraphSpacing,
         letterSpacing: state.letterSpacing,
         fontWeight: state.fontWeight,
+        wordSpacing: state.wordSpacing,
+        maxLineWidth: state.maxLineWidth,
+        dropCaps: state.dropCaps,
+        twoColumnLayout: state.twoColumnLayout,
+        globalBold: state.globalBold,
+        colorVisionFilter: state.colorVisionFilter,
         customThemes: state.customThemes,
         customFonts: state.customFonts,
         typographyProfiles: state.typographyProfiles,

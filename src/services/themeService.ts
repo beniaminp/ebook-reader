@@ -77,6 +77,12 @@ export interface ReadingSettings {
   paragraphSpacing: number;
   letterSpacing: number;
   fontWeight: number;
+  wordSpacing: number;
+  maxLineWidth: number; // 0 = no limit, otherwise chars per line
+  dropCaps: boolean;
+  twoColumnLayout: boolean;
+  globalBold: boolean;
+  colorVisionFilter: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 }
 
 export interface Theme {
@@ -233,6 +239,12 @@ export const DEFAULT_SETTINGS: ReadingSettings = {
   paragraphSpacing: 1,
   letterSpacing: 0,
   fontWeight: 400,
+  wordSpacing: 0,
+  maxLineWidth: 0,
+  dropCaps: false,
+  twoColumnLayout: false,
+  globalBold: false,
+  colorVisionFilter: 'none',
 };
 
 class ThemeServiceClass {

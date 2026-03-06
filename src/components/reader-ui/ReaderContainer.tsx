@@ -62,6 +62,35 @@ const BlueLightFilter: React.FC<{ visible: boolean; intensity: number }> = ({
 };
 
 /**
+ * Color Vision Deficiency Filter
+ * Uses CSS filter with SVG color matrix transformations
+ */
+const COLOR_VISION_MATRICES: Record<string, string> = {
+  protanopia: '0.567, 0.433, 0, 0, 0, 0.558, 0.442, 0, 0, 0, 0, 0.242, 0.758, 0, 0, 0, 0, 0, 1, 0',
+  deuteranopia: '0.625, 0.375, 0, 0, 0, 0.7, 0.3, 0, 0, 0, 0, 0.3, 0.7, 0, 0, 0, 0, 0, 1, 0',
+  tritanopia: '0.95, 0.05, 0, 0, 0, 0, 0.433, 0.567, 0, 0, 0, 0.475, 0.525, 0, 0, 0, 0, 0, 1, 0',
+};
+
+const ColorVisionFilter: React.FC<{ filter: string }> = ({ filter }) => {
+  if (filter === 'none') return null;
+  const matrix = COLOR_VISION_MATRICES[filter];
+  if (!matrix) return null;
+
+  return (
+    <>
+      <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+        <defs>
+          <filter id="color-vision-filter">
+            <feColorMatrix type="matrix" values={matrix} />
+          </filter>
+        </defs>
+      </svg>
+      <style>{`.reader-wrapper { filter: url(#color-vision-filter); }`}</style>
+    </>
+  );
+};
+
+/**
  * Main Reader Container Component
  */
 export const ReaderContainer: React.FC<ReaderContainerProps> = ({
@@ -99,6 +128,12 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     paragraphSpacing,
     letterSpacing,
     fontWeight,
+    wordSpacing,
+    maxLineWidth,
+    dropCaps,
+    twoColumnLayout,
+    globalBold,
+    colorVisionFilter,
     tapSensitivity,
     swipeThreshold,
   } = useThemeStore();
@@ -182,7 +217,9 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     root.style.setProperty('--reader-paragraph-spacing', `${paragraphSpacing}em`);
     root.style.setProperty('--reader-font-weight', fontWeight.toString());
     root.style.setProperty('--reader-hyphens', hyphenation ? 'auto' : 'manual');
-  }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize, hyphenation, paragraphSpacing, letterSpacing, fontWeight]);
+    root.style.setProperty('--reader-word-spacing', wordSpacing ? `${wordSpacing}em` : 'normal');
+    root.style.setProperty('--reader-max-line-width', maxLineWidth > 0 ? `${maxLineWidth}ch` : 'none');
+  }, [theme, fontFamily, fontSize, lineHeight, textAlign, marginSize, hyphenation, paragraphSpacing, letterSpacing, fontWeight, wordSpacing, maxLineWidth]);
 
   // Apply bionic reading to text content
 
@@ -224,9 +261,16 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
     textAlign,
     padding: `${customMargins.top}px ${customMargins.right}px ${customMargins.bottom}px ${customMargins.left}px`,
     letterSpacing: letterSpacing ? `${letterSpacing}em` : undefined,
+    wordSpacing: wordSpacing ? `${wordSpacing}em` : undefined,
     hyphens: hyphenation ? 'auto' : undefined,
     WebkitHyphens: hyphenation ? 'auto' : undefined,
-  };
+    maxWidth: maxLineWidth > 0 ? `${maxLineWidth}ch` : undefined,
+    marginLeft: maxLineWidth > 0 ? 'auto' : undefined,
+    marginRight: maxLineWidth > 0 ? 'auto' : undefined,
+    columnCount: twoColumnLayout ? 2 : undefined,
+    columnGap: twoColumnLayout ? '2em' : undefined,
+    fontWeight: globalBold ? 'bold' : undefined,
+  } as React.CSSProperties;
 
   // Apply custom background if set
   if (customBackgroundImage) {
@@ -248,6 +292,10 @@ export const ReaderContainer: React.FC<ReaderContainerProps> = ({
       onTouchEnd={handleTouchEnd}
     >
       <BlueLightFilter visible={blueLightFilter} intensity={blueLightIntensity} />
+      <ColorVisionFilter filter={colorVisionFilter} />
+      {dropCaps && (
+        <style>{`.reader-container p:first-of-type::first-letter { float: left !important; font-size: 3.2em !important; line-height: 0.8 !important; padding-right: 0.08em !important; font-weight: bold !important; }`}</style>
+      )}
       {brightnessGesture.brightnessOverlay}
       {hasReadingFeatures && (
         <>

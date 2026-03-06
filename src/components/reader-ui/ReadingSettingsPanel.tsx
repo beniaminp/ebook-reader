@@ -118,6 +118,18 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setFocusModeOpacity,
     fontWeight,
     setFontWeight,
+    wordSpacing,
+    setWordSpacing,
+    maxLineWidth,
+    setMaxLineWidth,
+    dropCaps,
+    setDropCaps,
+    twoColumnLayout,
+    setTwoColumnLayout,
+    globalBold,
+    setGlobalBold,
+    colorVisionFilter,
+    setColorVisionFilter,
     pageTransitionType,
     setPageTransitionType,
     setAutoScroll,
@@ -640,6 +652,36 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                   className="type-compact-range"
                 />
               </div>
+
+              <div className="type-slider-row">
+                <div className="type-slider-header">
+                  <span>Word Spacing</span>
+                  <span className="type-slider-value">{wordSpacing.toFixed(2)}em</span>
+                </div>
+                <IonRange
+                  min={0}
+                  max={0.5}
+                  step={0.05}
+                  value={wordSpacing}
+                  onIonChange={(e) => setWordSpacing(e.detail.value as number)}
+                  className="type-compact-range"
+                />
+              </div>
+
+              <div className="type-slider-row">
+                <div className="type-slider-header">
+                  <span>Max Line Width</span>
+                  <span className="type-slider-value">{maxLineWidth === 0 ? 'Auto' : `${maxLineWidth} ch`}</span>
+                </div>
+                <IonRange
+                  min={0}
+                  max={120}
+                  step={5}
+                  value={maxLineWidth}
+                  onIonChange={(e) => setMaxLineWidth(e.detail.value as number)}
+                  className="type-compact-range"
+                />
+              </div>
             </div>
 
             {/* Margins — compact 2x2 grid */}
@@ -679,6 +721,40 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Layout Options */}
+            <div className="type-section">
+              <div className="type-section-label">Layout Options</div>
+              <IonList lines="none" style={{ background: 'transparent', padding: 0 }}>
+                <IonItem style={{ '--background': 'transparent', '--padding-start': '0', '--inner-padding-end': '0' }}>
+                  <IonLabel style={{ fontSize: '14px' }}>Drop Caps</IonLabel>
+                  <IonToggle slot="end" checked={dropCaps} onIonChange={(e) => setDropCaps(e.detail.checked)} />
+                </IonItem>
+                <IonItem style={{ '--background': 'transparent', '--padding-start': '0', '--inner-padding-end': '0' }}>
+                  <IonLabel style={{ fontSize: '14px' }}>Two-Column Layout</IonLabel>
+                  <IonToggle slot="end" checked={twoColumnLayout} onIonChange={(e) => setTwoColumnLayout(e.detail.checked)} />
+                </IonItem>
+                <IonItem style={{ '--background': 'transparent', '--padding-start': '0', '--inner-padding-end': '0' }}>
+                  <IonLabel style={{ fontSize: '14px' }}>Global Bold</IonLabel>
+                  <IonToggle slot="end" checked={globalBold} onIonChange={(e) => setGlobalBold(e.detail.checked)} />
+                </IonItem>
+                <IonItem style={{ '--background': 'transparent', '--padding-start': '0', '--inner-padding-end': '0' }}>
+                  <IonLabel style={{ fontSize: '14px' }}>Color Vision Filter</IonLabel>
+                  <IonSelect
+                    slot="end"
+                    value={colorVisionFilter}
+                    onIonChange={(e) => setColorVisionFilter(e.detail.value)}
+                    interface="popover"
+                    style={{ fontSize: '13px' }}
+                  >
+                    <IonSelectOption value="none">None</IonSelectOption>
+                    <IonSelectOption value="protanopia">Protanopia</IonSelectOption>
+                    <IonSelectOption value="deuteranopia">Deuteranopia</IonSelectOption>
+                    <IonSelectOption value="tritanopia">Tritanopia</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+              </IonList>
             </div>
 
             {/* Preset */}
