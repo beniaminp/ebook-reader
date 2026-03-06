@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -38,6 +38,7 @@ import {
   sparklesOutline,
   languageOutline,
   imageOutline,
+  folderOpenOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
@@ -48,6 +49,8 @@ import { useAppStore } from '../../stores/useAppStore';
 import { downloadExport, importAllData } from '../../services/localExportService';
 import { enrichAllBooks, fetchEnrichedMetadata } from '../../services/metadataLookupService';
 import * as databaseService from '../../services/database';
+import { Capacitor } from '@capacitor/core';
+import { getWatchFolderPath, setWatchFolderPath } from '../../services/watchFolderService';
 import './Settings.css';
 
 const THEME_OPTIONS: { value: ThemeType; label: string }[] = [
@@ -121,7 +124,14 @@ const Settings: React.FC = () => {
   const [isFetchingCovers, setIsFetchingCovers] = useState(false);
   const [coverFetchProgress, setCoverFetchProgress] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+  const [watchFolder, setWatchFolder] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      getWatchFolderPath().then(setWatchFolder);
+    }
+  }, []);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -553,6 +563,42 @@ const Settings: React.FC = () => {
               {isFetchingCovers ? <IonSpinner name="crescent" /> : 'Fetch'}
             </IonButton>
           </IonItem>
+
+          {Capacitor.isNativePlatform() && (
+            <IonItem>
+              <IonIcon icon={folderOpenOutline} slot="start" color="primary" />
+              <IonLabel>
+                <h3>Watch Folder</h3>
+                <IonNote>
+                  {watchFolder
+                    ? `Monitoring: ${watchFolder}`
+                    : 'Auto-import new ebooks from a folder'}
+                </IonNote>
+              </IonLabel>
+              <IonButton
+                slot="end"
+                fill="outline"
+                size="small"
+                style={{ '--border-radius': '8px' }}
+                onClick={async () => {
+                  if (watchFolder) {
+                    await setWatchFolderPath(null);
+                    setWatchFolder(null);
+                    setToastMessage('Watch folder removed');
+                  } else {
+                    const path = prompt('Enter folder path (e.g., Download/Books)');
+                    if (path) {
+                      await setWatchFolderPath(path);
+                      setWatchFolder(path);
+                      setToastMessage(`Watch folder set to: ${path}`);
+                    }
+                  }
+                }}
+              >
+                {watchFolder ? 'Remove' : 'Set'}
+              </IonButton>
+            </IonItem>
+          )}
         </fieldset>
 
         {/* ─── P2P Sharing ─────────────────────────────── */}

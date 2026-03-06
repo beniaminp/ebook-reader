@@ -37,6 +37,7 @@ import { useAutoRestore } from './hooks/useAutoRestore';
 import { initDatabase } from './services/database';
 import { torrentService } from './services/torrentService';
 import { useHardcoverStore } from './stores/hardcoverStore';
+import { autoImportFromWatchFolder } from './services/watchFolderService';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -80,8 +81,11 @@ const AppTabs: React.FC = () => {
     // Initialize database eagerly on app startup, then pre-load books into the store.
     // This avoids a race condition on Android where the Library component mounts
     // and tries to load books before the SQLite database is ready.
-    initDatabase().then(() => {
-      useAppStore.getState().loadBooks();
+    initDatabase().then(async () => {
+      await useAppStore.getState().loadBooks();
+      // Auto-import from watch folder after books are loaded
+      const count = await autoImportFromWatchFolder();
+      if (count > 0) useAppStore.getState().loadBooks();
     }).catch((err) => {
       console.error('Failed to initialize database:', err);
     });
@@ -136,8 +140,10 @@ const AppTabs: React.FC = () => {
     const listener = CapApp.addListener('appStateChange', ({ isActive }) => {
       if (isActive) {
         // Re-initialize DB first — Android may close the SQLite connection when backgrounded
-        initDatabase().then(() => {
-          useAppStore.getState().loadBooks();
+        initDatabase().then(async () => {
+          await useAppStore.getState().loadBooks();
+          const count = await autoImportFromWatchFolder();
+          if (count > 0) useAppStore.getState().loadBooks();
         });
       }
     });

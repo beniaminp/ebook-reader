@@ -161,7 +161,7 @@
 | **Storage Size Display** | Show file size per book; add storage management screen with total usage and cleanup tools | Calibre, Moon+ Reader, Google Play Books |
 | **Client-Side Format Conversion** | Basic in-app conversion (TXT→EPUB, EPUB→PDF) using existing parsers | Calibre, Moon+ Reader, Koodo Reader |
 | **WebDAV / Nextcloud Sync** | Generic WebDAV source for browsing and importing books from self-hosted cloud | Moon+ Reader, KOReader, Koodo Reader |
-| **Watch Folder / Auto-Import** | Monitor a local folder and auto-import new files dropped there | KOReader, Moon+ Reader, Calibre |
+| **Watch Folder / Auto-Import** ✅ | Monitor a local folder and auto-import new files dropped there | KOReader, Moon+ Reader, Calibre |
 | **Selective Backup & Restore** | Backup only progress/annotations, only specific collections, or preview before restoring | Moon+ Reader, Calibre |
 
 ### 3.5 Import & Export
