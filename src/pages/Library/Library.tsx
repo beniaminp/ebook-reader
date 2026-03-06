@@ -63,6 +63,8 @@ import {
   checkboxOutline,
   squareOutline,
   createOutline,
+  flashOutline,
+  sparklesOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -82,6 +84,10 @@ import {
   type SortOption,
   type ReadStatus,
 } from '../../stores/useLibraryPrefsStore';
+import { useSmartShelvesStore } from '../../stores/useSmartShelvesStore';
+import { evaluateShelf } from '../../services/smartShelvesService';
+import type { SmartShelf } from '../../services/smartShelvesService';
+import SmartShelfEditor from '../../components/SmartShelfEditor';
 import ReadingStreakCard from '../../components/ReadingStreakCard';
 import WelcomeBackCard from '../../components/WelcomeBackCard';
 import OnboardingOverlay from '../../components/OnboardingOverlay';
@@ -91,6 +97,14 @@ const Library: React.FC = () => {
   const history = useHistory();
   const { books, setBooks, setCurrentBook, removeBook } = useAppStore();
   const { viewMode, setViewMode, sortBy, setSortBy, filters, setFilters } = useLibraryPrefsStore();
+  const {
+    shelves: smartShelves,
+    activeShelfId: activeSmartShelfId,
+    setActiveShelf: setActiveSmartShelf,
+    addShelf: addSmartShelf,
+    removeShelf: removeSmartShelf,
+    updateShelf: updateSmartShelf,
+  } = useSmartShelvesStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -211,6 +225,23 @@ const Library: React.FC = () => {
   const [isCoverSearching, setIsCoverSearching] = useState(false);
   const [isSavingCover, setIsSavingCover] = useState(false);
 
+  // Smart shelf editor state
+  const [showSmartShelfEditor, setShowSmartShelfEditor] = useState(false);
+  const [editingSmartShelf, setEditingSmartShelf] = useState<SmartShelf | null>(null);
+
+  const handleSaveSmartShelf = useCallback((shelf: SmartShelf) => {
+    const existing = smartShelves.find((s) => s.id === shelf.id);
+    if (existing) {
+      updateSmartShelf(shelf.id, shelf);
+    } else {
+      addSmartShelf(shelf);
+    }
+  }, [smartShelves, updateSmartShelf, addSmartShelf]);
+
+  const handleDeleteSmartShelf = useCallback((shelfId: string) => {
+    removeSmartShelf(shelfId);
+  }, [removeSmartShelf]);
+
   const handleRateBook = useCallback(async (bookId: string, rating: number, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -307,6 +338,24 @@ const Library: React.FC = () => {
   // Compute filtered and sorted books directly — avoids the extra render cycle
   // that useEffect + setState would cause.
   const filteredBooks = useMemo(() => {
+    // If a smart shelf is active, use its rules to filter books
+    if (activeSmartShelfId) {
+      const activeSmartShelf = smartShelves.find((s) => s.id === activeSmartShelfId);
+      if (activeSmartShelf) {
+        let result = evaluateShelf(activeSmartShelf, books);
+        // Still apply search on top of smart shelf
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          result = result.filter(
+            (book) =>
+              book.title.toLowerCase().includes(query) ||
+              book.author.toLowerCase().includes(query)
+          );
+        }
+        return result;
+      }
+    }
+
     let result = [...books];
 
     // Apply search filter
@@ -358,7 +407,7 @@ const Library: React.FC = () => {
 
     // Apply sorting
     return sortBooks(result, sortBy);
-  }, [books, searchQuery, sortBy, sortBooks, filters, bookTagMap, bookCollectionMap]);
+  }, [books, searchQuery, sortBy, sortBooks, filters, bookTagMap, bookCollectionMap, activeSmartShelfId, smartShelves]);
 
   const loadBooks = async () => {
     setIsLoading(true);
@@ -1267,7 +1316,8 @@ const Library: React.FC = () => {
 
   const clearAllFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
-  }, []);
+    setActiveSmartShelf(null);
+  }, [setActiveSmartShelf]);
 
   const renderDownloadBadge = (book: Book) => {
     if (book.source === 'calibre-web' && !book.downloaded) {
@@ -1328,8 +1378,14 @@ const Library: React.FC = () => {
                     <p>{book.format.toUpperCase()}</p>
                   </div>
                 )}
-                {book.progress > 0 && (
+                {(book.progress > 0 || (book.furthestProgress != null && book.furthestProgress > 0)) && (
                   <div className="book-progress-overlay">
+                    {book.furthestProgress != null && book.furthestProgress > book.progress && (
+                      <div
+                        className="book-progress-bar book-progress-furthest"
+                        style={{ width: `${Math.min(100, Math.round(book.furthestProgress * 100))}%` }}
+                      />
+                    )}
                     <div
                       className="book-progress-bar"
                       style={{ width: `${getProgressWidth(book)}%` }}
@@ -1420,9 +1476,15 @@ const Library: React.FC = () => {
                     : `${(book.fileSize / (1024 * 1024)).toFixed(1)} MB`}
                 </span>
               ) : null}
-              {book.progress > 0 && (
+              {(book.progress > 0 || (book.furthestProgress != null && book.furthestProgress > 0)) && (
                 <div className="book-progress-container">
                   <div className="book-progress-bar-small">
+                    {book.furthestProgress != null && book.furthestProgress > book.progress && (
+                      <div
+                        className="book-progress-fill book-progress-furthest-small"
+                        style={{ width: `${Math.min(100, Math.round(book.furthestProgress * 100))}%` }}
+                      />
+                    )}
                     <div
                       className="book-progress-fill"
                       style={{ width: `${getProgressWidth(book)}%` }}
@@ -1470,8 +1532,14 @@ const Library: React.FC = () => {
                         <span className="bookshelf-book-placeholder-format">{book.format.toUpperCase()}</span>
                       </div>
                     )}
-                    {book.progress > 0 && (
+                    {(book.progress > 0 || (book.furthestProgress != null && book.furthestProgress > 0)) && (
                       <div className="bookshelf-progress">
+                        {book.furthestProgress != null && book.furthestProgress > book.progress && (
+                          <div
+                            className="bookshelf-progress-fill bookshelf-progress-furthest"
+                            style={{ width: `${Math.min(100, Math.round(book.furthestProgress * 100))}%` }}
+                          />
+                        )}
                         <div
                           className="bookshelf-progress-fill"
                           style={{ width: `${getProgressWidth(book)}%` }}
@@ -1671,7 +1739,7 @@ const Library: React.FC = () => {
     </IonModal>
   );
 
-  const hasActiveFilters = activeFilterCount > 0 || searchQuery.trim() !== '';
+  const hasActiveFilters = activeFilterCount > 0 || searchQuery.trim() !== '' || !!activeSmartShelfId;
 
   return (
     <IonPage className="library-page">
@@ -1748,7 +1816,7 @@ const Library: React.FC = () => {
               <IonSelectOption value="rating">Rating</IonSelectOption>
             </IonSelect>
             <span className="library-book-count">
-              {searchQuery.trim() || activeFilterCount > 0
+              {searchQuery.trim() || activeFilterCount > 0 || activeSmartShelfId
                 ? `${filteredBooks.length} of ${books.length} book${books.length !== 1 ? 's' : ''}`
                 : `${books.length} book${books.length !== 1 ? 's' : ''}`}
             </span>
@@ -1834,6 +1902,63 @@ const Library: React.FC = () => {
             </IonChip>
           </div>
         )}
+
+        {/* Smart Shelves chip bar */}
+        <div className="smart-shelves-bar">
+          <IonIcon
+            icon={sparklesOutline}
+            style={{
+              fontSize: '16px',
+              color: 'var(--ion-color-medium)',
+              marginRight: '4px',
+              flexShrink: 0,
+            }}
+          />
+          <div className="smart-shelves-scroll">
+            {activeSmartShelfId && (
+              <IonChip
+                color="medium"
+                onClick={() => setActiveSmartShelf(null)}
+                style={{ fontSize: '12px' }}
+              >
+                All Books
+              </IonChip>
+            )}
+            {smartShelves.map((shelf) => (
+              <IonChip
+                key={shelf.id}
+                color={activeSmartShelfId === shelf.id ? 'primary' : undefined}
+                outline={activeSmartShelfId !== shelf.id}
+                onClick={() =>
+                  setActiveSmartShelf(activeSmartShelfId === shelf.id ? null : shelf.id)
+                }
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setEditingSmartShelf(shelf);
+                  setShowSmartShelfEditor(true);
+                }}
+                style={{ fontSize: '12px' }}
+              >
+                {shelf.name}
+                {activeSmartShelfId === shelf.id && (
+                  <IonBadge color="light" style={{ marginLeft: 6, fontSize: '10px' }}>
+                    {evaluateShelf(shelf, books).length}
+                  </IonBadge>
+                )}
+              </IonChip>
+            ))}
+            <IonChip
+              outline
+              onClick={() => {
+                setEditingSmartShelf(null);
+                setShowSmartShelfEditor(true);
+              }}
+              style={{ fontSize: '12px' }}
+            >
+              <IonIcon icon={addOutline} />
+            </IonChip>
+          </div>
+        </div>
 
         {importingCount > 0 && (
           <div className="loading-state" style={{ paddingBottom: 0 }}>
@@ -2690,6 +2815,18 @@ const Library: React.FC = () => {
           )}
         </IonContent>
       </IonModal>
+
+      {/* Smart Shelf Editor Modal */}
+      <SmartShelfEditor
+        isOpen={showSmartShelfEditor}
+        shelf={editingSmartShelf}
+        onSave={handleSaveSmartShelf}
+        onDelete={handleDeleteSmartShelf}
+        onDismiss={() => {
+          setShowSmartShelfEditor(false);
+          setEditingSmartShelf(null);
+        }}
+      />
     </IonPage>
   );
 };

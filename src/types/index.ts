@@ -53,6 +53,7 @@ export interface Book {
   review?: string; // User's written review
   fileHash?: string; // SHA-256 hash of first 8KB for duplicate detection
   fileSize?: number; // File size in bytes
+  furthestProgress?: number; // Furthest reading position reached (0-1 decimal), prevents accidental progress overwrite
   metadata?: BookMetadata;
 }
 
@@ -107,6 +108,7 @@ export interface Highlight {
   text: string;
   color: string;
   note?: string;
+  tags?: string[];
   timestamp: Date;
   /** PDF-specific: page number for the highlight */
   pageNumber?: number;

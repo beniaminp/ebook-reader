@@ -99,6 +99,35 @@
   --padding-end: 10px;
 }
 
+/* ─── Smart Shelves bar ─────────────────────────────── */
+.smart-shelves-bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px 6px;
+  background: var(--ion-background-color, #fafafa);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.smart-shelves-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex: 1;
+}
+
+.smart-shelves-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.smart-shelves-scroll ion-chip {
+  flex-shrink: 0;
+  height: 28px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+}
+
 /* ─── Loading / Empty States ─────────────────────────── */
 .loading-state {
   display: flex;
@@ -352,6 +381,7 @@
   height: 4px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 0 0 4px 4px;
+  overflow: hidden;
 }
 
 .book-progress-bar {
@@ -359,6 +389,20 @@
   background: var(--ion-color-primary);
   transition: width 0.3s ease;
   border-radius: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Furthest-read indicator (grid view) - subtle lighter bar behind current progress */
+.book-progress-bar.book-progress-furthest {
+  background: var(--ion-color-primary);
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.book-progress-bar:not(.book-progress-furthest) {
+  z-index: 1;
 }
 
 /* Format badge on cover */
@@ -512,6 +556,7 @@
   border-radius: 2px;
   overflow: hidden;
   max-width: 100px;
+  position: relative;
 }
 
 .book-progress-bar-small .book-progress-fill {
@@ -519,6 +564,20 @@
   background: var(--ion-color-primary);
   border-radius: 2px;
   transition: width 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Furthest-read indicator (list view) */
+.book-progress-bar-small .book-progress-furthest-small {
+  background: var(--ion-color-primary);
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.book-progress-bar-small .book-progress-fill:not(.book-progress-furthest-small) {
+  z-index: 1;
 }
 
 .book-progress-text {
@@ -664,11 +723,26 @@
   height: 3px;
   background: rgba(0, 0, 0, 0.3);
   z-index: 3;
+  overflow: hidden;
 }
 
 .bookshelf-progress-fill {
   height: 100%;
   background: var(--ion-color-primary);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Furthest-read indicator (shelf view) */
+.bookshelf-progress-fill.bookshelf-progress-furthest {
+  background: var(--ion-color-primary);
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.bookshelf-progress-fill:not(.bookshelf-progress-furthest) {
+  z-index: 1;
 }
 
 .bookshelf-book-shadow {

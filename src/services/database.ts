@@ -42,6 +42,7 @@ interface DbHighlight {
   text: string;
   color: string;
   note?: string;
+  tags?: string; // JSON stringified array of tag strings
   pageNumber?: number;
   rects?: string; // JSON stringified array of {x, y, width, height}
 }
@@ -273,9 +274,20 @@ export async function getAllBooks(): Promise<Book[]> {
       }
     }
 
+    // Also extract furthest_progress from the raw query results
+    const furthestMap = new Map<string, number>();
+    if (progressResult.values) {
+      for (const row of progressResult.values) {
+        if (row.furthest_progress != null) {
+          furthestMap.set(row.book_id, row.furthest_progress / 100);
+        }
+      }
+    }
+
     // Merge progress into books
     return books.map((book) => {
       const progress = progressMap.get(book.id);
+      const furthestProgress = furthestMap.get(book.id);
       if (progress) {
         return {
           ...book,
@@ -283,6 +295,7 @@ export async function getAllBooks(): Promise<Book[]> {
           totalPages: progress.totalPages,
           progress: progress.percentage / 100, // Convert from percentage to decimal
           lastRead: new Date(progress.lastReadAt * 1000),
+          furthestProgress,
         };
       }
       return book;
@@ -747,6 +760,7 @@ function mapRowToBook(row: any): Book | null {
     review: row.review || undefined,
     fileHash: row.file_hash || undefined,
     fileSize: row.file_size || undefined,
+    furthestProgress: row.furthest_progress != null ? row.furthest_progress / 100 : undefined,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }
@@ -778,6 +792,7 @@ function webBookToBook(webBook: WebBook): Book {
     series: (webBook as any).series,
     seriesIndex: (webBook as any).seriesIndex,
     readStatus: (webBook as any).readStatus || 'unread',
+    furthestProgress: (webBook as any).furthestProgress,
     metadata: (webBook as any).metadata,
   };
 }
@@ -853,6 +868,49 @@ export async function upsertReadingProgress(
     return true;
   } catch (error) {
     console.error('Error upserting reading progress:', error);
+    return false;
+  }
+}
+
+/**
+ * Update the furthest reading progress for a book.
+ * Only saves if the new percentage exceeds the currently stored value.
+ * @param bookId - The book ID
+ * @param percentage - The new percentage (0-100 scale)
+ */
+export async function updateFurthestProgress(
+  bookId: string,
+  percentage: number
+): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    ensureWebInit();
+    const book = webBooks.find((b) => b.id === bookId);
+    if (book) {
+      const currentFurthest = (book as any).furthestProgress || 0;
+      const newDecimal = percentage / 100;
+      if (newDecimal > currentFurthest) {
+        (book as any).furthestProgress = newDecimal;
+        book.updatedAt = Date.now();
+        saveWebData();
+      }
+    }
+    return true;
+  }
+
+  try {
+    const database = await getDb();
+    // Use reading_progress table to store furthest_progress alongside current progress.
+    // Only update if new value is greater than the existing one.
+    await database.run(
+      `UPDATE ${TABLES.READING_PROGRESS}
+       SET furthest_progress = MAX(COALESCE(furthest_progress, 0), ?),
+           updated_at = ?
+       WHERE book_id = ?;`,
+      [percentage, Math.floor(Date.now() / 1000), bookId]
+    );
+    return true;
+  } catch (error) {
+    console.error('Error updating furthest progress:', error);
     return false;
   }
 }
@@ -1055,6 +1113,7 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
       text: highlight.text,
       color: highlight.color,
       note: highlight.note,
+      tags: highlight.tags ? JSON.parse(highlight.tags) : undefined,
       pageNumber: highlight.pageNumber,
       rects: highlight.rects ? JSON.parse(highlight.rects) : undefined,
       timestamp: new Date(),
@@ -1069,9 +1128,9 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
 
     await database.run(
       `INSERT INTO ${TABLES.HIGHLIGHTS} (
-        id, book_id, location, text, color, note, page_number, rects,
+        id, book_id, location, text, color, note, tags, page_number, rects,
         chapter_id, chapter_title, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         id,
         highlight.bookId,
@@ -1079,6 +1138,7 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
         highlight.text,
         highlight.color || '#ffff00',
         highlight.note || null,
+        highlight.tags || null,
         highlight.pageNumber || null,
         highlight.rects || null,
         null,
@@ -1099,6 +1159,7 @@ export async function addHighlight(highlight: DbHighlight): Promise<Highlight | 
       text: highlight.text,
       color: highlight.color,
       note: highlight.note,
+      tags: highlight.tags ? JSON.parse(highlight.tags) : undefined,
       pageNumber: highlight.pageNumber,
       rects: highlight.rects ? JSON.parse(highlight.rects) : undefined,
       timestamp: new Date(now * 1000),
@@ -1141,6 +1202,7 @@ export async function getHighlights(bookId: string): Promise<Highlight[]> {
       text: row.text,
       color: row.color,
       note: row.note || undefined,
+      tags: row.tags ? JSON.parse(row.tags) : undefined,
       pageNumber: row.page_number || undefined,
       rects: row.rects ? JSON.parse(row.rects) : undefined,
       timestamp: new Date(row.created_at * 1000),
@@ -1169,7 +1231,7 @@ export async function deleteHighlight(id: string): Promise<boolean> {
 
 export async function updateHighlight(
   id: string,
-  updates: Partial<Pick<Highlight, 'color' | 'note'>>
+  updates: Partial<Pick<Highlight, 'color' | 'note' | 'tags'>>
 ): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
     const key = `highlight_${id}`;
@@ -1195,6 +1257,10 @@ export async function updateHighlight(
     if (updates.note !== undefined) {
       fields.push('note = ?');
       values.push(updates.note);
+    }
+    if (updates.tags !== undefined) {
+      fields.push('tags = ?');
+      values.push(JSON.stringify(updates.tags));
     }
 
     if (fields.length > 0) {
@@ -2369,6 +2435,7 @@ export const databaseService = {
   // Reading Progress
   upsertReadingProgress,
   getReadingProgress,
+  updateFurthestProgress,
   // Bookmarks
   addBookmark,
   getBookmarks,

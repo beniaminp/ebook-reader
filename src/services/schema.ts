@@ -116,6 +116,7 @@ export const CREATE_TABLES = {
       text TEXT NOT NULL,
       color TEXT DEFAULT '#ffff00',
       note TEXT,
+      tags TEXT,
       page_number INTEGER,
       rects TEXT,
       chapter_id TEXT,
@@ -560,6 +561,8 @@ export const MIGRATIONS: Record<number, string> = {
   4: 'Add read_status column to books table',
   5: 'Add Hardcover sync columns to books and hardcover_sync_queue table',
   6: 'Add review, file_hash columns to books and reading_sessions table',
+  7: 'Add furthest_progress column to reading_progress table',
+  8: 'Add tags column to highlights table for annotation tags',
 };
 
 // SQL statements for migrations
@@ -598,6 +601,12 @@ export const MIGRATION_SQL: Record<number, string> = {
     );
     CREATE INDEX IF NOT EXISTS idx_reading_sessions_book_id ON reading_sessions(book_id);
     CREATE INDEX IF NOT EXISTS idx_reading_sessions_start_time ON reading_sessions(start_time DESC);
+  `,
+  7: `
+    ALTER TABLE ${TABLES.READING_PROGRESS} ADD COLUMN furthest_progress REAL DEFAULT 0;
+  `,
+  8: `
+    ALTER TABLE ${TABLES.HIGHLIGHTS} ADD COLUMN tags TEXT;
   `,
 };
 

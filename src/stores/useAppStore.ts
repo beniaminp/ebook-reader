@@ -214,6 +214,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       const wasFinished = previousBook && previousBook.progress >= 0.95;
       const isNowFinished = progressPercentage >= 0.95;
 
+      // Update furthest progress if new position exceeds the stored maximum
+      const currentFurthest = previousBook?.furthestProgress || 0;
+      const newFurthest = Math.max(currentFurthest, progressPercentage);
+      if (progressPercentage > currentFurthest) {
+        databaseService
+          .updateFurthestProgress(bookId, progressPercentage * 100)
+          .catch(() => {});
+      }
+
       set((state) => ({
         books: state.books.map((b) =>
           b.id === bookId
@@ -222,6 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 totalPages: total,
                 currentPage: location,
                 progress: progressPercentage,
+                furthestProgress: newFurthest,
                 lastRead: new Date(),
               }
             : b
@@ -234,6 +244,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 totalPages: total,
                 currentPage: location,
                 progress: progressPercentage,
+                furthestProgress: newFurthest,
                 lastRead: new Date(),
               }
             : state.currentBook,
