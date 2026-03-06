@@ -230,7 +230,7 @@
 | **iOS Live Activity / Dynamic Island** | Show reading timer on lock screen and Dynamic Island | BookTrack |
 | **Siri Shortcuts / Android App Shortcuts** | Voice commands: "Continue reading [book]", "Start a reading session" | Apple Books, Kindle |
 | **"Continue Reading" Notification** | Daily scheduled reminder if daily reading goal not met, with deep link to current book | Apple Books, Kindle, Moon+ Reader |
-| **RSS-to-Ebook / Read-It-Later Inbox** | Subscribe to RSS feeds or save web articles; convert to readable format in library | Readwise Reader, Wallabag, Matter |
+| **RSS-to-Ebook / Read-It-Later Inbox** ✅ | Subscribe to RSS feeds or save web articles; convert to readable format in library | Readwise Reader, Wallabag, Matter |
 | **Webhook / Zapier Integration** | Fire webhooks on events (finished book, added highlight) for automation pipelines | — (high community demand) |
 | **Calibre-Web Annotation Sync** | Push highlights/bookmarks back to Calibre-Web server (currently read-only sync) | — |
 | **Multi-Profile Support** | Multiple user profiles per app installation with separate libraries and settings | Moon+ Reader Pro |

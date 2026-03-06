@@ -29,6 +29,7 @@ import ReadingGoals from './pages/ReadingGoals/ReadingGoals';
 import HardcoverSettings from './pages/HardcoverSettings/HardcoverSettings';
 import SearchBooks from './pages/SearchBooks/SearchBooks';
 import TranslationLanguages from './pages/TranslationLanguages/TranslationLanguages';
+import ReadLater from './pages/ReadLater/ReadLater';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
@@ -213,6 +214,9 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/translation-languages">
           <TranslationLanguages />
+        </Route>
+        <Route exact path="/read-later">
+          <ReadLater />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

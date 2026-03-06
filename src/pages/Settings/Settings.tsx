@@ -39,6 +39,7 @@ import {
   languageOutline,
   imageOutline,
   folderOpenOutline,
+  newspaperOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
@@ -521,6 +522,14 @@ const Settings: React.FC = () => {
             <IonLabel>
               <h3>Translation Languages</h3>
               <IonNote>Download languages for offline translation</IonNote>
+            </IonLabel>
+          </IonItem>
+
+          <IonItem button routerLink="/read-later" detail className="settings-nav-item">
+            <IonIcon icon={newspaperOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Read Later / RSS</h3>
+              <IonNote>Subscribe to RSS feeds and save articles</IonNote>
             </IonLabel>
           </IonItem>
 
