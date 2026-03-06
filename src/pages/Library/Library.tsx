@@ -60,6 +60,9 @@ import {
   layersOutline,
   star,
   starOutline,
+  checkboxOutline,
+  squareOutline,
+  createOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -120,6 +123,77 @@ const Library: React.FC = () => {
   // "Add to Shelf" state
   const [showShelfAssign, setShowShelfAssign] = useState(false);
   const [bookShelfIds, setBookShelfIds] = useState<string[]>([]);
+
+  // Bulk select state
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
+  const [showBulkEditSheet, setShowBulkEditSheet] = useState(false);
+  const [bulkGenre, setBulkGenre] = useState('');
+  const [bulkRating, setBulkRating] = useState(0);
+  const [bulkSeries, setBulkSeries] = useState('');
+  const [bulkLanguage, setBulkLanguage] = useState('');
+  const [bulkReadStatus, setBulkReadStatus] = useState('');
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
+
+  const toggleBulkSelect = (bookId: string) => {
+    setSelectedBookIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(bookId)) next.delete(bookId);
+      else next.add(bookId);
+      return next;
+    });
+  };
+
+  const handleBulkEdit = async () => {
+    if (selectedBookIds.size === 0) return;
+    setIsBulkSaving(true);
+    try {
+      for (const bookId of selectedBookIds) {
+        const updates: any = {};
+        const metaUpdates: any = {};
+        if (bulkGenre.trim()) {
+          updates.genre = bulkGenre.trim();
+          metaUpdates.genre = bulkGenre.trim();
+        }
+        if (bulkRating > 0) {
+          metaUpdates.rating = bulkRating;
+        }
+        if (bulkSeries.trim()) {
+          updates.series = bulkSeries.trim();
+          metaUpdates.series = bulkSeries.trim();
+        }
+        if (bulkLanguage.trim()) {
+          metaUpdates.language = bulkLanguage.trim();
+        }
+        if (bulkReadStatus) {
+          updates.readStatus = bulkReadStatus;
+        }
+        if (Object.keys(updates).length > 0) {
+          await databaseService.updateBook(bookId, updates);
+        }
+        if (Object.keys(metaUpdates).length > 0) {
+          await databaseService.updateBookMetadata(bookId, metaUpdates);
+        }
+      }
+      await loadBooks();
+      setToastColor('success');
+      setToastMessage(`Updated ${selectedBookIds.size} book${selectedBookIds.size > 1 ? 's' : ''}`);
+      setShowBulkEditSheet(false);
+      setBulkSelectMode(false);
+      setSelectedBookIds(new Set());
+      setBulkGenre('');
+      setBulkRating(0);
+      setBulkSeries('');
+      setBulkLanguage('');
+      setBulkReadStatus('');
+    } catch (err) {
+      console.error('Bulk edit failed:', err);
+      setToastColor('danger');
+      setToastMessage('Failed to update books');
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
 
   // Series editing state (in Book Details modal)
   const [detailSeriesName, setDetailSeriesName] = useState('');
@@ -340,6 +414,10 @@ const Library: React.FC = () => {
   };
 
   const handleBookClick = (book: Book) => {
+    if (bulkSelectMode) {
+      toggleBulkSelect(book.id);
+      return;
+    }
     if (!book.id) {
       console.error('Attempted to open book with missing id:', book);
       return;
@@ -1240,6 +1318,22 @@ const Library: React.FC = () => {
                   </div>
                 )}
                 {renderDownloadBadge(book)}
+                {bulkSelectMode && (
+                  <IonIcon
+                    icon={selectedBookIds.has(book.id) ? checkboxOutline : squareOutline}
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      left: 4,
+                      fontSize: 22,
+                      color: selectedBookIds.has(book.id) ? 'var(--ion-color-primary)' : 'rgba(255,255,255,0.7)',
+                      background: 'rgba(0,0,0,0.4)',
+                      borderRadius: 4,
+                      padding: 2,
+                      zIndex: 5,
+                    }}
+                  />
+                )}
                 {book.readStatus === 'dnf' && (
                   <IonBadge color="medium" className="book-dnf-badge">DNF</IonBadge>
                 )}
@@ -1563,6 +1657,16 @@ const Library: React.FC = () => {
           </IonButtons>
           <IonTitle>Library</IonTitle>
           <IonButtons slot="end">
+            <IonButton onClick={() => {
+              if (bulkSelectMode) {
+                setBulkSelectMode(false);
+                setSelectedBookIds(new Set());
+              } else {
+                setBulkSelectMode(true);
+              }
+            }}>
+              <IonIcon icon={bulkSelectMode ? closeOutline : checkboxOutline} />
+            </IonButton>
             <IonButton onClick={() => setShowFilterPanel(true)}>
               <IonIcon icon={filterOutline} />
               {activeFilterCount > 0 && (
@@ -1758,11 +1862,157 @@ const Library: React.FC = () => {
         )}
       </IonContent>
 
-      <IonFab vertical="bottom" horizontal="end" slot="fixed">
-        <IonFabButton onClick={() => setShowImportSheet(true)}>
-          <IonIcon icon={addOutline} />
-        </IonFabButton>
-      </IonFab>
+      {/* Bulk select action bar */}
+      {bulkSelectMode && selectedBookIds.size > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'var(--ion-toolbar-background, var(--ion-color-primary))',
+            color: '#fff',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            zIndex: 10000,
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.2)',
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 600 }}>
+            {selectedBookIds.size} selected
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <IonButton
+              fill="solid"
+              color="light"
+              size="small"
+              onClick={() => {
+                setBulkGenre('');
+                setBulkRating(0);
+                setBulkSeries('');
+                setBulkLanguage('');
+                setBulkReadStatus('');
+                setShowBulkEditSheet(true);
+              }}
+            >
+              <IonIcon icon={createOutline} slot="start" />
+              Edit
+            </IonButton>
+            <IonButton
+              fill="outline"
+              color="light"
+              size="small"
+              onClick={() => {
+                setSelectedBookIds(new Set(filteredBooks.map(b => b.id)));
+              }}
+            >
+              Select All
+            </IonButton>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Metadata Edit Modal */}
+      <IonModal
+        isOpen={showBulkEditSheet}
+        onDidDismiss={() => setShowBulkEditSheet(false)}
+        breakpoints={[0, 0.65]}
+        initialBreakpoint={0.65}
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Bulk Edit ({selectedBookIds.size} books)</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowBulkEditSheet(false)}>
+                <IonIcon icon={closeOutline} />
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <p style={{ fontSize: 13, color: 'var(--ion-color-medium)', margin: '0 0 12px' }}>
+            Only filled fields will be applied. Leave blank to skip.
+          </p>
+          <IonList>
+            <IonItem>
+              <IonLabel position="stacked">Genre</IonLabel>
+              <IonInput
+                value={bulkGenre}
+                onIonInput={(e) => setBulkGenre(e.detail.value || '')}
+                placeholder="e.g. Fiction, Science"
+                clearInput
+              />
+            </IonItem>
+            <IonItem>
+              <IonLabel position="stacked">Series</IonLabel>
+              <IonInput
+                value={bulkSeries}
+                onIonInput={(e) => setBulkSeries(e.detail.value || '')}
+                placeholder="e.g. Harry Potter"
+                clearInput
+              />
+            </IonItem>
+            <IonItem>
+              <IonLabel position="stacked">Language</IonLabel>
+              <IonInput
+                value={bulkLanguage}
+                onIonInput={(e) => setBulkLanguage(e.detail.value || '')}
+                placeholder="e.g. en, fr, de"
+                clearInput
+              />
+            </IonItem>
+            <IonItem>
+              <IonLabel>Read Status</IonLabel>
+              <IonSelect
+                value={bulkReadStatus}
+                onIonChange={(e) => setBulkReadStatus(e.detail.value)}
+                placeholder="No change"
+              >
+                <IonSelectOption value="">No change</IonSelectOption>
+                <IonSelectOption value="unread">Unread</IonSelectOption>
+                <IonSelectOption value="reading">Reading</IonSelectOption>
+                <IonSelectOption value="finished">Finished</IonSelectOption>
+                <IonSelectOption value="dnf">DNF</IonSelectOption>
+              </IonSelect>
+            </IonItem>
+            <IonItem>
+              <IonLabel>Rating</IonLabel>
+              <div style={{ display: 'flex', gap: 4, padding: '8px 0' }}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <IonIcon
+                    key={s}
+                    icon={s <= bulkRating ? star : starOutline}
+                    style={{
+                      fontSize: 24,
+                      color: s <= bulkRating ? '#f5a623' : 'var(--ion-color-medium)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setBulkRating(s === bulkRating ? 0 : s)}
+                  />
+                ))}
+              </div>
+            </IonItem>
+          </IonList>
+          <IonButton
+            expand="block"
+            style={{ marginTop: 16 }}
+            onClick={handleBulkEdit}
+            disabled={isBulkSaving}
+          >
+            {isBulkSaving ? <IonSpinner name="dots" /> : `Apply to ${selectedBookIds.size} Books`}
+          </IonButton>
+        </IonContent>
+      </IonModal>
+
+      {!bulkSelectMode && (
+        <IonFab vertical="bottom" horizontal="end" slot="fixed">
+          <IonFabButton onClick={() => setShowImportSheet(true)}>
+            <IonIcon icon={addOutline} />
+          </IonFabButton>
+        </IonFab>
+      )}
 
       <IonActionSheet
         isOpen={showImportSheet}
