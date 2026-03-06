@@ -921,6 +921,27 @@ const Library: React.FC = () => {
     }
   };
 
+  const computeFileHash = async (buffer: ArrayBuffer): Promise<string> => {
+    const slice = buffer.slice(0, 8192); // First 8KB
+    const hashBuffer = await crypto.subtle.digest('SHA-256', slice);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const checkForDuplicate = (title: string, author: string, fileHash?: string): Book | undefined => {
+    return books.find(b => {
+      // Check by file hash
+      if (fileHash && b.fileHash && b.fileHash === fileHash) return true;
+      // Check by title+author (case insensitive)
+      if (
+        b.title.toLowerCase() === title.toLowerCase() &&
+        b.author.toLowerCase() === author.toLowerCase() &&
+        author.toLowerCase() !== 'unknown'
+      ) return true;
+      return false;
+    });
+  };
+
   const importBook = async (file: File): Promise<void> => {
     // Validate File object to prevent crashes
     if (!file || !file.name) {
@@ -1034,6 +1055,24 @@ const Library: React.FC = () => {
       console.error('Metadata extraction failed, using filename:', err);
     }
 
+    // Compute file hash for duplicate detection
+    let fileHash: string | undefined;
+    try {
+      fileHash = await computeFileHash(arrayBuffer);
+    } catch { /* hash is optional */ }
+
+    // Check for duplicates
+    const existingDuplicate = checkForDuplicate(title, author, fileHash);
+    if (existingDuplicate) {
+      const shouldContinue = window.confirm(
+        `"${file.name}" appears to match "${existingDuplicate.title}" by ${existingDuplicate.author} already in your library.\n\nImport anyway?`
+      );
+      if (!shouldContinue) {
+        await webFileStorage.deleteFile(bookId);
+        return;
+      }
+    }
+
     const newBook: Book = {
       id: bookId,
       title,
@@ -1041,6 +1080,7 @@ const Library: React.FC = () => {
       filePath,
       coverPath,
       format,
+      fileHash,
       totalPages: 0,
       currentPage: 0,
       progress: 0,

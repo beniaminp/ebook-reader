@@ -348,8 +348,8 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
         id, title, author, file_path, file_name, file_size, format,
         cover_path, total_pages, language, publisher, publish_date, isbn,
         description, source, source_id, source_url, downloaded, series,
-        series_index, rating, tags, added_at, last_opened_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        series_index, rating, tags, file_hash, added_at, last_opened_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         book.id,
         book.title,
@@ -373,6 +373,7 @@ export async function addBook(book: Omit<Book, 'dateAdded'>): Promise<boolean> {
         null,
         null,
         null,
+        book.fileHash || null,
         Math.floor(now / 1000),
         null,
         Math.floor(now / 1000),

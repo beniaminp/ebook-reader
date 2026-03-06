@@ -157,7 +157,7 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Duplicate Detection** | Warn when importing a book that matches an existing title+author or file hash | Calibre, ReadEra |
+| **Duplicate Detection** ✅ | Warn when importing a book that matches an existing title+author or file hash | Calibre, ReadEra |
 | **Storage Size Display** | Show file size per book; add storage management screen with total usage and cleanup tools | Calibre, Moon+ Reader, Google Play Books |
 | **Client-Side Format Conversion** | Basic in-app conversion (TXT→EPUB, EPUB→PDF) using existing parsers | Calibre, Moon+ Reader, Koodo Reader |
 | **WebDAV / Nextcloud Sync** | Generic WebDAV source for browsing and importing books from self-hosted cloud | Moon+ Reader, KOReader, Koodo Reader |
