@@ -40,6 +40,8 @@ import {
   imageOutline,
   folderOpenOutline,
   newspaperOutline,
+  calendarOutline,
+  flashOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
@@ -127,6 +129,15 @@ const Settings: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [watchFolder, setWatchFolder] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const totalStorageBytes = books.reduce((sum, b) => sum + (b.fileSize || 0), 0);
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -514,6 +525,16 @@ const Settings: React.FC = () => {
             <IonLabel>
               <h3>Reading Statistics</h3>
               <IonNote>View your reading history and progress</IonNote>
+            </IonLabel>
+          </IonItem>
+
+          <IonItem className="settings-nav-item">
+            <IonIcon icon={serverOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Library Storage</h3>
+              <IonNote>
+                {books.length} books · {formatFileSize(totalStorageBytes)}
+              </IonNote>
             </IonLabel>
           </IonItem>
 

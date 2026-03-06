@@ -1,0 +1,159 @@
+.pomodoro-mini {
+  background: none;
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 12px;
+  padding: 4px 10px;
+  color: var(--ion-text-color);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.pomodoro-mini:hover { opacity: 1; }
+
+.pomodoro-mini--active {
+  opacity: 1;
+  border-color: var(--ion-color-primary);
+  color: var(--ion-color-primary);
+  animation: pomodoro-pulse 2s infinite;
+}
+
+.pomodoro-mini--break {
+  border-color: var(--ion-color-success);
+  color: var(--ion-color-success);
+}
+
+@keyframes pomodoro-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.pomodoro-panel {
+  position: fixed;
+  bottom: 60px;
+  right: 12px;
+  background: var(--ion-background-color, #fff);
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 16px;
+  padding: 16px;
+  width: 260px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 9999;
+}
+
+.pomodoro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.pomodoro-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pomodoro-collapse {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--ion-color-medium);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.pomodoro-option {
+  margin-bottom: 10px;
+}
+
+.pomodoro-option-label {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.pomodoro-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pomodoro-chip {
+  background: var(--ion-color-light);
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--ion-text-color);
+}
+
+.pomodoro-chip--active {
+  background: var(--ion-color-primary);
+  color: #fff;
+  border-color: var(--ion-color-primary);
+}
+
+.pomodoro-sessions {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  margin-top: 8px;
+}
+
+.pomodoro-active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pomodoro-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.pomodoro-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.pomodoro-ring-bg {
+  fill: none;
+  stroke: var(--ion-color-light-shade);
+  stroke-width: 4;
+}
+
+.pomodoro-ring-fill {
+  fill: none;
+  stroke: var(--ion-color-primary);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.pomodoro-ring-fill--break {
+  stroke: var(--ion-color-success);
+}
+
+.pomodoro-time {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pomodoro-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

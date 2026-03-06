@@ -41,6 +41,7 @@ import {
   list,
   colorPaletteOutline,
   volumeHighOutline,
+  speedometerOutline,
 } from 'ionicons/icons';
 
 import { Capacitor } from '@capacitor/core';
@@ -74,6 +75,8 @@ import { useTTSHighlighter } from '../../hooks/useTTSHighlighter';
 import { SleepTimerButton } from '../reader-ui/SleepTimerButton';
 import { SleepTimerWarning } from '../reader-ui/SleepTimerWarning';
 import { SleepTimerOverlay } from '../reader-ui/SleepTimerOverlay';
+import RSVPReader from '../reader-ui/RSVPReader';
+import PomodoroTimer from '../reader-ui/PomodoroTimer';
 import { TTSControls } from '../reader-ui/TTSControls';
 import { useReadingSpeed } from '../../hooks/useReadingSpeed';
 import { TimeLeftDisplay } from '../reader-ui/TimeLeftDisplay';
@@ -203,6 +206,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // TTS state
   const [ttsActive, setTtsActive] = useState(false);
+  const [rsvpOpen, setRsvpOpen] = useState(false);
   // Ref to track whether TTS is active (avoids stale closures)
   const ttsActiveRef = useRef(false);
   // Ref to track whether we are auto-advancing TTS to the next page
@@ -1204,6 +1208,13 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
               </IonButton>
             )}
             <SleepTimerButton sleepTimer={sleepTimer} iconStyle={iconColor} />
+            <IonButton
+              onClick={() => setRsvpOpen(true)}
+              style={iconColor}
+              title="Speed Reading (RSVP)"
+            >
+              <IonIcon icon={speedometerOutline} />
+            </IonButton>
             <IonButton onClick={() => setSettingsOpen(true)} style={iconColor}>
               <IonIcon icon={settingsOutline} />
             </IonButton>
@@ -1458,7 +1469,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
       {/* ─── Text Selection Menu ─── */}
       <TextSelectionMenu
-        enabledActions={['translate', 'highlight', 'copy', 'define']}
+        enabledActions={['translate', 'highlight', 'copy', 'define', 'share-quote']}
         capturedText={isFoliate ? capturedSelectionText : undefined}
         onDismiss={handleSelectionDismiss}
         onHighlight={(text) => {
@@ -1485,6 +1496,18 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         onDefine={(text) => {
           setSelectedWord(text.split(/\s+/)[0]);
           setDictionaryOpen(true);
+        }}
+        onShareQuote={async (text) => {
+          try {
+            const { shareQuoteCard } = await import('../../services/quoteCardService');
+            await shareQuoteCard({
+              text,
+              bookTitle: book.title,
+              author: book.author,
+            });
+          } catch (err) {
+            setToastMessage('Failed to share quote');
+          }
         }}
       />
 
@@ -1657,6 +1680,20 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
           sleepTimer.startTimer(minutes);
         }}
       />
+
+      {/* Pomodoro Focus Timer */}
+      <PomodoroTimer />
+
+      {/* RSVP Speed Reading */}
+      {rsvpOpen && (
+        <RSVPReader
+          text={engineRef.current?.getVisibleText?.() || ''}
+          onClose={() => setRsvpOpen(false)}
+          onComplete={() => {
+            engineRef.current?.next();
+          }}
+        />
+      )}
     </IonPage>
   );
 };

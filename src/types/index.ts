@@ -52,6 +52,7 @@ export interface Book {
   coverUrl?: string; // Remote cover URL for enrichment
   review?: string; // User's written review
   fileHash?: string; // SHA-256 hash of first 8KB for duplicate detection
+  fileSize?: number; // File size in bytes
   metadata?: BookMetadata;
 }
 

@@ -30,6 +30,8 @@ import HardcoverSettings from './pages/HardcoverSettings/HardcoverSettings';
 import SearchBooks from './pages/SearchBooks/SearchBooks';
 import TranslationLanguages from './pages/TranslationLanguages/TranslationLanguages';
 import ReadLater from './pages/ReadLater/ReadLater';
+import YearInReview from './pages/YearInReview/YearInReview';
+import DailyReviewPage from './pages/DailyReview/DailyReview';
 import { useThemeStore } from './stores/useThemeStore';
 import { useSharingStore } from './stores/useSharingStore';
 import { useAuthStore } from './stores/useAuthStore';
@@ -217,6 +219,12 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/read-later">
           <ReadLater />
+        </Route>
+        <Route exact path="/year-in-review">
+          <YearInReview />
+        </Route>
+        <Route exact path="/daily-review">
+          <DailyReviewPage />
         </Route>
         <Route exact path="/">
           <Redirect to="/library" />

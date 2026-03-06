@@ -26,10 +26,14 @@ import {
   IonThumbnail,
 } from '@ionic/react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { flameOutline, chevronForwardOutline, bookOutline, timeOutline } from 'ionicons/icons';
+import { flameOutline, chevronForwardOutline, bookOutline, timeOutline, trophyOutline, calendarOutline, flashOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { databaseService } from '../../services/database';
 import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
+import ReadingHeatmap from '../../components/ReadingHeatmap';
+import ReadingBadges from '../../components/ReadingBadges';
+import { evaluateBadges, type EarnedBadge } from '../../services/badgesService';
+import { useAppStore } from '../../stores/useAppStore';
 
 interface TimelineEntry {
   bookId: string;
@@ -94,6 +98,9 @@ const Statistics: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [heatmapData, setHeatmapData] = useState<Array<{ date: number; time_spent: number }>>([]);
+  const [badges, setBadges] = useState<EarnedBadge[]>([]);
+  const books = useAppStore((s) => s.books);
 
   const {
     enabled: streakEnabled,
@@ -116,14 +123,29 @@ const Statistics: React.FC = () => {
     setIsLoading(true);
     try {
       const days = parseInt(period, 10);
-      const [global, totals, timelineData] = await Promise.all([
+      const [global, totals, timelineData, yearData] = await Promise.all([
         databaseService.getGlobalReadingStats(days),
         databaseService.getTotalReadingSummary(),
         databaseService.getReadingTimeline(50),
+        databaseService.getGlobalReadingStats(365),
       ]);
       setDailyStats(global as DailyStats[]);
       setSummary(totals);
       setTimeline(timelineData);
+      setHeatmapData(yearData as Array<{ date: number; time_spent: number }>);
+
+      // Evaluate badges
+      const genres = [...new Set(books.map((b) => b.genre).filter(Boolean))] as string[];
+      const sessions = timelineData.map((t) => ({ startTime: t.startTime }));
+      const evaluated = evaluateBadges({
+        totalBooks: totals.totalBooksRead,
+        totalMinutes: Math.round(totals.totalTimeSpent / 60),
+        currentStreak,
+        longestStreak,
+        genres,
+        sessions,
+      });
+      setBadges(evaluated);
     } catch (error) {
       console.error('Error loading statistics:', error);
     } finally {
@@ -245,6 +267,28 @@ const Statistics: React.FC = () => {
             </IonCardContent>
           </IonCard>
         )}
+
+        {/* Quick Access Cards */}
+        <div style={{ display: 'flex', gap: '8px', padding: '4px 16px 8px', overflowX: 'auto' }}>
+          <IonButton
+            fill="outline"
+            size="small"
+            routerLink="/year-in-review"
+            style={{ '--border-radius': '12px', flex: '0 0 auto' }}
+          >
+            <IonIcon icon={calendarOutline} slot="start" />
+            Year in Review
+          </IonButton>
+          <IonButton
+            fill="outline"
+            size="small"
+            routerLink="/daily-review"
+            style={{ '--border-radius': '12px', flex: '0 0 auto' }}
+          >
+            <IonIcon icon={flashOutline} slot="start" />
+            Daily Review
+          </IonButton>
+        </div>
 
         {isLoading ? (
           <div
@@ -421,6 +465,23 @@ const Statistics: React.FC = () => {
                 )}
               </IonCardContent>
             </IonCard>
+
+            {/* Reading Heatmap */}
+            <IonCard style={{ margin: '0 16px 16px' }}>
+              <IonCardHeader>
+                <IonCardTitle style={{ fontSize: '16px' }}>Reading Activity</IonCardTitle>
+              </IonCardHeader>
+              <IonCardContent>
+                <ReadingHeatmap data={heatmapData} />
+              </IonCardContent>
+            </IonCard>
+
+            {/* Reading Badges */}
+            {badges.length > 0 && (
+              <div style={{ margin: '0 16px 16px' }}>
+                <ReadingBadges badges={badges} />
+              </div>
+            )}
 
             {/* Reading History Timeline */}
             <IonCard style={{ margin: '0 16px 16px' }}>

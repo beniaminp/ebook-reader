@@ -1,0 +1,379 @@
+.year-in-review {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1a4e 30%, #24243e 60%, #1b1340 100%);
+  color: #f0f0f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.year-in-review__inner {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+/* Close button */
+.year-in-review__close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10000;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s;
+}
+
+.year-in-review__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.year-in-review__close ion-icon {
+  color: #ffffff;
+  font-size: 24px;
+}
+
+/* Header */
+.year-in-review__header {
+  text-align: center;
+  padding: 40px 0 32px;
+}
+
+.year-in-review__header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.year-in-review__header p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Stats cards */
+.year-in-review__card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.year-in-review__card--highlight {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15));
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.year-in-review__card-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 12px;
+}
+
+/* Big number stat */
+.year-in-review__big-number {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  margin: 0 0 4px;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.year-in-review__big-label {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* Stats row */
+.year-in-review__stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.year-in-review__stat-item {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
+
+.year-in-review__stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #e0e0ff;
+  margin: 0 0 4px;
+}
+
+.year-in-review__stat-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* Monthly bar chart */
+.year-in-review__chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  padding-top: 8px;
+}
+
+.year-in-review__chart-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.year-in-review__chart-bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #818cf8, #6366f1);
+  transition: height 0.3s ease;
+}
+
+.year-in-review__chart-bar--zero {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.year-in-review__chart-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 6px;
+}
+
+.year-in-review__chart-count {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* Genre bars */
+.year-in-review__genre-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.year-in-review__genre-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.year-in-review__genre-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.year-in-review__genre-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0ff;
+}
+
+.year-in-review__genre-count {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.year-in-review__genre-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.year-in-review__genre-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #818cf8, #a78bfa);
+  transition: width 0.4s ease;
+}
+
+/* Authors list */
+.year-in-review__author-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.year-in-review__author-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.year-in-review__author-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.year-in-review__author-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e0e0ff;
+  flex: 1;
+}
+
+.year-in-review__author-count {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Stars rating */
+.year-in-review__stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.year-in-review__stars ion-icon {
+  font-size: 28px;
+}
+
+.year-in-review__star--filled {
+  color: #fbbf24;
+}
+
+.year-in-review__star--half {
+  color: #fbbf24;
+  opacity: 0.5;
+}
+
+.year-in-review__star--empty {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.year-in-review__rating-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-left: 8px;
+}
+
+/* Fastest book */
+.year-in-review__fastest {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.year-in-review__fastest-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.year-in-review__fastest-icon ion-icon {
+  font-size: 24px;
+  color: #34d399;
+}
+
+.year-in-review__fastest-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0ff;
+  margin: 0 0 2px;
+}
+
+.year-in-review__fastest-days {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* Share button */
+.year-in-review__share {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  margin-top: 24px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.year-in-review__share:hover {
+  opacity: 0.9;
+}
+
+.year-in-review__share:active {
+  transform: scale(0.98);
+}
+
+.year-in-review__share ion-icon {
+  font-size: 20px;
+}
+
+/* Streak card special */
+.year-in-review__streak-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-in-review__streak-icon ion-icon {
+  font-size: 32px;
+  color: #f97316;
+}

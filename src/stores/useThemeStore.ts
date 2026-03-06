@@ -136,6 +136,25 @@ const PREDEFINED_THEMES: Record<string, ReaderTheme> = {
 
 export type PageTransitionType = 'none' | 'fade' | 'slide' | 'curl';
 
+export interface TypographyProfile {
+  id: string;
+  name: string;
+  createdAt: number;
+  settings: {
+    theme: string;
+    fontFamily: string;
+    fontSize: number;
+    lineHeight: number;
+    textAlign: string;
+    marginSize: string;
+    customMargins: CustomMargins;
+    hyphenation: boolean;
+    paragraphSpacing: number;
+    letterSpacing: number;
+    fontWeight: number;
+  };
+}
+
 interface ThemeState extends ReadingSettings {
   // Custom themes
   customThemes: ReaderTheme[];
@@ -213,6 +232,12 @@ interface ThemeState extends ReadingSettings {
   removeCustomFont: (fontName: string) => Promise<void>;
   loadCustomFonts: () => Promise<void>;
 
+  // Typography profiles
+  typographyProfiles: TypographyProfile[];
+  saveTypographyProfile: (name: string) => void;
+  loadTypographyProfile: (profileId: string) => void;
+  deleteTypographyProfile: (profileId: string) => void;
+
   // Custom background actions
   setCustomBackgroundColor: (color: string | undefined) => void;
   setCustomBackgroundImage: (imageUri: string | undefined) => void;
@@ -285,6 +310,7 @@ export const useThemeStore = create<ThemeState>()(
       customFonts: [],
       customBackgroundColor: undefined,
       customBackgroundImage: undefined,
+      typographyProfiles: [] as TypographyProfile[],
       pageTransitionType: 'none' as PageTransitionType,
       tapSensitivity: 10,
       swipeThreshold: 50,
@@ -486,6 +512,55 @@ export const useThemeStore = create<ThemeState>()(
         set({ customFonts: fonts });
       },
 
+      // Typography profiles
+      saveTypographyProfile: (name) =>
+        set((state) => {
+          const profile: TypographyProfile = {
+            id: crypto.randomUUID(),
+            name,
+            createdAt: Date.now(),
+            settings: {
+              theme: state.theme,
+              fontFamily: state.fontFamily,
+              fontSize: state.fontSize,
+              lineHeight: state.lineHeight,
+              textAlign: state.textAlign,
+              marginSize: state.marginSize,
+              customMargins: { ...state.customMargins },
+              hyphenation: state.hyphenation,
+              paragraphSpacing: state.paragraphSpacing,
+              letterSpacing: state.letterSpacing,
+              fontWeight: state.fontWeight,
+            },
+          };
+          return { typographyProfiles: [...state.typographyProfiles, profile] };
+        }),
+
+      loadTypographyProfile: (profileId) => {
+        const state = get();
+        const profile = state.typographyProfiles.find((p) => p.id === profileId);
+        if (profile) {
+          set({
+            theme: profile.settings.theme as any,
+            fontFamily: profile.settings.fontFamily as any,
+            fontSize: profile.settings.fontSize,
+            lineHeight: profile.settings.lineHeight,
+            textAlign: profile.settings.textAlign as any,
+            marginSize: profile.settings.marginSize as any,
+            customMargins: profile.settings.customMargins,
+            hyphenation: profile.settings.hyphenation,
+            paragraphSpacing: profile.settings.paragraphSpacing,
+            letterSpacing: profile.settings.letterSpacing,
+            fontWeight: profile.settings.fontWeight,
+          });
+        }
+      },
+
+      deleteTypographyProfile: (profileId) =>
+        set((state) => ({
+          typographyProfiles: state.typographyProfiles.filter((p) => p.id !== profileId),
+        })),
+
       // Custom background actions
       setCustomBackgroundColor: (color) => set({ customBackgroundColor: color }),
 
@@ -532,6 +607,7 @@ export const useThemeStore = create<ThemeState>()(
         fontWeight: state.fontWeight,
         customThemes: state.customThemes,
         customFonts: state.customFonts,
+        typographyProfiles: state.typographyProfiles,
         customBackgroundColor: state.customBackgroundColor,
         customBackgroundImage: state.customBackgroundImage,
         pageTransitionType: state.pageTransitionType,

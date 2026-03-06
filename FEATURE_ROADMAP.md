@@ -29,7 +29,7 @@
 | **Column Width / Max Line Length** | Cap the maximum readable column width (60-75 chars/line) on large screens | Kobo, Readwise Reader |
 | **Drop Caps** | Render decorative enlarged first letter of chapters from EPUB metadata | Kindle Enhanced Typesetting, Apple Books |
 | **Font Weight / Bold Intensity** ✅ | Slider (100-900) to increase/decrease font weight without switching font families | Moon+ Reader Pro, Kobo TypeGenius |
-| **Typography Presets / Profiles** | Named, saveable profiles (e.g., "Night Comfort", "Speed Reading", "Dyslexia Friendly") that bundle font, spacing, and color settings | Kobo, Apple Books (page themes) |
+| **Typography Presets / Profiles** ✅ | Named, saveable profiles (e.g., "Night Comfort", "Speed Reading", "Dyslexia Friendly") that bundle font, spacing, and color settings | Kobo, Apple Books (page themes) |
 | **Custom CSS Injection** ✅ | Allow advanced users to inject custom CSS to override EPUB rendering | KOReader, Moon+ Reader Pro |
 
 ### 1.2 Reading Modes
@@ -41,7 +41,7 @@
 | **Immersive Full-Screen Mode** ✅ | Hide all OS chrome (status bar, nav bar, header/footer), leaving only text. Single tap to reveal UI | Moon+ Reader Pro, Google Play Books, Apple Books |
 | **Sleep Timer** ✅ | Auto-stop reading session and TTS after a set duration (15/30/45/60 min) | Kindle (2024), Libby, Moon+ Reader Pro |
 | **Scheduled Blue Light Shift** | Auto-adjust blue-light filter intensity based on time of day (cool→warm), like f.lux | Kobo ComfortLight PRO, Apple Night Shift, Google Play Books |
-| **RSVP Speed Reading Mode** | Display one word at a time at configurable WPM for rapid reading without eye movement | Reedy, Outread, Glance, Librera |
+| **RSVP Speed Reading Mode** ✅ | Display one word at a time at configurable WPM for rapid reading without eye movement | Reedy, Outread, Glance, Librera |
 
 ### 1.3 Navigation
 
@@ -54,7 +54,7 @@
 | **Scrubber with Chapter Markers** ✅ | Horizontal progress bar showing chapter boundaries as draggable markers | Apple Books, Kindle, Kobo |
 | **Cross-Device Position Sync** | Cloud sync for reading position, bookmarks, and highlights across devices | Kindle Whispersync, Kobo Sync, Apple Books iCloud |
 | **Furthest-Read Tracking** | Track both current position AND furthest page reached; prevent accidental progress overwrite | Kindle, Kobo |
-| **Estimated Completion Date** | "At your current pace, you'll finish this book on [date]" | Kindle, Kobo Reading Life |
+| **Estimated Completion Date** ✅ | "At your current pace, you'll finish this book on [date]" | Kindle, Kobo Reading Life |
 
 ### 1.4 Accessibility
 
@@ -83,7 +83,7 @@
 | **Highlight Importance Rating** | 1-5 star rating per highlight to feed into spaced repetition review | Readwise |
 | **Rich Text / Markdown Notes** | Support bold, italic, bullet lists, headings, and inline links in annotation notes | Readwise Reader, Notability |
 | **Page Region Screenshot** | Select a rectangular region (diagram, chart) and save as an image annotation | Moon+ Reader Pro, GoodNotes, Xodo |
-| **Quote Sharing Cards** | Generate styled image cards from highlights (cover + quote + author) for social media sharing | Kindle, Moon+ Reader, Fable |
+| **Quote Sharing Cards** ✅ | Generate styled image cards from highlights (cover + quote + author) for social media sharing | Kindle, Moon+ Reader, Fable |
 
 ### 2.2 Dictionary & Translation
 
@@ -99,7 +99,7 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Spaced Repetition Daily Review** | Surface a configurable number of past highlights daily using SM-2 algorithm; dedicated "Daily Review" screen | Readwise |
+| **Spaced Repetition Daily Review** ✅ | Surface a configurable number of past highlights daily using SM-2 algorithm; dedicated "Daily Review" screen | Readwise |
 | **Flashcard Generation** | Convert highlights to cloze-deletion flashcards; exportable to Anki (`.apkg`) format | Readwise, Kindle Vocabulary Builder |
 | **Vocabulary Quiz / Review Mode** | Quiz mode for saved dictionary words (definition→word, word→definition, fill-in-sentence) | Kindle Vocabulary Builder, Kobo, LingQ |
 | **Global Annotation Search** | Search highlight text, notes, and bookmarks across ALL books simultaneously | Readwise, Moon+ Reader Pro, Kindle |
@@ -158,7 +158,7 @@
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
 | **Duplicate Detection** ✅ | Warn when importing a book that matches an existing title+author or file hash | Calibre, ReadEra |
-| **Storage Size Display** | Show file size per book; add storage management screen with total usage and cleanup tools | Calibre, Moon+ Reader, Google Play Books |
+| **Storage Size Display** ✅ | Show file size per book; add storage management screen with total usage and cleanup tools | Calibre, Moon+ Reader, Google Play Books |
 | **Client-Side Format Conversion** | Basic in-app conversion (TXT→EPUB, EPUB→PDF) using existing parsers | Calibre, Moon+ Reader, Koodo Reader |
 | **WebDAV / Nextcloud Sync** | Generic WebDAV source for browsing and importing books from self-hosted cloud | Moon+ Reader, KOReader, Koodo Reader |
 | **Watch Folder / Auto-Import** ✅ | Monitor a local folder and auto-import new files dropped there | KOReader, Moon+ Reader, Calibre |
@@ -193,23 +193,23 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Pomodoro / Focus Timer** | Built-in 25-min focus blocks with break reminders; reading session timer | BookTrack |
+| **Pomodoro / Focus Timer** ✅ | Built-in 25-min focus blocks with break reminders; reading session timer | BookTrack |
 | **Reading Goals & Annual Challenge** ✅ | Yearly book goal (e.g., "30 books in 2026") and daily minute goal with progress tracking | Apple Books, Goodreads Challenge, StoryGraph |
 | **Reading Streaks** ✅ | Consecutive-day reading tracker with streak shields, milestones, and notifications | Apple Books, Kobo Reading Life, Bookly |
 | **Reading Speed Calculator** ✅ | Real-time WPM measurement by tracking time elapsed vs. words scrolled | Speechify, Outread |
 | **Comprehension Breaks / Quizzes** | Post-chapter comprehension questions (AI-generated or manual) | StreamRead |
-| **Reading Badges / Achievements** | Visual badges for milestones ("First book", "100 hours", "Night Owl") | Kobo Reading Life Awards, Bookly |
+| **Reading Badges / Achievements** ✅ | Visual badges for milestones ("First book", "100 hours", "Night Owl") | Kobo Reading Life Awards, Bookly |
 
 ### 4.3 Advanced Statistics
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Reading Heatmap (GitHub-style)** | Full-year calendar heatmap showing daily reading activity intensity | StoryGraph |
+| **Reading Heatmap (GitHub-style)** ✅ | Full-year calendar heatmap showing daily reading activity intensity | StoryGraph |
 | **Per-Book Speed Analytics** | Average WPM, total sessions, fastest/slowest days, reading timeline per book | StoryGraph, BookTrack |
 | **Mood & Genre Analytics** | Tag books by mood/genre; visualize reading patterns over time | StoryGraph |
 | **Time-of-Day Distribution** | 24-hour chart showing when during the day the user reads most | Bookmory |
 | **Vocabulary Growth Chart** | Cumulative words saved over time, correlated with books read | — |
-| **Annual Year in Review** | Shareable year-end summary: total books, hours, top genre, longest streak, etc. | Apple Books (2025), Spotify Wrapped-style |
+| **Annual Year in Review** ✅ | Shareable year-end summary: total books, hours, top genre, longest streak, etc. | Apple Books (2025), Spotify Wrapped-style |
 | **Reading History Timeline** ✅ | Chronological log of every session: book, date, duration, pages, start/end position | Kobo Reading Life, Libby Timeline |
 
 ### 4.4 Social Features

@@ -127,12 +127,18 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     clearCustomBackground,
     applyPreset,
     resetSettings,
+    typographyProfiles,
+    saveTypographyProfile,
+    loadTypographyProfile,
+    deleteTypographyProfile,
   } = useThemeStore();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
   const [importingFont, setImportingFont] = useState(false);
   const [fontImportError, setFontImportError] = useState<string | null>(null);
   const [showGoogleFonts, setShowGoogleFonts] = useState(false);
+  const [showSaveProfile, setShowSaveProfile] = useState(false);
+  const [profileName, setProfileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fontInputRef = useRef<HTMLInputElement>(null);
 
@@ -684,6 +690,95 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                   <span className="type-preset-desc">OpenDyslexic, wider spacing, left-aligned</span>
                 </div>
               </button>
+            </div>
+
+            {/* Typography Profiles */}
+            <div className="type-section">
+              <div className="type-section-label">Saved Profiles</div>
+              {typographyProfiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                  {typographyProfiles.map((p) => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        className="type-preset-btn"
+                        style={{ flex: 1 }}
+                        onClick={() => loadTypographyProfile(p.id)}
+                      >
+                        <div className="type-preset-text">
+                          <span className="type-preset-title">{p.name}</span>
+                          <span className="type-preset-desc">
+                            {p.settings.fontSize}px, {p.settings.fontFamily}, {p.settings.lineHeight}x
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--ion-color-danger)',
+                          fontSize: '18px',
+                          padding: '4px',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => deleteTypographyProfile(p.id)}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showSaveProfile ? (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Profile name..."
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--ion-color-light-shade)',
+                      background: 'var(--ion-color-light)',
+                      color: 'var(--ion-text-color)',
+                      fontSize: '13px',
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && profileName.trim()) {
+                        saveTypographyProfile(profileName.trim());
+                        setProfileName('');
+                        setShowSaveProfile(false);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    className="type-preset-btn"
+                    style={{ padding: '8px 12px', minWidth: 'auto' }}
+                    onClick={() => {
+                      if (profileName.trim()) {
+                        saveTypographyProfile(profileName.trim());
+                        setProfileName('');
+                        setShowSaveProfile(false);
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="type-preset-btn"
+                  onClick={() => setShowSaveProfile(true)}
+                  style={{ width: '100%' }}
+                >
+                  <div className="type-preset-text">
+                    <span className="type-preset-title">+ Save Current Settings</span>
+                    <span className="type-preset-desc">Save as a named profile to quickly switch later</span>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         )}

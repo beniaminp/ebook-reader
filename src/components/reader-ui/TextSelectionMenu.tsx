@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IonButton, IonIcon } from '@ionic/react';
-import { language, bookmark, glasses, copy, create } from 'ionicons/icons';
+import { language, bookmark, glasses, copy, create, shareOutline } from 'ionicons/icons';
 import { useTranslationStore } from '../../stores/useTranslationStore';
 import './TextSelectionMenu.css';
 
@@ -20,7 +20,8 @@ interface TextSelectionMenuProps {
   onHighlight?: (text: string, color?: string) => void;
   onCopy?: (text: string) => void;
   onAddNote?: (text: string, rect?: DOMRect) => void;
-  enabledActions?: Array<'translate' | 'define' | 'highlight' | 'copy' | 'note'>;
+  onShareQuote?: (text: string) => void;
+  enabledActions?: Array<'translate' | 'define' | 'highlight' | 'copy' | 'note' | 'share-quote'>;
   /**
    * Externally captured selection text. When set, this overrides the internal
    * iframe-polling logic (used on Android to hide Chrome's native selection UI).
@@ -87,7 +88,8 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
   onHighlight,
   onCopy,
   onAddNote,
-  enabledActions = ['translate', 'highlight', 'copy'],
+  onShareQuote,
+  enabledActions = ['translate', 'highlight', 'copy', 'share-quote'],
   capturedText,
   onDismiss,
 }) => {
@@ -317,6 +319,13 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
     onDismiss?.();
   }, [selectedText, onAddNote, clearSelection, onDismiss]);
 
+  const handleShareQuote = useCallback(() => {
+    onShareQuote?.(selectedText);
+    setVisible(false);
+    clearSelection();
+    onDismiss?.();
+  }, [selectedText, onShareQuote, clearSelection, onDismiss]);
+
   if (!visible || !selectedText) {
     return null;
   }
@@ -358,6 +367,12 @@ export const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({
             <IonButton onClick={handleAddNote} color="tertiary" size="small" fill="solid">
               <IonIcon icon={create} slot="start" />
               Note
+            </IonButton>
+          )}
+          {enabledActions.includes('share-quote') && (
+            <IonButton onClick={handleShareQuote} color="dark" size="small" fill="solid">
+              <IonIcon icon={shareOutline} slot="start" />
+              Quote
             </IonButton>
           )}
         </div>

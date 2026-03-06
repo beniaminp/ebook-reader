@@ -746,6 +746,7 @@ function mapRowToBook(row: any): Book | null {
     coverUrl: row.cover_url || undefined,
     review: row.review || undefined,
     fileHash: row.file_hash || undefined,
+    fileSize: row.file_size || undefined,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }

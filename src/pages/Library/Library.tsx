@@ -1413,6 +1413,13 @@ const Library: React.FC = () => {
             {renderStarRating(book, 13)}
             <div className="book-list-meta">
               <span className="book-list-format">{book.format.toUpperCase()}</span>
+              {book.fileSize ? (
+                <span style={{ fontSize: '11px', color: 'var(--ion-color-medium)', marginLeft: '6px' }}>
+                  {book.fileSize < 1024 * 1024
+                    ? `${(book.fileSize / 1024).toFixed(0)} KB`
+                    : `${(book.fileSize / (1024 * 1024)).toFixed(1)} MB`}
+                </span>
+              ) : null}
               {book.progress > 0 && (
                 <div className="book-progress-container">
                   <div className="book-progress-bar-small">

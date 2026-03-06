@@ -1,0 +1,35 @@
+.reading-heatmap-container {
+  padding: 8px 4px;
+}
+
+.reading-heatmap-scroll {
+  position: relative;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reading-heatmap-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--ion-color-dark, #333);
+  color: var(--ion-color-dark-contrast, #fff);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--ion-font-family, system-ui);
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.reading-heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 8px;
+  padding-right: 4px;
+}
