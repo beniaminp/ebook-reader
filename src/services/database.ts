@@ -165,7 +165,11 @@ async function initDatabaseInternal(): Promise<boolean> {
 
       const indexes = getAllIndexStatements();
       for (const index of indexes) {
-        await db.execute(index);
+        try {
+          await db.execute(index);
+        } catch {
+          // Index creation can fail if column doesn't exist yet (pre-migration)
+        }
       }
 
       const seeds = getAllSeedStatements();
