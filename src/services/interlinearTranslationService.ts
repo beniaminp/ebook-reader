@@ -203,3 +203,14 @@ export async function getDownloadedModels(): Promise<string[]> {
   const result = await mlkit.Translation.getDownloadedModels();
   return result.languages as any as string[];
 }
+
+/**
+ * Delete a downloaded MLKit model (Android only).
+ * No-op on web.
+ */
+export async function deleteDownloadedModel(lang: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  const mlkit = await getMlkit();
+  await mlkit.Translation.deleteDownloadedModel({ language: lang as any });
+  downloadedModels.delete(lang);
+}

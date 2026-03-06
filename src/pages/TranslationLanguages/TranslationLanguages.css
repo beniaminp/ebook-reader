@@ -1,0 +1,81 @@
+/* Web-only notice */
+.tl-web-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--ion-color-medium);
+}
+
+.tl-web-notice-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: var(--ion-color-primary);
+}
+
+.tl-web-notice h3 {
+  margin: 0 0 8px;
+  color: var(--ion-text-color);
+}
+
+.tl-web-notice p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+/* Info bar */
+.tl-info {
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tl-info p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.tl-stats {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tl-stats-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-primary);
+  white-space: nowrap;
+}
+
+/* Search */
+.tl-search {
+  --border-radius: 10px;
+  padding: 0 8px 8px;
+}
+
+/* Language list */
+.tl-list {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tl-item h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.tl-item ion-note {
+  font-size: 12px;
+}
+
+.tl-check {
+  font-size: 20px;
+  margin-right: 4px;
+}

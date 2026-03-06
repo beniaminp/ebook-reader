@@ -36,6 +36,7 @@ import {
   flameOutline,
   bookOutline,
   sparklesOutline,
+  languageOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
@@ -450,6 +451,14 @@ const Settings: React.FC = () => {
             <IonLabel>
               <h3>Reading Statistics</h3>
               <IonNote>View your reading history and progress</IonNote>
+            </IonLabel>
+          </IonItem>
+
+          <IonItem button routerLink="/translation-languages" detail className="settings-nav-item">
+            <IonIcon icon={languageOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Translation Languages</h3>
+              <IonNote>Download languages for offline translation</IonNote>
             </IonLabel>
           </IonItem>
 
