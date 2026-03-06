@@ -1,8 +1,13 @@
 /**
  * Translation Service
- * Uses Google Translate (free endpoint) with MyMemory fallback.
- * Works on both web and Android without API keys.
+ *
+ * - Android: MLKit Translation (offline, on-device) with language auto-detection
+ *   via MLKit Language Identification. Falls back to web APIs if MLKit fails.
+ * - Web: Google Translate free endpoint with MyMemory fallback.
  */
+
+import { Capacitor } from '@capacitor/core';
+import { identifyLanguage } from './languageIdentificationService';
 
 // ============================================================================
 // TYPES
@@ -187,6 +192,49 @@ async function translateWithMyMemory(
 }
 
 // ============================================================================
+// MLKIT TRANSLATION (ANDROID)
+// ============================================================================
+
+type MlkitModule = typeof import('@capacitor-mlkit/translation');
+let mlkitTranslation: MlkitModule | null = null;
+
+async function getMlkit(): Promise<MlkitModule> {
+  if (!mlkitTranslation) {
+    mlkitTranslation = await import('@capacitor-mlkit/translation');
+  }
+  return mlkitTranslation;
+}
+
+const downloadedModels = new Set<string>();
+
+/**
+ * Translate using MLKit on Android. Requires a concrete source language.
+ */
+async function translateWithMlkit(
+  text: string,
+  sourceLang: string,
+  targetLang: string
+): Promise<{ translatedText: string; detectedLang: string }> {
+  const mlkit = await getMlkit();
+
+  // Ensure models are downloaded
+  for (const lang of [sourceLang, targetLang]) {
+    if (!downloadedModels.has(lang)) {
+      await mlkit.Translation.downloadModel({ language: lang as any });
+      downloadedModels.add(lang);
+    }
+  }
+
+  const result = await mlkit.Translation.translate({
+    text,
+    sourceLanguage: sourceLang as any,
+    targetLanguage: targetLang as any,
+  });
+
+  return { translatedText: result.text, detectedLang: sourceLang };
+}
+
+// ============================================================================
 // TRANSLATION SERVICE CLASS
 // ============================================================================
 
@@ -202,7 +250,9 @@ class TranslationService {
   }
 
   /**
-   * Translate text using Google Translate with MyMemory fallback.
+   * Translate text.
+   * Android: MLKit (offline) with language identification, web fallback.
+   * Web: Google Translate with MyMemory fallback.
    */
   async translate(
     text: string,
@@ -225,6 +275,33 @@ class TranslationService {
     let translatedText: string;
     let detectedLang: string;
 
+    // On Android, try MLKit first (offline)
+    if (Capacitor.isNativePlatform()) {
+      let resolvedSource = sourceLang;
+      if (resolvedSource === 'auto') {
+        resolvedSource = await identifyLanguage(text);
+      }
+
+      if (resolvedSource !== 'auto' && resolvedSource !== targetLang) {
+        try {
+          const result = await translateWithMlkit(text, resolvedSource, targetLang);
+          translatedText = result.translatedText;
+          detectedLang = result.detectedLang;
+
+          const response: TranslationResponse = {
+            translatedText,
+            sourceLang: detectedLang,
+            targetLang,
+          };
+          this.cache.set(cacheKey, response);
+          return response;
+        } catch (mlkitErr) {
+          console.warn('[Translation] MLKit failed, falling back to web:', mlkitErr);
+        }
+      }
+    }
+
+    // Web-based fallback (Google Translate → MyMemory)
     try {
       const result = await translateWithGoogle(text, sourceLang, targetLang);
       translatedText = result.translatedText;
@@ -235,8 +312,7 @@ class TranslationService {
         const result = await translateWithMyMemory(text, sourceLang, targetLang);
         translatedText = result.translatedText;
         detectedLang = result.detectedLang;
-      } catch (mmErr) {
-        // Re-throw the original Google error if both fail
+      } catch {
         throw googleErr;
       }
     }

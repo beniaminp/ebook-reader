@@ -59,6 +59,9 @@ dependencies {
     implementation 'org.libtorrent4j:libtorrent4j-android-arm:2.1.0-39'
     implementation 'org.libtorrent4j:libtorrent4j-android-x86_64:2.1.0-39'
 
+    // MLKit Language Identification for offline language detection
+    implementation 'com.google.mlkit:language-id:17.0.6'
+
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

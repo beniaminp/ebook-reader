@@ -7,6 +7,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { identifyLanguage } from './languageIdentificationService';
 
 // Lazy-loaded MLKit Translation module (Android only)
 type MlkitModule = typeof import('@capacitor-mlkit/translation');
@@ -137,9 +138,14 @@ export async function translateParagraph(
 
   let translated: string;
 
-  if (Capacitor.isNativePlatform() && sourceLang !== 'auto') {
-    // MLKit requires a specific source language — it does not support 'auto'.
-    // When sourceLang is 'auto', we fall through to web-based translation below.
+  // On Android, resolve 'auto' via MLKit Language Identification
+  let resolvedSourceLang = sourceLang;
+  if (Capacitor.isNativePlatform() && sourceLang === 'auto') {
+    resolvedSourceLang = await identifyLanguage(text);
+  }
+
+  if (Capacitor.isNativePlatform() && resolvedSourceLang !== 'auto') {
+    if (resolvedSourceLang === targetLang) return text;
     const mlkit = await getMlkit();
 
     // Ensure target language model is downloaded before translating
@@ -150,14 +156,14 @@ export async function translateParagraph(
       console.log(`[Interlinear] Model for "${targetLang}" ready`);
     }
 
-    if (!downloadedModels.has(sourceLang)) {
-      await mlkit.Translation.downloadModel({ language: sourceLang as any });
-      downloadedModels.add(sourceLang);
+    if (!downloadedModels.has(resolvedSourceLang)) {
+      await mlkit.Translation.downloadModel({ language: resolvedSourceLang as any });
+      downloadedModels.add(resolvedSourceLang);
     }
 
     const result = await mlkit.Translation.translate({
       text,
-      sourceLanguage: sourceLang as any,
+      sourceLanguage: resolvedSourceLang as any,
       targetLanguage: targetLang as any,
     });
     translated = result.text;
