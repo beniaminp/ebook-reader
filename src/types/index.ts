@@ -194,6 +194,9 @@ export type TranslationLanguageCode =
   | 'vi'
   | 'id'
   | 'uk'
+  | 'ro'
+  | 'hu'
+  | 'bg'
   | 'auto';
 
 export interface TranslationSettings {
