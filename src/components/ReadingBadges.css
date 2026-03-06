@@ -1,0 +1,116 @@
+/* ─── Reading Badges / Achievements ─────────────────── */
+
+.reading-badges {
+  padding: 0 4px;
+}
+
+.reading-badges__section {
+  margin: 8px 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.reading-badges__section-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ─── 3-column grid ──────────────────────────────────── */
+
+.reading-badges__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+/* ─── Individual badge tile ──────────────────────────── */
+
+.reading-badges__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 12px 6px;
+  border-radius: 10px;
+  background: var(--ion-color-light, #f4f4f4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.reading-badges__item--earned {
+  background: linear-gradient(135deg, rgba(255, 196, 0, 0.12), rgba(255, 152, 0, 0.06));
+}
+
+.reading-badges__item--earned:active {
+  transform: scale(0.96);
+}
+
+.reading-badges__item--locked {
+  opacity: 0.5;
+  filter: grayscale(0.7);
+}
+
+/* ─── Icon ───────────────────────────────────────────── */
+
+.reading-badges__icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* ─── Name ───────────────────────────────────────────── */
+
+.reading-badges__name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ion-text-color);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ─── Earned date ────────────────────────────────────── */
+
+.reading-badges__date {
+  font-size: 9px;
+  color: var(--ion-color-medium);
+  font-weight: 500;
+}
+
+/* ─── Progress label + bar ───────────────────────────── */
+
+.reading-badges__progress-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+}
+
+.reading-badges__progress-bar {
+  width: 100%;
+  --progress-background: var(--ion-color-primary, #3880ff);
+  border-radius: 4px;
+  height: 4px;
+}
+
+/* ─── Empty state ────────────────────────────────────── */
+
+.reading-badges__empty {
+  text-align: center;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--ion-color-medium);
+}
+
+/* ─── Dark Mode ──────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  .reading-badges__item {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .reading-badges__item--earned {
+    background: linear-gradient(135deg, rgba(255, 196, 0, 0.1), rgba(255, 152, 0, 0.06));
+  }
+}
