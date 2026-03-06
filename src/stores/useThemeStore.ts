@@ -134,7 +134,7 @@ const PREDEFINED_THEMES: Record<string, ReaderTheme> = {
   },
 };
 
-export type PageTransitionType = 'none' | 'fade' | 'slide';
+export type PageTransitionType = 'none' | 'fade' | 'slide' | 'curl';
 
 interface ThemeState extends ReadingSettings {
   // Custom themes

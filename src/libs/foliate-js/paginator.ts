@@ -1,4 +1,5 @@
 import type { Overlayer } from './overlayer'
+import { drawPageCurl, animateCurl, CURL_COMPLETE_THRESHOLD, CURL_VELOCITY_THRESHOLD, CURL_ANIMATE_DURATION } from './page-curl'
 
 // ---- Interfaces ----
 
@@ -638,6 +639,7 @@ export class Paginator extends HTMLElement {
         'max-inline-size',
         'max-block-size',
         'max-column-count',
+        'page-curl',
     ]
 
     #root: ShadowRoot = this.attachShadow({ mode: 'open' })
@@ -669,6 +671,16 @@ export class Paginator extends HTMLElement {
     #touchState: TouchState = { x: 0, y: 0, t: 0, vx: 0, vy: 0 }
     #touchScrolled = false
     #lastVisibleRange: Range | undefined
+
+    // ── Page curl state ──
+    #curlCanvas!: HTMLCanvasElement
+    #curlCtx: CanvasRenderingContext2D | null = null
+    #curlActive = false
+    #curlProgress = 0
+    #curlDirection: 1 | -1 = 1
+    #curlStartX = 0
+    #curlAnim: { cancel: () => void } | null = null
+    #curlPageColor = '#f5f5f0'
 
     // Public fields set by open()
     bookDir?: string
@@ -768,12 +780,22 @@ export class Paginator extends HTMLElement {
             font-size: .75em;
             opacity: .6;
         }
+        #curl-canvas {
+            grid-column: 1 / -1;
+            grid-row: 1 / -1;
+            z-index: 10;
+            pointer-events: none;
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
         </style>
         <div id="top">
             <div id="background" part="filter"></div>
             <div id="header"></div>
             <div id="container" part="container"></div>
             <div id="footer"></div>
+            <canvas id="curl-canvas"></canvas>
         </div>
         `
 
@@ -782,6 +804,8 @@ export class Paginator extends HTMLElement {
         this.#container = this.#root.getElementById('container')!
         this.#header = this.#root.getElementById('header')!
         this.#footer = this.#root.getElementById('footer')!
+        this.#curlCanvas = this.#root.getElementById('curl-canvas') as HTMLCanvasElement
+        this.#curlCtx = this.#curlCanvas.getContext('2d')
 
         this.#observer.observe(this.#container)
         this.#container.addEventListener('scroll', () =>
@@ -919,6 +943,102 @@ export class Paginator extends HTMLElement {
             )
         }
         this.#mediaQuery.addEventListener('change', this.#mediaQueryListener)
+    }
+
+    // ── Page curl helpers ──────────────────────────────────────────────────
+
+    get #pageCurlEnabled(): boolean {
+        return this.hasAttribute('page-curl') && !this.scrolled
+    }
+
+    #sizeCurlCanvas(): void {
+        const rect = this.#top.getBoundingClientRect()
+        const dpr = devicePixelRatio || 1
+        this.#curlCanvas.width = rect.width * dpr
+        this.#curlCanvas.height = rect.height * dpr
+        this.#curlCanvas.style.width = `${rect.width}px`
+        this.#curlCanvas.style.height = `${rect.height}px`
+        this.#curlCtx?.scale(dpr, dpr)
+    }
+
+    #showCurlCanvas(): void {
+        this.#curlCanvas.style.display = 'block'
+        this.#sizeCurlCanvas()
+    }
+
+    #hideCurlCanvas(): void {
+        this.#curlCanvas.style.display = 'none'
+        this.#curlProgress = 0
+        this.#curlActive = false
+        if (this.#curlCtx) {
+            const dpr = devicePixelRatio || 1
+            this.#curlCtx.setTransform(1, 0, 0, 1, 0, 0)
+            this.#curlCtx.clearRect(0, 0, this.#curlCanvas.width, this.#curlCanvas.height)
+            this.#curlCtx.scale(dpr, dpr)
+        }
+    }
+
+    #drawCurl(): void {
+        if (!this.#curlCtx) return
+        const rect = this.#top.getBoundingClientRect()
+        const dpr = devicePixelRatio || 1
+        this.#curlCtx.setTransform(1, 0, 0, 1, 0, 0)
+        this.#curlCtx.scale(dpr, dpr)
+        drawPageCurl(
+            this.#curlCtx,
+            rect.width,
+            rect.height,
+            this.#curlProgress,
+            this.#curlDirection,
+            { pageColor: this.#curlPageColor, rtl: this.#rtl },
+        )
+    }
+
+    /** Set the page color used for the curl back-of-page gradient. */
+    setPageCurlColor(color: string): void {
+        this.#curlPageColor = color
+    }
+
+    /** Animate a full page curl for tap/keyboard navigation. */
+    async #animatedPageCurl(dir: -1 | 1): Promise<void> {
+        // Cancel any ongoing curl animation
+        this.#curlAnim?.cancel()
+
+        // Check if we can go in this direction
+        const prev = dir === -1
+        if (prev && this.atStart) return
+        if (!prev && this.atEnd) return
+
+        this.#curlDirection = dir
+        this.#showCurlCanvas()
+
+        // Animate curl from 0 to 1
+        const anim = animateCurl(0, 1, CURL_ANIMATE_DURATION, (p) => {
+            this.#curlProgress = p
+            this.#drawCurl()
+        })
+        this.#curlAnim = anim
+        await anim.promise
+        this.#curlAnim = null
+
+        // Perform the actual page turn (instant, no CSS animation)
+        const wasAnimated = this.hasAttribute('animated')
+        if (wasAnimated) this.removeAttribute('animated')
+
+        const shouldGo = await (prev
+            ? this.#scrollPrev()
+            : this.#scrollNext())
+        if (shouldGo)
+            await this.#goTo({
+                index: this.#adjacentIndex(dir)!,
+                anchor: prev ? () => 1 : () => 0,
+            })
+
+        if (wasAnimated) this.setAttribute('animated', '')
+
+        // Brief delay so the new page renders before we remove the overlay
+        await new Promise(r => requestAnimationFrame(r))
+        this.#hideCurlCanvas()
     }
 
     attributeChangedCallback(name: string, _: string | null, value: string | null): void {
@@ -1212,6 +1332,12 @@ export class Paginator extends HTMLElement {
             vx: 0,
             vy: 0,
         }
+        // Page curl: record start X for total displacement tracking
+        if (this.#pageCurlEnabled) {
+            this.#curlStartX = touch?.screenX ?? 0
+            this.#curlAnim?.cancel()
+            this.#curlAnim = null
+        }
     }
 
     #onTouchMove(e: TouchEvent): void {
@@ -1241,6 +1367,25 @@ export class Paginator extends HTMLElement {
         state.vx = dx / dt
         state.vy = dy / dt
         this.#touchScrolled = true
+
+        // ── Page curl mode ──
+        if (this.#pageCurlEnabled) {
+            const totalDx = this.#curlStartX - x
+            const absTotalDx = Math.abs(totalDx)
+            // Only activate curl if horizontal movement dominates
+            if (absTotalDx > 15) {
+                const containerWidth = this.#container.getBoundingClientRect().width
+                if (!this.#curlActive) {
+                    this.#curlActive = true
+                    this.#curlDirection = totalDx > 0 ? 1 : -1
+                    this.#showCurlCanvas()
+                }
+                this.#curlProgress = Math.min(1, absTotalDx / containerWidth)
+                this.#drawCurl()
+            }
+            return
+        }
+
         if (Math.abs(dx) >= Math.abs(dy)) {
             this.doScrollBy(dx, 0)
         } else if (Math.abs(dy) > Math.abs(dx)) {
@@ -1251,6 +1396,52 @@ export class Paginator extends HTMLElement {
     #onTouchEnd(): void {
         this.#touchScrolled = false
         if (this.scrolled) return
+
+        // ── Page curl mode ──
+        if (this.#pageCurlEnabled && this.#curlActive) {
+            const progress = this.#curlProgress
+            const velocity = Math.abs(this.#touchState.vx)
+            const shouldComplete = progress > CURL_COMPLETE_THRESHOLD
+                || velocity > CURL_VELOCITY_THRESHOLD
+
+            if (shouldComplete) {
+                // Animate to full curl, then do the page turn
+                const dir = this.#curlDirection
+                const anim = animateCurl(
+                    progress, 1, CURL_ANIMATE_DURATION * (1 - progress),
+                    (p) => { this.#curlProgress = p; this.#drawCurl() },
+                )
+                this.#curlAnim = anim
+                anim.promise.then(async () => {
+                    this.#curlAnim = null
+                    // Perform actual page turn
+                    const prev = dir === -1
+                    const shouldGo = await (prev
+                        ? this.#scrollPrev()
+                        : this.#scrollNext())
+                    if (shouldGo)
+                        await this.#goTo({
+                            index: this.#adjacentIndex(dir)!,
+                            anchor: prev ? () => 1 : () => 0,
+                        })
+                    await new Promise(r => requestAnimationFrame(r))
+                    this.#hideCurlCanvas()
+                })
+            } else {
+                // Snap back — animate to 0
+                const anim = animateCurl(
+                    progress, 0, CURL_ANIMATE_DURATION * progress,
+                    (p) => { this.#curlProgress = p; this.#drawCurl() },
+                )
+                this.#curlAnim = anim
+                anim.promise.then(() => {
+                    this.#curlAnim = null
+                    this.#hideCurlCanvas()
+                })
+            }
+            return
+        }
+
         requestAnimationFrame(() => {
             if (globalThis.visualViewport!.scale === 1)
                 this.snap(this.#touchState.vx, this.#touchState.vy)
@@ -1582,6 +1773,20 @@ export class Paginator extends HTMLElement {
 
     async #turnPage(dir: -1 | 1, distance?: number): Promise<void> {
         if (this.#locked) return
+
+        // Use page curl animation if enabled (for non-distance page turns)
+        if (this.#pageCurlEnabled && !distance) {
+            this.#locked = true
+            const safetyTimer = setTimeout(() => { this.#locked = false }, 5000)
+            try {
+                await this.#animatedPageCurl(dir)
+            } finally {
+                clearTimeout(safetyTimer)
+                this.#locked = false
+            }
+            return
+        }
+
         this.#locked = true
         // Safety timeout: force-unlock after 5s to prevent permanent lock-up
         // if a promise hangs (e.g., iframe destroyed mid-load)

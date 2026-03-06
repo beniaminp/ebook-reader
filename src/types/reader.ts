@@ -131,4 +131,6 @@ export interface ReaderEngineRef {
    * Used by TTS highlighter to narrow word search to visible content.
    */
   getVisibleRange?(): Range | null;
+  /** Enable/disable page curl animation. */
+  setPageCurl?(enabled: boolean, pageColor?: string): void;
 }

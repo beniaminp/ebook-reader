@@ -116,6 +116,8 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
     setLetterSpacing,
     setFocusMode,
     setFocusModeOpacity,
+    pageTransitionType,
+    setPageTransitionType,
     setAutoScroll,
     setAutoScrollSpeed,
     setCustomBackgroundColor,
@@ -751,6 +753,20 @@ export const ReadingSettingsPanel: React.FC<ReadingSettingsPanelProps> = ({ onDi
                 />
               </IonItem>
             )}
+
+            <IonItem>
+              <IonLabel>Page Animation</IonLabel>
+              <IonSelect
+                value={pageTransitionType}
+                onIonChange={(e) => setPageTransitionType(e.detail.value)}
+                interface="popover"
+              >
+                <IonSelectOption value="none">None</IonSelectOption>
+                <IonSelectOption value="fade">Fade</IonSelectOption>
+                <IonSelectOption value="slide">Slide</IonSelectOption>
+                <IonSelectOption value="curl">Page Curl</IonSelectOption>
+              </IonSelect>
+            </IonItem>
 
             <IonItem>
               <IonLabel>Auto Scroll</IonLabel>

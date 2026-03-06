@@ -1031,6 +1031,18 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         } catch { /* renderer not ready */ }
         return null;
       },
+      setPageCurl: (enabled: boolean, pageColor?: string) => {
+        try {
+          const renderer = (viewRef.current as any)?.renderer;
+          if (!renderer) return;
+          if (enabled) {
+            renderer.setAttribute('page-curl', '');
+            if (pageColor) renderer.setPageCurlColor?.(pageColor);
+          } else {
+            renderer.removeAttribute('page-curl');
+          }
+        } catch { /* renderer not ready */ }
+      },
       getContentDocuments: (): Document[] => {
         const activeDocs: Document[] = [];
         try {

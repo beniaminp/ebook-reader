@@ -36,7 +36,7 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Page Curl Animation** | Realistic 3D page-curl effect as a transition option | Apple Books, Kindle Paperwhite 5, Moon+ Reader Pro |
+| **Page Curl Animation** ✅ | Realistic 3D page-curl effect as a transition option (interactive drag + animated tap) | Apple Books, Kindle Paperwhite 5, Moon+ Reader Pro |
 | **Scroll with Snap-to-Paragraph** | In scroll mode, snap to the nearest paragraph boundary when the user lifts their finger | Readest, Google Play Books |
 | **Immersive Full-Screen Mode** ✅ | Hide all OS chrome (status bar, nav bar, header/footer), leaving only text. Single tap to reveal UI | Moon+ Reader Pro, Google Play Books, Apple Books |
 | **Sleep Timer** ✅ | Auto-stop reading session and TTS after a set duration (15/30/45/60 min) | Kindle (2024), Libby, Moon+ Reader Pro |

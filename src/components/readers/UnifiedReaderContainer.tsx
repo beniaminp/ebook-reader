@@ -684,6 +684,13 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     );
   }, [themeStore.wordWiseEnabled, themeStore.wordWiseLevel, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
 
+  // ─── Page curl animation ─────────────────────────
+  useEffect(() => {
+    if (!isFoliate) return;
+    const enabled = themeStore.pageTransitionType === 'curl';
+    engineRef.current?.setPageCurl?.(enabled, currentTheme.backgroundColor);
+  }, [themeStore.pageTransitionType, isFoliate, currentTheme.backgroundColor]);
+
   // ─── AutoScroll ─────────────────────────
 
   useEffect(() => {
