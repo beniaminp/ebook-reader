@@ -220,7 +220,7 @@
 | **Public / Popular Highlights** | Mark highlights as public; other readers see crowd-sourced underlines with reader counts | Kindle Popular Highlights |
 | **Goodreads Integration** | OAuth login; auto-post reading status, ratings, and reviews to Goodreads | Kindle, Moon+ Reader Pro, Kobo |
 | **Activity Feed** | Social feed showing friends' finished books, milestones, and shared quotes | Goodreads, Fable |
-| **In-App Book Reviews & Ratings** | Post-finish prompt for star rating and written review, visible on library card | Google Play Books, Goodreads, Kobo |
+| **In-App Book Reviews & Ratings** ✅ | Post-finish prompt for star rating and written review, visible on library card | Google Play Books, Goodreads, Kobo |
 
 ### 4.5 Platform & Integration
 

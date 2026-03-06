@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useHistory } from 'react-router-dom';
 import {
   IonContent,
@@ -9,8 +9,14 @@ import {
   IonToast,
   IonProgressBar,
   IonText,
+  IonModal,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
+  IonTextarea,
 } from '@ionic/react';
-import { arrowBack } from 'ionicons/icons';
+import { arrowBack, star, starOutline, closeOutline } from 'ionicons/icons';
 
 import { useAppStore } from '../../stores/useAppStore';
 import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
@@ -141,6 +147,13 @@ const Reader: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState('');
+
+  // Post-finish review prompt
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const reviewPromptShownRef = useRef(false);
+  const prevProgressRef = useRef(0);
 
   const { setDownloadProgress: storeSetDownloadProgress, removeDownloadProgress } =
     useCalibreWebStore();
@@ -372,6 +385,20 @@ const Reader: React.FC = () => {
       if (!book) return;
       updateProgress(book.id, Math.round(percentage), 100, locationString);
       sessionPagesRef.current += 1;
+
+      // Detect book completion: transition from <95% to >=95%
+      const normalizedPct = percentage / 100;
+      if (
+        normalizedPct >= 0.95 &&
+        prevProgressRef.current < 0.95 &&
+        !reviewPromptShownRef.current &&
+        !(book.metadata?.rating)
+      ) {
+        reviewPromptShownRef.current = true;
+        // Delay slightly so UI doesn't interrupt mid-turn
+        setTimeout(() => setShowReviewModal(true), 1500);
+      }
+      prevProgressRef.current = normalizedPct;
     },
     [book, updateProgress]
   );
@@ -476,6 +503,24 @@ const Reader: React.FC = () => {
     );
   }
 
+  const handleSubmitReview = useCallback(async () => {
+    if (!book) return;
+    try {
+      if (reviewRating > 0) {
+        await databaseService.updateBookMetadata(book.id, { rating: reviewRating });
+      }
+      if (reviewText.trim()) {
+        await databaseService.updateBook(book.id, { review: reviewText.trim() } as any);
+      }
+      if (reviewRating > 0 || reviewText.trim()) {
+        setToastMessage('Review saved!');
+      }
+    } catch {
+      setToastMessage('Failed to save review');
+    }
+    setShowReviewModal(false);
+  }, [book, reviewRating, reviewText]);
+
   // Loaded — render unified reader
   if (!book) return null;
 
@@ -499,6 +544,68 @@ const Reader: React.FC = () => {
         position="bottom"
         onDidDismiss={() => setToastMessage('')}
       />
+
+      {/* Post-finish review prompt */}
+      <IonModal
+        isOpen={showReviewModal}
+        onDidDismiss={() => setShowReviewModal(false)}
+        breakpoints={[0, 0.55]}
+        initialBreakpoint={0.55}
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Rate This Book</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowReviewModal(false)}>
+                <IonIcon icon={closeOutline} />
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: '16px' }}>
+              You finished "{book.title}"!
+            </p>
+            <p style={{ margin: 0, color: 'var(--ion-color-medium)', fontSize: '14px' }}>
+              How would you rate it?
+            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <IonIcon
+                key={s}
+                icon={s <= reviewRating ? star : starOutline}
+                style={{
+                  fontSize: '36px',
+                  color: s <= reviewRating ? '#f5a623' : 'var(--ion-color-medium)',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setReviewRating(s === reviewRating ? 0 : s)}
+              />
+            ))}
+          </div>
+          <IonTextarea
+            placeholder="Write a review (optional)..."
+            value={reviewText}
+            onIonInput={(e) => setReviewText(e.detail.value || '')}
+            rows={4}
+            style={{
+              '--background': 'var(--ion-color-light)',
+              '--padding-start': '12px',
+              '--padding-end': '12px',
+              borderRadius: '8px',
+            }}
+          />
+          <IonButton
+            expand="block"
+            style={{ marginTop: '16px' }}
+            onClick={handleSubmitReview}
+          >
+            {reviewRating > 0 || reviewText.trim() ? 'Save Review' : 'Skip'}
+          </IonButton>
+        </IonContent>
+      </IonModal>
     </>
   );
 };

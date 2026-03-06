@@ -50,6 +50,8 @@ export interface Book {
   communityRatingCount?: number; // Number of community ratings
   pageCount?: number; // Page count from metadata enrichment
   coverUrl?: string; // Remote cover URL for enrichment
+  review?: string; // User's written review
+  fileHash?: string; // SHA-256 hash of first 8KB for duplicate detection
   metadata?: BookMetadata;
 }
 

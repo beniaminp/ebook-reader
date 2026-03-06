@@ -1915,6 +1915,24 @@ const Library: React.FC = () => {
                 </div>
               </div>
 
+              {/* User Review */}
+              {selectedBook.review && (
+                <div>
+                  <h3 style={{ margin: '0 0 4px 0' }}>Your Review</h3>
+                  <p
+                    style={{
+                      margin: '0',
+                      color: 'var(--ion-color-medium)',
+                      fontSize: '14px',
+                      lineHeight: '1.5',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    "{selectedBook.review}"
+                  </p>
+                </div>
+              )}
+
               {/* Description */}
               {selectedBook.metadata?.description && (
                 <div>

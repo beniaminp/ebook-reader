@@ -463,6 +463,14 @@ export async function updateBook(id: string, updates: Partial<Book>): Promise<bo
       fields.push('read_status = ?');
       values.push((updates as any).readStatus);
     }
+    if ((updates as any).review !== undefined) {
+      fields.push('review = ?');
+      values.push((updates as any).review || null);
+    }
+    if ((updates as any).fileHash !== undefined) {
+      fields.push('file_hash = ?');
+      values.push((updates as any).fileHash || null);
+    }
 
     if (fields.length > 0) {
       fields.push('updated_at = ?');
@@ -735,6 +743,8 @@ function mapRowToBook(row: any): Book | null {
     communityRatingCount: row.community_rating_count != null ? row.community_rating_count : undefined,
     pageCount: row.page_count != null ? row.page_count : undefined,
     coverUrl: row.cover_url || undefined,
+    review: row.review || undefined,
+    fileHash: row.file_hash || undefined,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
 }
