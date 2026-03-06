@@ -136,7 +136,7 @@
 
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
-| **Auto Cover Art Fetch** | Bulk auto-fetch covers for newly imported books; "Fix missing covers" batch action | Calibre, Kobo, BookLore |
+| **Auto Cover Art Fetch** ✅ | Bulk auto-fetch covers for newly imported books; "Fix missing covers" batch action | Calibre, Kobo, BookLore |
 | **Bulk Metadata Edit** ✅ | Multi-select books and apply shared metadata (genre, rating, series, language) in one step | Calibre, Google Play Books |
 | **Star Ratings in Library View** ✅ | Visible 1-5 star rating widget on book cards/list items with "sort by rating" option | Calibre, Moon+ Reader, Google Play Books |
 | **ISBN Barcode Scanner** | Camera-based ISBN scan to auto-populate metadata for sideloaded books | Bookshelf, Bookmory |

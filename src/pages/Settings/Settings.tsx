@@ -37,6 +37,7 @@ import {
   bookOutline,
   sparklesOutline,
   languageOutline,
+  imageOutline,
 } from 'ionicons/icons';
 import { useThemeStore } from '../../stores/useThemeStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../stores/useThemeStore';
@@ -45,7 +46,8 @@ import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
 import { useHardcoverStore } from '../../stores/hardcoverStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { downloadExport, importAllData } from '../../services/localExportService';
-import { enrichAllBooks } from '../../services/metadataLookupService';
+import { enrichAllBooks, fetchEnrichedMetadata } from '../../services/metadataLookupService';
+import * as databaseService from '../../services/database';
 import './Settings.css';
 
 const THEME_OPTIONS: { value: ThemeType; label: string }[] = [
@@ -116,6 +118,8 @@ const Settings: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [isFetchingCovers, setIsFetchingCovers] = useState(false);
+  const [coverFetchProgress, setCoverFetchProgress] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,6 +168,54 @@ const Settings: React.FC = () => {
       setToastMessage(`Enrichment failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsEnriching(false);
+    }
+  };
+
+  const handleFetchMissingCovers = async () => {
+    setIsFetchingCovers(true);
+    setCoverFetchProgress('Finding books without covers...');
+    try {
+      const booksWithoutCovers = books.filter((b) => !b.coverPath);
+      if (booksWithoutCovers.length === 0) {
+        setToastMessage('All books already have covers');
+        return;
+      }
+
+      let fetched = 0;
+      for (let i = 0; i < booksWithoutCovers.length; i++) {
+        const book = booksWithoutCovers[i];
+        setCoverFetchProgress(`Fetching cover ${i + 1}/${booksWithoutCovers.length}: ${book.title}`);
+        try {
+          const metadata = await fetchEnrichedMetadata(book.title, book.author, book.metadata?.isbn);
+          if (metadata?.coverUrl) {
+            const response = await fetch(metadata.coverUrl);
+            if (response.ok) {
+              const blob = await response.blob();
+              const dataUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+              await databaseService.updateBook(book.id, { coverPath: dataUrl });
+              fetched++;
+            }
+          }
+        } catch {
+          // Skip books that fail
+        }
+        // Rate limit
+        if (i < booksWithoutCovers.length - 1) {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+
+      if (fetched > 0) useAppStore.getState().loadBooks();
+      setToastMessage(fetched > 0 ? `Fetched covers for ${fetched} books` : 'No covers found online');
+    } catch (err) {
+      setToastMessage(`Cover fetch failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsFetchingCovers(false);
+      setCoverFetchProgress('');
     }
   };
 
@@ -477,6 +529,28 @@ const Settings: React.FC = () => {
               style={{ '--border-radius': '8px' }}
             >
               {isEnriching ? <IonSpinner name="crescent" /> : 'Enrich'}
+            </IonButton>
+          </IonItem>
+
+          <IonItem>
+            <IonIcon icon={imageOutline} slot="start" color="primary" />
+            <IonLabel>
+              <h3>Fix Missing Covers</h3>
+              <IonNote>
+                {isFetchingCovers && coverFetchProgress
+                  ? coverFetchProgress
+                  : 'Download cover art for books without covers'}
+              </IonNote>
+            </IonLabel>
+            <IonButton
+              slot="end"
+              fill="outline"
+              size="small"
+              onClick={handleFetchMissingCovers}
+              disabled={isFetchingCovers}
+              style={{ '--border-radius': '8px' }}
+            >
+              {isFetchingCovers ? <IonSpinner name="crescent" /> : 'Fetch'}
             </IonButton>
           </IonItem>
         </fieldset>

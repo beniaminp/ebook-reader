@@ -1182,11 +1182,30 @@ const Library: React.FC = () => {
     metadataLookupService.fetchBookMetadata(title, author).then(async (meta) => {
       if (meta) {
         await databaseService.updateBookMetadata(bookId, meta);
+        // Auto-fetch cover if book has none and metadata has a cover URL
+        let fetchedCoverPath: string | undefined;
+        if (!newBook.coverPath && meta.coverUrl) {
+          try {
+            const resp = await fetch(meta.coverUrl);
+            if (resp.ok) {
+              const blob = await resp.blob();
+              fetchedCoverPath = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+              await databaseService.updateBook(bookId, { coverPath: fetchedCoverPath });
+            }
+          } catch {
+            // Cover fetch is optional
+          }
+        }
         // Update the book in the store with genre/metadata
         const updatedBooks = useAppStore.getState().books.map((b) =>
           b.id === bookId
             ? {
                 ...b,
+                ...(fetchedCoverPath ? { coverPath: fetchedCoverPath } : {}),
                 genre: meta.genre,
                 subgenres: meta.subgenres,
                 metadata: { ...b.metadata, ...meta },
