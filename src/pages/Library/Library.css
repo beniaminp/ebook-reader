@@ -913,6 +913,19 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* ─── Star Rating ────────────────────────────────────── */
+.star-rating {
+  margin-top: 2px;
+}
+
+.star-rating ion-icon {
+  transition: color 0.15s, transform 0.15s;
+}
+
+.star-rating ion-icon:hover {
+  transform: scale(1.2);
+}
+
 /* ─── Dark Mode ──────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   .library-page {

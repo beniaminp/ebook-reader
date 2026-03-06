@@ -559,6 +559,7 @@ export const MIGRATIONS: Record<number, string> = {
   3: 'Add genre and subgenres columns to books table',
   4: 'Add read_status column to books table',
   5: 'Add Hardcover sync columns to books and hardcover_sync_queue table',
+  6: 'Add review, file_hash columns to books and reading_sessions table',
 };
 
 // SQL statements for migrations
@@ -580,6 +581,23 @@ export const MIGRATION_SQL: Record<number, string> = {
     ALTER TABLE ${TABLES.BOOKS} ADD COLUMN community_rating_count INTEGER;
     ALTER TABLE ${TABLES.BOOKS} ADD COLUMN page_count INTEGER;
     ALTER TABLE ${TABLES.BOOKS} ADD COLUMN cover_url TEXT;
+  `,
+  6: `
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN review TEXT;
+    ALTER TABLE ${TABLES.BOOKS} ADD COLUMN file_hash TEXT;
+    CREATE TABLE IF NOT EXISTS reading_sessions (
+      id TEXT PRIMARY KEY,
+      book_id TEXT NOT NULL,
+      start_time INTEGER NOT NULL,
+      end_time INTEGER NOT NULL,
+      start_position REAL DEFAULT 0,
+      end_position REAL DEFAULT 0,
+      pages_read INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+      FOREIGN KEY (book_id) REFERENCES ${TABLES.BOOKS}(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_reading_sessions_book_id ON reading_sessions(book_id);
+    CREATE INDEX IF NOT EXISTS idx_reading_sessions_start_time ON reading_sessions(start_time DESC);
   `,
 };
 

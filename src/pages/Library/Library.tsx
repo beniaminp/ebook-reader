@@ -58,6 +58,8 @@ import {
   imageOutline,
   searchOutline,
   layersOutline,
+  star,
+  starOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -131,6 +133,44 @@ const Library: React.FC = () => {
   const [isCoverSearching, setIsCoverSearching] = useState(false);
   const [isSavingCover, setIsSavingCover] = useState(false);
 
+  const handleRateBook = useCallback(async (bookId: string, rating: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      await databaseService.updateBookMetadata(bookId, { rating });
+      const updatedBooks = books.map((b) =>
+        b.id === bookId ? { ...b, metadata: { ...b.metadata, rating } } : b
+      );
+      setBooks(updatedBooks);
+    } catch (err) {
+      console.error('Failed to rate book:', err);
+    }
+  }, [books, setBooks]);
+
+  const renderStarRating = (book: Book, size: number = 14) => {
+    const rating = book.metadata?.rating ?? 0;
+    return (
+      <div
+        className="star-rating"
+        style={{ display: 'flex', gap: '1px' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {[1, 2, 3, 4, 5].map((s) => (
+          <IonIcon
+            key={s}
+            icon={s <= rating ? star : starOutline}
+            style={{
+              fontSize: `${size}px`,
+              color: s <= rating ? '#f5a623' : 'var(--ion-color-medium)',
+              cursor: 'pointer',
+            }}
+            onClick={(e) => handleRateBook(book.id, s === rating ? 0 : s, e)}
+          />
+        ))}
+      </div>
+    );
+  };
+
   const activeFilterCount =
     (filters.format !== 'all' ? 1 : 0) +
     (filters.collectionId !== 'all' ? 1 : 0) +
@@ -155,6 +195,8 @@ const Library: React.FC = () => {
         return sorted.sort((a, b) => toTime(b.dateAdded) - toTime(a.dateAdded));
       case 'lastRead':
         return sorted.sort((a, b) => toTime(b.lastRead) - toTime(a.lastRead));
+      case 'rating':
+        return sorted.sort((a, b) => (b.metadata?.rating ?? 0) - (a.metadata?.rating ?? 0));
       default:
         return sorted;
     }
@@ -1168,6 +1210,7 @@ const Library: React.FC = () => {
               <IonCardHeader className="ion-no-padding">
                 <IonCardTitle className="book-title">{book.title}</IonCardTitle>
                 <IonCardSubtitle className="book-author">{book.author}</IonCardSubtitle>
+                {renderStarRating(book, 12)}
               </IonCardHeader>
             </IonCard>
           </IonCol>
@@ -1210,6 +1253,7 @@ const Library: React.FC = () => {
           <IonLabel>
             <h2>{book.title}</h2>
             <p>{book.author}</p>
+            {renderStarRating(book, 13)}
             <div className="book-list-meta">
               <span className="book-list-format">{book.format.toUpperCase()}</span>
               {book.progress > 0 && (
@@ -1527,6 +1571,7 @@ const Library: React.FC = () => {
               <IonSelectOption value="title">Title</IonSelectOption>
               <IonSelectOption value="author">Author</IonSelectOption>
               <IonSelectOption value="lastRead">Last Read</IonSelectOption>
+              <IonSelectOption value="rating">Rating</IonSelectOption>
             </IonSelect>
             <span className="library-book-count">
               {searchQuery.trim() || activeFilterCount > 0
@@ -1865,6 +1910,9 @@ const Library: React.FC = () => {
                 <p style={{ margin: '0', color: 'var(--ion-color-medium)' }}>
                   {selectedBook.author}
                 </p>
+                <div style={{ marginTop: '8px' }}>
+                  {renderStarRating(selectedBook, 22)}
+                </div>
               </div>
 
               {/* Description */}
