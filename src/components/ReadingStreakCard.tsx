@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { IonIcon, IonToast } from '@ionic/react';
-import { flameOutline, flame, trophyOutline, timeOutline } from 'ionicons/icons';
+import { flameOutline, flame, trophyOutline } from 'ionicons/icons';
 import { useReadingGoalsStore } from '../stores/useReadingGoalsStore';
 import './ReadingStreakCard.css';
 
@@ -50,55 +50,41 @@ const ReadingStreakCard: React.FC = () => {
   };
 
   // Calculate the circumference and dashoffset for the circular progress ring
-  const radius = 28;
+  const radius = 18;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (progress * circumference);
+  const progressPercent = Math.min(Math.round(progress * 100), 100);
 
   return (
     <>
       <div className={`streak-card${goalMet ? ' streak-card--completed' : ''}`}>
-        {/* Left: Streak info */}
-        <div className="streak-card__streak">
-          <div className={`streak-card__flame${currentStreak > 0 ? ' streak-card__flame--active' : ''}`}>
-            <IonIcon icon={currentStreak > 0 ? flame : flameOutline} />
-          </div>
-          <div className="streak-card__streak-info">
-            <span className="streak-card__streak-count">{currentStreak}</span>
-            <span className="streak-card__streak-label">
-              day{currentStreak !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-
-        {/* Center: Circular progress */}
+        {/* Left: Circular progress with minutes inside */}
         <div className="streak-card__progress">
           <svg
             className="streak-card__ring"
-            viewBox="0 0 68 68"
-            width="68"
-            height="68"
+            viewBox="0 0 44 44"
+            width="44"
+            height="44"
           >
-            {/* Background circle */}
             <circle
               className="streak-card__ring-bg"
-              cx="34"
-              cy="34"
+              cx="22"
+              cy="22"
               r={radius}
               fill="none"
-              strokeWidth="5"
+              strokeWidth="4"
             />
-            {/* Progress arc */}
             <circle
               className={`streak-card__ring-fill${goalMet ? ' streak-card__ring-fill--done' : ''}`}
-              cx="34"
-              cy="34"
+              cx="22"
+              cy="22"
               r={radius}
               fill="none"
-              strokeWidth="5"
+              strokeWidth="4"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
               strokeLinecap="round"
-              transform="rotate(-90 34 34)"
+              transform="rotate(-90 22 22)"
             />
           </svg>
           <div className="streak-card__progress-text">
@@ -106,25 +92,33 @@ const ReadingStreakCard: React.FC = () => {
               <IonIcon icon={trophyOutline} className="streak-card__check" />
             ) : (
               <span className="streak-card__progress-mins">
-                {Math.round(todayMinutes)}
+                {progressPercent}
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: Today's stats */}
-        <div className="streak-card__details">
-          <div className="streak-card__today">
-            <IonIcon icon={timeOutline} />
-            <span>
-              {formatMinutes(todayMinutes)} / {formatMinutes(dailyGoalMinutes)}
-            </span>
-          </div>
-          {longestStreak > 0 && (
-            <div className="streak-card__best">
-              Best: {longestStreak} day{longestStreak !== 1 ? 's' : ''}
-            </div>
-          )}
+        {/* Center: Today's reading info */}
+        <div className="streak-card__info">
+          <span className="streak-card__today-label">
+            {goalMet ? 'Goal reached!' : `${formatMinutes(todayMinutes)} of ${formatMinutes(dailyGoalMinutes)}`}
+          </span>
+          <span className="streak-card__sub">
+            {currentStreak > 0 ? (
+              <>
+                <IonIcon icon={flame} className="streak-card__flame-icon streak-card__flame-icon--active" />
+                {currentStreak} day streak
+              </>
+            ) : (
+              <>
+                <IonIcon icon={flameOutline} className="streak-card__flame-icon" />
+                Start your streak!
+              </>
+            )}
+            {longestStreak > currentStreak && (
+              <span className="streak-card__best"> &middot; Best: {longestStreak}d</span>
+            )}
+          </span>
         </div>
       </div>
 

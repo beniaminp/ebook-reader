@@ -3,72 +3,17 @@
 .streak-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 8px 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  margin: 6px 12px;
+  padding: 8px 12px;
   background: var(--ion-card-background, #fff);
-  border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   transition: background 0.3s ease;
 }
 
 .streak-card--completed {
-  background: linear-gradient(135deg, rgba(255, 196, 0, 0.08), rgba(255, 152, 0, 0.06));
-}
-
-/* ─── Streak flame + count ─────────────────────────── */
-
-.streak-card__streak {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.streak-card__flame {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--ion-color-light, #f0f0f0);
-  transition: background 0.3s, transform 0.3s;
-}
-
-.streak-card__flame ion-icon {
-  font-size: 20px;
-  color: var(--ion-color-medium);
-  transition: color 0.3s;
-}
-
-.streak-card__flame--active {
-  background: linear-gradient(135deg, #ff9800, #ff5722);
-}
-
-.streak-card__flame--active ion-icon {
-  color: #fff;
-}
-
-.streak-card__streak-info {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.streak-card__streak-count {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--ion-text-color);
-  letter-spacing: -0.5px;
-}
-
-.streak-card__streak-label {
-  font-size: 11px;
-  color: var(--ion-color-medium);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, rgba(255, 196, 0, 0.08), rgba(255, 152, 0, 0.05));
 }
 
 /* ─── Circular progress ring ──────────────────────── */
@@ -76,9 +21,8 @@
 .streak-card__progress {
   position: relative;
   flex-shrink: 0;
-  width: 68px;
-  height: 68px;
-  margin-left: auto;
+  width: 44px;
+  height: 44px;
 }
 
 .streak-card__ring {
@@ -110,46 +54,64 @@
 }
 
 .streak-card__progress-mins {
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--ion-text-color);
+  line-height: 1;
+}
+
+.streak-card__progress-mins::after {
+  content: '%';
+  font-size: 8px;
+  font-weight: 600;
+  opacity: 0.6;
 }
 
 .streak-card__check {
-  font-size: 22px;
+  font-size: 18px;
   color: #ff9800;
 }
 
-/* ─── Today's stats ───────────────────────────────── */
+/* ─── Info section ────────────────────────────────── */
 
-.streak-card__details {
+.streak-card__info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 1px;
   min-width: 0;
 }
 
-.streak-card__today {
+.streak-card__today-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.streak-card__sub {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--ion-color-medium);
   font-weight: 500;
-  color: var(--ion-text-color);
   white-space: nowrap;
 }
 
-.streak-card__today ion-icon {
-  font-size: 14px;
+.streak-card__flame-icon {
+  font-size: 13px;
   color: var(--ion-color-medium);
   flex-shrink: 0;
 }
 
+.streak-card__flame-icon--active {
+  color: #ff7043;
+}
+
 .streak-card__best {
-  font-size: 11px;
   color: var(--ion-color-medium);
-  white-space: nowrap;
 }
 
 /* ─── Dark Mode ───────────────────────────────────── */
@@ -157,15 +119,11 @@
 @media (prefers-color-scheme: dark) {
   .streak-card {
     background: #252525;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   .streak-card--completed {
     background: linear-gradient(135deg, rgba(255, 196, 0, 0.1), rgba(255, 152, 0, 0.06));
-  }
-
-  .streak-card__flame {
-    background: rgba(255, 255, 255, 0.08);
   }
 
   .streak-card__ring-bg {
