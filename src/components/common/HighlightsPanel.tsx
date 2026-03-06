@@ -25,7 +25,7 @@ import {
   IonToast,
   IonBadge,
 } from '@ionic/react';
-import { colorPalette, trashOutline, createOutline, close, bookmarkOutline } from 'ionicons/icons';
+import { colorPalette, trashOutline, createOutline, close, bookmarkOutline, chatbubbleOutline, chevronDown, chevronUp } from 'ionicons/icons';
 
 import type { EpubHighlight } from '../../services/annotationsService';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
@@ -52,6 +52,7 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
   const [selectedColor, setSelectedColor] = useState<string>(HIGHLIGHT_COLORS[0].value);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
   const handleEdit = (highlight: EpubHighlight) => {
     setEditingId(highlight.id);
@@ -111,48 +112,121 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
             </div>
           ) : (
             <IonList>
-              {highlights.map((highlight) => (
-                <IonItem
-                  key={highlight.id}
-                  button
-                  onClick={() => handleGoToHighlight(highlight.cfiRange)}
-                  style={{
-                    borderLeft: `4px solid ${highlight.color}`,
-                    paddingLeft: '12px',
-                  }}
-                >
-                  <IonLabel>
-                    <p
-                      style={{
-                        backgroundColor: `${highlight.color}40`,
-                        padding: '8px',
-                        borderRadius: '4px',
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      "{highlight.text}"
-                    </p>
-                    {highlight.chapterTitle && (
-                      <IonNote style={{ display: 'block', marginTop: '4px' }}>
-                        {highlight.chapterTitle}
-                      </IonNote>
+              {highlights.map((highlight) => {
+                const hasNote = !!highlight.note;
+                const isExpanded = expandedNotes.has(highlight.id);
+                return (
+                  <IonItem
+                    key={highlight.id}
+                    button
+                    onClick={() => handleGoToHighlight(highlight.cfiRange)}
+                    style={{
+                      borderLeft: `4px solid ${highlight.color}`,
+                      paddingLeft: '12px',
+                    }}
+                  >
+                    {/* Margin note indicator */}
+                    {hasNote && (
+                      <div
+                        slot="start"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedNotes((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(highlight.id)) next.delete(highlight.id);
+                            else next.add(highlight.id);
+                            return next;
+                          });
+                        }}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          background: `${highlight.color}30`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <IonIcon
+                          icon={chatbubbleOutline}
+                          style={{ fontSize: 14, color: highlight.color }}
+                        />
+                      </div>
                     )}
-                    {highlight.note && (
-                      <IonNote style={{ display: 'block', marginTop: '4px' }}>
-                        Note: {highlight.note}
-                      </IonNote>
-                    )}
-                  </IonLabel>
-                  <IonButtons slot="end">
-                    <IonButton onClick={() => handleEdit(highlight)}>
-                      <IonIcon icon={createOutline} />
-                    </IonButton>
-                    <IonButton onClick={() => handleDelete(highlight.id)} color="danger">
-                      <IonIcon icon={trashOutline} />
-                    </IonButton>
-                  </IonButtons>
-                </IonItem>
-              ))}
+                    <IonLabel>
+                      <p
+                        style={{
+                          backgroundColor: `${highlight.color}40`,
+                          padding: '8px',
+                          borderRadius: '4px',
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        "{highlight.text}"
+                      </p>
+                      {highlight.chapterTitle && (
+                        <IonNote style={{ display: 'block', marginTop: '4px' }}>
+                          {highlight.chapterTitle}
+                        </IonNote>
+                      )}
+                      {/* Inline expandable margin note */}
+                      {hasNote && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedNotes((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(highlight.id)) next.delete(highlight.id);
+                              else next.add(highlight.id);
+                              return next;
+                            });
+                          }}
+                          style={{
+                            marginTop: '6px',
+                            padding: isExpanded ? '8px 10px' : '4px 10px',
+                            background: 'var(--ion-color-light)',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            borderLeft: `3px solid ${highlight.color}`,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <IonIcon
+                              icon={isExpanded ? chevronUp : chevronDown}
+                              style={{ fontSize: 12, color: 'var(--ion-color-medium)' }}
+                            />
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ion-color-medium)' }}>
+                              Note
+                            </span>
+                          </div>
+                          {isExpanded && (
+                            <p style={{
+                              margin: '4px 0 0',
+                              fontSize: 13,
+                              lineHeight: 1.5,
+                              color: 'var(--ion-text-color)',
+                              whiteSpace: 'pre-wrap',
+                            }}>
+                              {highlight.note}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </IonLabel>
+                    <IonButtons slot="end">
+                      <IonButton onClick={(e) => { e.stopPropagation(); handleEdit(highlight); }}>
+                        <IonIcon icon={createOutline} />
+                      </IonButton>
+                      <IonButton onClick={(e) => { e.stopPropagation(); handleDelete(highlight.id); }} color="danger">
+                        <IonIcon icon={trashOutline} />
+                      </IonButton>
+                    </IonButtons>
+                  </IonItem>
+                );
+              })}
             </IonList>
           )}
         </IonContent>

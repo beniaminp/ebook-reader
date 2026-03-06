@@ -77,7 +77,7 @@
 | Feature | Description | Reference Apps |
 |---------|-------------|----------------|
 | **Semantic Highlight Labels** | Map each highlight color to a user-defined meaning (e.g., yellow="important", red="disagree") with filtering | Kindle Colorsoft, Kobo Colour, Readwise Reader |
-| **Inline Margin Notes** | Margin icons for notes anchored to highlights; tap to expand without leaving the page | Kindle, Moon+ Reader Pro, Apple Books |
+| **Inline Margin Notes** ✅ | Margin icons for notes anchored to highlights; tap to expand without leaving the page | Kindle, Moon+ Reader Pro, Apple Books |
 | **Freehand Drawing Layer** | Finger/stylus sketching, circling, underlining over pages (EPUB and PDF) | Kindle Scribe, Moon+ Reader Pro, GoodNotes |
 | **Annotation Tags** | Custom reusable tags (`#metaphor`, `#research`, `#to-review`) filterable in a global annotation view | Readwise Reader, Hypothesis |
 | **Highlight Importance Rating** | 1-5 star rating per highlight to feed into spaced repetition review | Readwise |
