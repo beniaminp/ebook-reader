@@ -9,6 +9,37 @@
   --color: var(--ion-toolbar-color, #fff);
 }
 
+/* ─── Search Books Online ────────────────────────────── */
+.browse-search-row {
+  padding: 12px 16px 4px;
+}
+
+.browse-search-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: none;
+  background: var(--ion-color-primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.browse-search-button ion-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.browse-search-button:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
 /* ─── Recently Added ─────────────────────────────────── */
 .browse-recent-section {
   margin: 12px 16px;
@@ -115,8 +146,8 @@
   color: var(--ion-text-color);
 }
 
-/* ─── Category Sections ──────────────────────────────── */
-.browse-section {
+/* ─── Category List ──────────────────────────────────── */
+.browse-category-list {
   margin: 12px 16px;
   background: var(--ion-card-background, #fff);
   border-radius: 14px;
@@ -124,25 +155,72 @@
   overflow: hidden;
 }
 
-.browse-section-header {
+.browse-category-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px 6px;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  position: relative;
 }
 
-.browse-section-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.browse-category-row:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 62px;
+  right: 16px;
+  height: 1px;
+  background: var(--ion-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.browse-category-row:active {
+  background: var(--ion-color-light-tint, rgba(0, 0, 0, 0.04));
+}
+
+.browse-category-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 18px;
   color: #fff;
   flex-shrink: 0;
 }
 
+.browse-category-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.browse-category-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ion-text-color);
+}
+
+.browse-category-count {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+}
+
+.browse-category-chevron {
+  font-size: 18px;
+  color: var(--ion-color-medium-tint, #aaa);
+  flex-shrink: 0;
+}
+
+/* ─── Category Icon Colors ───────────────────────────── */
 .browse-section-icon--blue { background: linear-gradient(135deg, #4a90d9, #357abd); }
 .browse-section-icon--purple { background: linear-gradient(135deg, #7e57c2, #5e35b1); }
 .browse-section-icon--orange { background: linear-gradient(135deg, #fb8c00, #ef6c00); }
@@ -152,56 +230,79 @@
 .browse-section-icon--indigo { background: linear-gradient(135deg, #5c6bc0, #3949ab); }
 .browse-section-icon--pink { background: linear-gradient(135deg, #ec407a, #c2185b); }
 
-.browse-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--ion-color-medium);
+/* ─── Category Modal ─────────────────────────────────── */
+.browse-category-modal {
+  --border-radius: 16px 16px 0 0;
 }
 
-.browse-chips {
+.browse-category-modal ion-toolbar {
+  --background: var(--ion-background-color, #fff);
+  --color: var(--ion-text-color);
+}
+
+.browse-modal-searchbar {
+  --background: var(--ion-color-light, #f0f0f0);
+  --border-radius: 10px;
+  --box-shadow: none;
+  padding-top: 0 !important;
+  padding-bottom: 8px !important;
+}
+
+.browse-modal-list {
+  padding: 4px 0;
+}
+
+.browse-modal-item {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 16px 16px;
-}
-
-.browse-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: var(--ion-color-light, #f0f0f0);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ion-text-color);
-  cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 20px;
   border: none;
-  outline: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+  position: relative;
 }
 
-.browse-chip:active {
-  transform: scale(0.95);
-  background: var(--ion-color-primary-tint);
+.browse-modal-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: var(--ion-border-color, rgba(0, 0, 0, 0.06));
 }
 
-.browse-chip-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ion-color-medium);
-  background: rgba(0, 0, 0, 0.06);
-  padding: 1px 7px;
-  border-radius: 10px;
+.browse-modal-item:active {
+  background: var(--ion-color-light-tint, rgba(0, 0, 0, 0.04));
 }
 
-.browse-empty-hint {
-  padding: 10px 16px 16px;
+.browse-modal-item-label {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--ion-text-color);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-modal-item-count {
   font-size: 13px;
   color: var(--ion-color-medium);
-  font-style: italic;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.browse-modal-empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ion-color-medium);
 }
 
 /* ─── Filtered View ──────────────────────────────────── */
@@ -219,7 +320,6 @@
   color: var(--ion-color-medium);
 }
 
-/* Reuse book-card styles from Library */
 .browse-filtered-grid .book-card {
   margin: 4px 2px;
   cursor: pointer;
@@ -343,17 +443,18 @@
     --background: #1a1a1a;
   }
 
-  .browse-section,
-  .browse-recent-section {
+  .browse-recent-section,
+  .browse-category-list {
     background: #252525;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   }
 
-  .browse-chip {
+  .browse-category-row:not(:last-child)::after,
+  .browse-modal-item:not(:last-child)::after {
     background: rgba(255, 255, 255, 0.08);
   }
 
-  .browse-chip-count {
-    background: rgba(255, 255, 255, 0.1);
+  .browse-category-modal ion-toolbar {
+    --background: #1e1e1e;
   }
 }

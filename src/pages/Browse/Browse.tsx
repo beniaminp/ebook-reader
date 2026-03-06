@@ -15,11 +15,12 @@ import {
   IonCardSubtitle,
   IonChip,
   IonButtons,
-  IonBackButton,
   IonButton,
   IonSegment,
   IonSegmentButton,
   IonLabel,
+  IonModal,
+  IonSearchbar,
 } from '@ionic/react';
 import {
   personOutline,
@@ -32,6 +33,8 @@ import {
   timeOutline,
   arrowBack,
   searchOutline,
+  chevronForwardOutline,
+  folderOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
@@ -55,6 +58,31 @@ interface TagItem {
   color?: string;
 }
 
+interface CategoryItem {
+  label: string;
+  count: number;
+  id?: string; // for collections/tags
+}
+
+type CategoryKind = 'author' | 'format' | 'series' | 'collection' | 'tag' | 'language' | 'status';
+
+interface CategoryConfig {
+  kind: CategoryKind;
+  title: string;
+  icon: string;
+  colorClass: string;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  { kind: 'author', title: 'Authors', icon: personOutline, colorClass: 'browse-section-icon--blue' },
+  { kind: 'format', title: 'Formats', icon: documentOutline, colorClass: 'browse-section-icon--purple' },
+  { kind: 'series', title: 'Series', icon: libraryOutline, colorClass: 'browse-section-icon--green' },
+  { kind: 'collection', title: 'Collections', icon: folderOutline, colorClass: 'browse-section-icon--teal' },
+  { kind: 'tag', title: 'Tags', icon: pricetagOutline, colorClass: 'browse-section-icon--pink' },
+  { kind: 'language', title: 'Languages', icon: languageOutline, colorClass: 'browse-section-icon--indigo' },
+  { kind: 'status', title: 'Reading Status', icon: checkmarkDoneOutline, colorClass: 'browse-section-icon--red' },
+];
+
 type BrowseTab = 'categories' | 'series';
 
 const Browse: React.FC = () => {
@@ -68,8 +96,9 @@ const Browse: React.FC = () => {
   const [tags, setTags] = useState<TagItem[]>([]);
   const [bookTagMap, setBookTagMap] = useState<Record<string, string[]>>({});
   const [activeFilter, setActiveFilter] = useState<FilterType | null>(null);
+  const [openCategory, setOpenCategory] = useState<CategoryKind | null>(null);
+  const [modalSearch, setModalSearch] = useState('');
 
-  // Load data on mount
   useEffect(() => {
     loadBooks();
     loadCollectionsAndTags();
@@ -84,7 +113,6 @@ const Browse: React.FC = () => {
       setCollections(cols);
       setTags(tgs);
 
-      // Load books for each collection
       const colBookMap: Record<string, Book[]> = {};
       await Promise.all(
         cols.map(async (col) => {
@@ -93,17 +121,6 @@ const Browse: React.FC = () => {
       );
       setCollectionBookMap(colBookMap);
 
-      // Load tags for each book
-      const tagMap: Record<string, string[]> = {};
-      await Promise.all(
-        tgs.map(async (tag) => {
-          // For each tag, find which books have it by checking each book
-          // We'll build a reverse map: tagId -> bookIds
-          tagMap[tag.id] = [];
-        })
-      );
-
-      // Build book->tags mapping by checking each book's tags
       const bkTagMap: Record<string, string[]> = {};
       const allBooks = useAppStore.getState().books;
       await Promise.all(
@@ -141,7 +158,7 @@ const Browse: React.FC = () => {
       .sort((a, b) => b[1] - a[1]);
   }, [books]);
 
-  const series = useMemo(() => {
+  const seriesData = useMemo(() => {
     const map = new Map<string, number>();
     books.forEach((b) => {
       const s = b.metadata?.series;
@@ -204,10 +221,65 @@ const Browse: React.FC = () => {
     });
   }, [tags, bookTagMap]);
 
-  // Count books that have series metadata (must be before any conditional return)
   const seriesBookCount = useMemo(() => {
     return books.filter((b) => b.series || b.metadata?.series).length;
   }, [books]);
+
+  // Get items for a given category
+  const getCategoryItems = useCallback((kind: CategoryKind): CategoryItem[] => {
+    switch (kind) {
+      case 'author':
+        return authors.map(([label, count]) => ({ label, count }));
+      case 'format':
+        return formats.map(([label, count]) => ({ label, count }));
+      case 'series':
+        return seriesData.map(([label, count]) => ({ label, count }));
+      case 'collection':
+        return collectionsWithCounts.map((c) => ({ label: c.name, count: c.count, id: c.id }));
+      case 'tag':
+        return tagsWithCounts.map((t) => ({ label: t.name, count: t.count, id: t.id }));
+      case 'language':
+        return languages.map(([label, count]) => ({ label, count }));
+      case 'status':
+        return readingStatuses.map((s) => ({ label: s.label, count: s.count }));
+      default:
+        return [];
+    }
+  }, [authors, formats, seriesData, collectionsWithCounts, tagsWithCounts, languages, readingStatuses]);
+
+  // Get total item count for a category
+  const getCategoryCount = useCallback((kind: CategoryKind): number => {
+    return getCategoryItems(kind).length;
+  }, [getCategoryItems]);
+
+  // Handle selecting an item from the modal
+  const handleItemSelect = useCallback((kind: CategoryKind, item: CategoryItem) => {
+    setOpenCategory(null);
+    setModalSearch('');
+    switch (kind) {
+      case 'author':
+        setActiveFilter({ kind: 'author', value: item.label });
+        break;
+      case 'format':
+        setActiveFilter({ kind: 'format', value: item.label });
+        break;
+      case 'series':
+        setActiveFilter({ kind: 'series', value: item.label });
+        break;
+      case 'collection':
+        setActiveFilter({ kind: 'collection', value: item.label, collectionId: item.id! });
+        break;
+      case 'tag':
+        setActiveFilter({ kind: 'tag', value: item.label, tagId: item.id! });
+        break;
+      case 'language':
+        setActiveFilter({ kind: 'language', value: item.label });
+        break;
+      case 'status':
+        setActiveFilter({ kind: 'status', value: item.label });
+        break;
+    }
+  }, []);
 
   // Filter books based on active filter
   const filteredBooks = useMemo(() => {
@@ -246,6 +318,19 @@ const Browse: React.FC = () => {
     if (book.progress > 1) return book.progress;
     return Math.round(book.progress * 100);
   };
+
+  // Items for the currently open modal, filtered by search
+  const modalItems = useMemo(() => {
+    if (!openCategory) return [];
+    const items = getCategoryItems(openCategory);
+    if (!modalSearch.trim()) return items;
+    const query = modalSearch.toLowerCase().trim();
+    return items.filter((item) => item.label.toLowerCase().includes(query));
+  }, [openCategory, getCategoryItems, modalSearch]);
+
+  const openCategoryConfig = openCategory
+    ? CATEGORIES.find((c) => c.kind === openCategory)
+    : null;
 
   // Filtered view
   if (activeFilter) {
@@ -330,7 +415,7 @@ const Browse: React.FC = () => {
             </IonSegmentButton>
             <IonSegmentButton value="series">
               <IonLabel>
-                Series{seriesBookCount > 0 ? ` (${series.length})` : ''}
+                Series{seriesBookCount > 0 ? ` (${seriesData.length})` : ''}
               </IonLabel>
             </IonSegmentButton>
           </IonSegment>
@@ -342,13 +427,13 @@ const Browse: React.FC = () => {
         ) : (
         <>
         {/* Search Books Online */}
-        <div className="browse-section">
+        <div className="browse-search-row">
           <button
-            className="browse-chip browse-chip--highlight"
+            className="browse-search-button"
             onClick={() => history.push('/search-books')}
           >
-            <IonIcon icon={searchOutline} style={{ marginRight: 6 }} />
-            Search Books Online
+            <IonIcon icon={searchOutline} />
+            <span>Search Books Online</span>
           </button>
         </div>
 
@@ -384,201 +469,96 @@ const Browse: React.FC = () => {
           </div>
         )}
 
-        {/* Authors */}
-        <div className="browse-section">
-          <div className="browse-section-header">
-            <div className="browse-section-icon browse-section-icon--blue">
-              <IonIcon icon={personOutline} />
-            </div>
-            <span className="browse-section-title">Authors</span>
-          </div>
-          {authors.length > 0 ? (
-            <div className="browse-chips">
-              {authors.map(([author, count]) => (
-                <button
-                  key={author}
-                  className="browse-chip"
-                  onClick={() => setActiveFilter({ kind: 'author', value: author })}
-                >
-                  {author}
-                  <span className="browse-chip-count">{count}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="browse-empty-hint">No books in library</p>
-          )}
+        {/* Category List */}
+        <div className="browse-category-list">
+          {CATEGORIES.map((cat) => {
+            const count = getCategoryCount(cat.kind);
+            return (
+              <button
+                key={cat.kind}
+                className="browse-category-row"
+                onClick={() => {
+                  setOpenCategory(cat.kind);
+                  setModalSearch('');
+                }}
+              >
+                <div className={`browse-category-icon ${cat.colorClass}`}>
+                  <IonIcon icon={cat.icon} />
+                </div>
+                <div className="browse-category-info">
+                  <span className="browse-category-name">{cat.title}</span>
+                  <span className="browse-category-count">
+                    {count} {count === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+                <IonIcon icon={chevronForwardOutline} className="browse-category-chevron" />
+              </button>
+            );
+          })}
         </div>
 
-        {/* Formats */}
-        <div className="browse-section">
-          <div className="browse-section-header">
-            <div className="browse-section-icon browse-section-icon--purple">
-              <IonIcon icon={documentOutline} />
-            </div>
-            <span className="browse-section-title">Formats</span>
-          </div>
-          {formats.length > 0 ? (
-            <div className="browse-chips">
-              {formats.map(([fmt, count]) => (
-                <button
-                  key={fmt}
-                  className="browse-chip"
-                  onClick={() => setActiveFilter({ kind: 'format', value: fmt })}
-                >
-                  {fmt}
-                  <span className="browse-chip-count">{count}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="browse-empty-hint">No books in library</p>
-          )}
-        </div>
-
-        {/* Series */}
-        {series.length > 0 && (
-          <div className="browse-section">
-            <div className="browse-section-header">
-              <div className="browse-section-icon browse-section-icon--green">
-                <IonIcon icon={libraryOutline} />
-              </div>
-              <span className="browse-section-title">Series</span>
-            </div>
-            <div className="browse-chips">
-              {series.map(([name, count]) => (
-                <button
-                  key={name}
-                  className="browse-chip"
-                  onClick={() => setActiveFilter({ kind: 'series', value: name })}
-                >
-                  {name}
-                  <span className="browse-chip-count">{count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Collections */}
-        <div className="browse-section">
-          <div className="browse-section-header">
-            <div className="browse-section-icon browse-section-icon--teal">
-              <IonIcon icon={libraryOutline} />
-            </div>
-            <span className="browse-section-title">Collections</span>
-          </div>
-          {collectionsWithCounts.length > 0 ? (
-            <div className="browse-chips">
-              {collectionsWithCounts.map((col) => (
-                <button
-                  key={col.id}
-                  className="browse-chip"
-                  onClick={() =>
-                    setActiveFilter({
-                      kind: 'collection',
-                      value: col.name,
-                      collectionId: col.id,
-                    })
-                  }
-                >
-                  {col.name}
-                  <span className="browse-chip-count">{col.count}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="browse-empty-hint">No collections yet</p>
-          )}
-        </div>
-
-        {/* Tags */}
-        <div className="browse-section">
-          <div className="browse-section-header">
-            <div className="browse-section-icon browse-section-icon--pink">
-              <IonIcon icon={pricetagOutline} />
-            </div>
-            <span className="browse-section-title">Tags</span>
-          </div>
-          {tagsWithCounts.length > 0 ? (
-            <div className="browse-chips">
-              {tagsWithCounts.map((tag) => (
-                <button
-                  key={tag.id}
-                  className="browse-chip"
-                  onClick={() =>
-                    setActiveFilter({
-                      kind: 'tag',
-                      value: tag.name,
-                      tagId: tag.id,
-                    })
-                  }
-                >
-                  {tag.name}
-                  <span className="browse-chip-count">{tag.count}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="browse-empty-hint">No tags yet</p>
-          )}
-        </div>
-
-        {/* Languages */}
-        {languages.length > 0 && (
-          <div className="browse-section">
-            <div className="browse-section-header">
-              <div className="browse-section-icon browse-section-icon--indigo">
-                <IonIcon icon={languageOutline} />
-              </div>
-              <span className="browse-section-title">Languages</span>
-            </div>
-            <div className="browse-chips">
-              {languages.map(([lang, count]) => (
-                <button
-                  key={lang}
-                  className="browse-chip"
-                  onClick={() => setActiveFilter({ kind: 'language', value: lang })}
-                >
-                  {lang}
-                  <span className="browse-chip-count">{count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Reading Status */}
-        {readingStatuses.length > 0 && (
-          <div className="browse-section">
-            <div className="browse-section-header">
-              <div className="browse-section-icon browse-section-icon--red">
-                <IonIcon icon={checkmarkDoneOutline} />
-              </div>
-              <span className="browse-section-title">Reading Status</span>
-            </div>
-            <div className="browse-chips">
-              {readingStatuses.map((status) => (
-                <button
-                  key={status.label}
-                  className="browse-chip"
-                  onClick={() =>
-                    setActiveFilter({ kind: 'status', value: status.label })
-                  }
-                >
-                  {status.label}
-                  <span className="browse-chip-count">{status.count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Bottom spacer */}
         <div style={{ height: 24 }} />
         </>
         )}
       </IonContent>
+
+      {/* Category Items Modal */}
+      <IonModal
+        isOpen={openCategory !== null}
+        onDidDismiss={() => {
+          setOpenCategory(null);
+          setModalSearch('');
+        }}
+        initialBreakpoint={0.65}
+        breakpoints={[0, 0.65, 0.95]}
+        className="browse-category-modal"
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>{openCategoryConfig?.title ?? ''}</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => { setOpenCategory(null); setModalSearch(''); }}>
+                Done
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+          {modalItems.length > 5 && (
+            <IonToolbar>
+              <IonSearchbar
+                value={modalSearch}
+                onIonInput={(e) => setModalSearch(e.detail.value || '')}
+                placeholder={`Search ${openCategoryConfig?.title?.toLowerCase() ?? ''}...`}
+                debounce={150}
+                className="browse-modal-searchbar"
+              />
+            </IonToolbar>
+          )}
+        </IonHeader>
+        <IonContent>
+          <div className="browse-modal-list">
+            {modalItems.length === 0 ? (
+              <div className="browse-modal-empty">
+                {modalSearch.trim()
+                  ? `No results for "${modalSearch}"`
+                  : `No ${openCategoryConfig?.title?.toLowerCase() ?? 'items'} yet`}
+              </div>
+            ) : (
+              modalItems.map((item) => (
+                <button
+                  key={item.id ?? item.label}
+                  className="browse-modal-item"
+                  onClick={() => handleItemSelect(openCategory!, item)}
+                >
+                  <span className="browse-modal-item-label">{item.label}</span>
+                  <span className="browse-modal-item-count">
+                    {item.count} {item.count === 1 ? 'book' : 'books'}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </IonContent>
+      </IonModal>
     </IonPage>
   );
 };
