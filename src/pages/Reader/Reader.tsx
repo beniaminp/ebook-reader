@@ -361,6 +361,15 @@ const Reader: React.FC = () => {
     if (timeSpent > 5) {
       try {
         await databaseService.recordReadingSession(bookId, sessionPagesRef.current, timeSpent);
+        // Also record individual session for timeline
+        await databaseService.recordIndividualSession(
+          bookId,
+          sessionStartRef.current,
+          Date.now(),
+          sessionPagesRef.current,
+          prevProgressRef.current,
+          prevProgressRef.current
+        );
       } catch {
         // Non-critical; ignore errors
       }

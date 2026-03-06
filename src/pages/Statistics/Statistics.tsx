@@ -21,12 +21,28 @@ import {
   IonProgressBar,
   IonButton,
   IonIcon,
+  IonList,
+  IonItem,
+  IonThumbnail,
 } from '@ionic/react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { flameOutline, chevronForwardOutline } from 'ionicons/icons';
+import { flameOutline, chevronForwardOutline, bookOutline, timeOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { databaseService } from '../../services/database';
 import { useReadingGoalsStore } from '../../stores/useReadingGoalsStore';
+
+interface TimelineEntry {
+  bookId: string;
+  bookTitle: string;
+  bookAuthor: string;
+  coverPath: string | null;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  pagesRead: number;
+  startPosition: number;
+  endPosition: number;
+}
 
 interface DailyStats {
   date: number;
@@ -77,6 +93,7 @@ const Statistics: React.FC = () => {
     averageSessionTime: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
 
   const {
     enabled: streakEnabled,
@@ -99,12 +116,14 @@ const Statistics: React.FC = () => {
     setIsLoading(true);
     try {
       const days = parseInt(period, 10);
-      const [global, totals] = await Promise.all([
+      const [global, totals, timelineData] = await Promise.all([
         databaseService.getGlobalReadingStats(days),
         databaseService.getTotalReadingSummary(),
+        databaseService.getReadingTimeline(50),
       ]);
       setDailyStats(global as DailyStats[]);
       setSummary(totals);
+      setTimeline(timelineData);
     } catch (error) {
       console.error('Error loading statistics:', error);
     } finally {
@@ -399,6 +418,59 @@ const Statistics: React.FC = () => {
                       />
                     </BarChart>
                   </ResponsiveContainer>
+                )}
+              </IonCardContent>
+            </IonCard>
+
+            {/* Reading History Timeline */}
+            <IonCard style={{ margin: '0 16px 16px' }}>
+              <IonCardHeader>
+                <IonCardTitle style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <IonIcon icon={timeOutline} />
+                  Reading History
+                </IonCardTitle>
+              </IonCardHeader>
+              <IonCardContent style={{ padding: 0 }}>
+                {timeline.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px', color: 'var(--ion-color-medium)' }}>
+                    No reading sessions recorded yet.
+                    <br />
+                    Sessions will appear here as you read.
+                  </div>
+                ) : (
+                  <IonList style={{ padding: 0 }}>
+                    {timeline.map((entry, i) => {
+                      const sessionDate = new Date(entry.startTime * 1000);
+                      const durationMin = Math.round(entry.duration / 60);
+                      return (
+                        <IonItem key={i} lines="inset" style={{ '--min-height': '60px' }}>
+                          <IonThumbnail slot="start" style={{ width: 36, height: 52, borderRadius: 3, overflow: 'hidden' }}>
+                            {entry.coverPath ? (
+                              <img src={entry.coverPath} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{
+                                width: '100%', height: '100%', background: 'var(--ion-color-light)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                <IonIcon icon={bookOutline} style={{ fontSize: 16 }} />
+                              </div>
+                            )}
+                          </IonThumbnail>
+                          <IonLabel>
+                            <h3 style={{ fontSize: 14, fontWeight: 600 }}>{entry.bookTitle}</h3>
+                            <p style={{ fontSize: 12 }}>
+                              {sessionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {' '}at {sessionDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                            <p style={{ fontSize: 11, color: 'var(--ion-color-medium)' }}>
+                              {durationMin > 0 ? `${formatMinutes(entry.duration)}` : '<1m'}
+                              {entry.pagesRead > 0 ? ` · ${entry.pagesRead} pages` : ''}
+                            </p>
+                          </IonLabel>
+                        </IonItem>
+                      );
+                    })}
+                  </IonList>
                 )}
               </IonCardContent>
             </IonCard>

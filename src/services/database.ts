@@ -1319,6 +1319,79 @@ export async function getGlobalReadingStats(days = 30): Promise<any[]> {
   }
 }
 
+/**
+ * Record an individual reading session with timestamps.
+ */
+export async function recordIndividualSession(
+  bookId: string,
+  startTime: number,
+  endTime: number,
+  pagesRead: number,
+  startPosition: number,
+  endPosition: number
+): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const database = await getDb();
+    const id = `session-${bookId}-${startTime}`;
+    await database.run(
+      `INSERT OR IGNORE INTO reading_sessions (id, book_id, start_time, end_time, pages_read, start_position, end_position)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [id, bookId, Math.floor(startTime / 1000), Math.floor(endTime / 1000), pagesRead, startPosition, endPosition]
+    );
+    return true;
+  } catch (error) {
+    console.error('Error recording individual session:', error);
+    return false;
+  }
+}
+
+/**
+ * Get reading history timeline (individual sessions joined with book info).
+ */
+export async function getReadingTimeline(limit = 50): Promise<Array<{
+  bookId: string;
+  bookTitle: string;
+  bookAuthor: string;
+  coverPath: string | null;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  pagesRead: number;
+  startPosition: number;
+  endPosition: number;
+}>> {
+  if (!Capacitor.isNativePlatform()) return [];
+  try {
+    const database = await getDb();
+    const result = await database.query(
+      `SELECT rs.book_id, b.title as book_title, b.author as book_author, b.cover_path,
+              rs.start_time, rs.end_time, (rs.end_time - rs.start_time) as duration,
+              rs.pages_read, rs.start_position, rs.end_position
+       FROM reading_sessions rs
+       JOIN ${TABLES.BOOKS} b ON rs.book_id = b.id
+       ORDER BY rs.start_time DESC
+       LIMIT ?;`,
+      [limit]
+    );
+    return (result.values || []).map((row: any) => ({
+      bookId: row.book_id,
+      bookTitle: row.book_title,
+      bookAuthor: row.book_author,
+      coverPath: row.cover_path,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      duration: row.duration,
+      pagesRead: row.pages_read || 0,
+      startPosition: row.start_position || 0,
+      endPosition: row.end_position || 0,
+    }));
+  } catch (error) {
+    console.error('Error getting reading timeline:', error);
+    return [];
+  }
+}
+
 export async function getTotalReadingSummary(): Promise<{
   totalBooksRead: number;
   totalPagesRead: number;
@@ -2306,8 +2379,10 @@ export const databaseService = {
   updateHighlight,
   // Reading Stats
   recordReadingSession,
+  recordIndividualSession,
   getReadingStats,
   getGlobalReadingStats,
+  getReadingTimeline,
   getTotalReadingSummary,
   // Settings
   getSetting,

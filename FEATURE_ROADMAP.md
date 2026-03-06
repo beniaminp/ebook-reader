@@ -210,7 +210,7 @@
 | **Time-of-Day Distribution** | 24-hour chart showing when during the day the user reads most | Bookmory |
 | **Vocabulary Growth Chart** | Cumulative words saved over time, correlated with books read | — |
 | **Annual Year in Review** | Shareable year-end summary: total books, hours, top genre, longest streak, etc. | Apple Books (2025), Spotify Wrapped-style |
-| **Reading History Timeline** | Chronological log of every session: book, date, duration, pages, start/end position | Kobo Reading Life, Libby Timeline |
+| **Reading History Timeline** ✅ | Chronological log of every session: book, date, duration, pages, start/end position | Kobo Reading Life, Libby Timeline |
 
 ### 4.4 Social Features
 
