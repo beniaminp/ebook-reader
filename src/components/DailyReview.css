@@ -1,0 +1,291 @@
+/* ─── Daily Review Container ─────────────────────── */
+
+.daily-review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 12px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ─── Progress Row ───────────────────────────────── */
+
+.daily-review__progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.daily-review__progress-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  white-space: nowrap;
+  min-width: 56px;
+}
+
+.daily-review__progress-bar {
+  flex: 1;
+  --progress-background: var(--ion-color-primary);
+  border-radius: 4px;
+  height: 4px;
+}
+
+/* ─── Flashcard ──────────────────────────────────── */
+
+.daily-review__card {
+  position: relative;
+  margin: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+  cursor: default;
+}
+
+.daily-review__card--revealed {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.daily-review__accent-bar {
+  height: 4px;
+  background: var(--highlight-accent, #ffd54f);
+}
+
+.daily-review__card-body {
+  padding: 20px 20px 16px;
+}
+
+/* ─── Highlight Text ─────────────────────────────── */
+
+.daily-review__highlight-text {
+  font-size: 18px;
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--ion-text-color);
+  margin: 0 0 16px;
+  padding: 0 0 0 14px;
+  border-left: 3px solid var(--highlight-accent, #ffd54f);
+  font-style: italic;
+}
+
+/* ─── Book Info ──────────────────────────────────── */
+
+.daily-review__book-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.daily-review__book-icon {
+  font-size: 16px;
+  color: var(--ion-color-medium);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.daily-review__book-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.daily-review__book-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-review__book-author {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ion-color-medium-shade, #808289);
+}
+
+/* ─── Note Section ───────────────────────────────── */
+
+.daily-review__note-section {
+  margin-top: 8px;
+  min-height: 40px;
+}
+
+.daily-review__reveal-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px dashed var(--ion-color-medium-tint, #c0c0c0);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ion-color-medium);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.daily-review__reveal-btn:hover {
+  background: rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.05);
+  border-color: var(--ion-color-primary);
+}
+
+.daily-review__note-section--visible .daily-review__note {
+  animation: daily-review-fade-in 0.3s ease;
+}
+
+.daily-review__note {
+  padding: 12px 14px;
+  background: rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.06);
+  border-radius: 10px;
+}
+
+.daily-review__note-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ion-color-medium);
+  margin-bottom: 4px;
+}
+
+.daily-review__note-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ion-text-color);
+  margin: 0;
+}
+
+/* ─── Rating Buttons ─────────────────────────────── */
+
+.daily-review__rating-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.daily-review__rate-btn {
+  flex: 1;
+  --border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+
+.daily-review__rate-btn--again {
+  --background: #ef5350;
+  --background-hover: #e53935;
+  --background-activated: #c62828;
+}
+
+.daily-review__rate-btn--hard {
+  --background: #ff9800;
+  --background-hover: #f57c00;
+  --background-activated: #e65100;
+}
+
+.daily-review__rate-btn--good {
+  --background: #42a5f5;
+  --background-hover: #1e88e5;
+  --background-activated: #1565c0;
+}
+
+.daily-review__rate-btn--easy {
+  --background: #66bb6a;
+  --background-hover: #43a047;
+  --background-activated: #2e7d32;
+}
+
+/* ─── Empty State ────────────────────────────────── */
+
+.daily-review__empty-card,
+.daily-review__done-card {
+  margin: 0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.daily-review__empty-content,
+.daily-review__done-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.daily-review__empty-icon,
+.daily-review__done-icon {
+  font-size: 48px;
+  color: var(--ion-color-medium);
+  margin-bottom: 12px;
+}
+
+.daily-review__done-icon {
+  color: #66bb6a;
+}
+
+.daily-review__empty-title,
+.daily-review__done-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ion-text-color);
+  margin: 0 0 6px;
+}
+
+.daily-review__empty-text,
+.daily-review__done-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ion-color-medium);
+  margin: 0;
+  max-width: 280px;
+}
+
+.daily-review__restart-btn {
+  margin-top: 16px;
+}
+
+/* ─── Animations ─────────────────────────────────── */
+
+@keyframes daily-review-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Dark Mode ──────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  .daily-review__card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .daily-review__card--revealed {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  .daily-review__reveal-btn {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .daily-review__note {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .daily-review__empty-card,
+  .daily-review__done-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
