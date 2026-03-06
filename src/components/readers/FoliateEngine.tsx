@@ -60,7 +60,7 @@ export interface FoliateEngineProps {
   /** Called when user taps an existing highlight. */
   onHighlightTap?: (value: string) => void;
   /** Called when user taps content (for tap-zone navigation). relX is 0–1 horizontal position. */
-  onContentTap?: (relX: number) => void;
+  onContentTap?: (relX: number, relY: number) => void;
   /**
    * Called when user selects text in the EPUB content. The native selection
    * is cleared immediately after capturing to hide Android's Chrome handles.
@@ -517,15 +517,21 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           // left edge of the screen.
           const toRelativeX = (clientX: number): number => {
             const iframeWin = doc.defaultView;
-            // Try to get the iframe element from the parent window to
-            // determine its screen offset
             if (iframeWin && iframeWin.frameElement) {
               const rect = iframeWin.frameElement.getBoundingClientRect();
               return (rect.left + clientX) / window.innerWidth;
             }
-            // Fallback: use the iframe's own viewport width
             const viewportWidth = iframeWin?.innerWidth || window.innerWidth;
             return clientX / viewportWidth;
+          };
+          const toRelativeY = (clientY: number): number => {
+            const iframeWin = doc.defaultView;
+            if (iframeWin && iframeWin.frameElement) {
+              const rect = iframeWin.frameElement.getBoundingClientRect();
+              return (rect.top + clientY) / window.innerHeight;
+            }
+            const viewportHeight = iframeWin?.innerHeight || window.innerHeight;
+            return clientY / viewportHeight;
           };
 
           // ─── Selection notification (keeps native selection alive for extending) ───
@@ -567,7 +573,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             }
             touchHandledTap = true;
             const relX = toRelativeX(t.clientX);
-            onContentTapRef.current?.(relX);
+            const relY = toRelativeY(t.clientY);
+            onContentTapRef.current?.(relX, relY);
           }, { passive: true });
           doc.addEventListener('click', (ev: MouseEvent) => {
             // On touch devices, touchend already handled the tap
@@ -586,7 +593,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
               return;
             }
             const relX = toRelativeX(ev.clientX);
-            onContentTapRef.current?.(relX);
+            const relY = toRelativeY(ev.clientY);
+            onContentTapRef.current?.(relX, relY);
           });
 
           // Notify parent of selection changes so the menu shows/hides.

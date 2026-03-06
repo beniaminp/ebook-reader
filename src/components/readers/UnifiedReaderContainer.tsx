@@ -759,6 +759,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // ─── Content tap zones (for non-foliate formats: PDF, scroll) ─────────────────────────
   // (Foliate tap zones are now handled inside the iframe via FoliateEngine.onContentTap)
 
+  // Ref to forward bookmark toggle into tap handlers (defined later)
+  const handleToggleBookmarkRef = useRef(() => {});
+
   const contentTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const contentTouchHandledRef = useRef(false);
 
@@ -798,15 +801,16 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       if (sel && !sel.isCollapsed) return;
 
       const relX = touch.clientX / window.innerWidth;
-      // Handle tap zones for non-foliate formats
-      if (relX < 0.33) {
-        contentTouchHandledRef.current = true;
+      const relY = touch.clientY / window.innerHeight;
+      contentTouchHandledRef.current = true;
+      // Upper-right corner: toggle bookmark (works even when toolbar is hidden)
+      if (relX > 0.80 && relY < 0.12) {
+        handleToggleBookmarkRef.current();
+      } else if (relX < 0.33) {
         handlePrev();
       } else if (relX > 0.67) {
-        contentTouchHandledRef.current = true;
         handleNext();
       } else {
-        contentTouchHandledRef.current = true;
         handleToggleToolbar();
       }
     },
@@ -824,7 +828,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed) return;
       const relX = e.clientX / window.innerWidth;
-      if (relX < 0.33) {
+      const relY = e.clientY / window.innerHeight;
+      // Upper-right corner: toggle bookmark
+      if (relX > 0.80 && relY < 0.12) {
+        handleToggleBookmarkRef.current();
+      } else if (relX < 0.33) {
         handlePrev();
       } else if (relX > 0.67) {
         handleNext();
@@ -912,6 +920,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     // Refresh bookmarks list for the panel
     await loadBookmarks();
   }, [book.id, progress, isBookmarked, onBookmark, loadBookmarks]);
+
+  // Keep bookmark ref in sync for tap-zone handlers defined earlier
+  handleToggleBookmarkRef.current = handleToggleBookmark;
 
   // ─── TTS ─────────────────────────
 
@@ -1066,13 +1077,18 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // Handle taps inside the foliate iframe for tap-zone navigation.
   // Uses a ref so FoliateEngine doesn't re-render when handlers change.
-  const handleFoliateContentTapRef = useRef((_relX: number) => {});
-  handleFoliateContentTapRef.current = (relX: number) => {
+  const handleFoliateContentTapRef = useRef((_relX: number, _relY: number) => {});
+  handleFoliateContentTapRef.current = (relX: number, relY: number) => {
+    // Upper-right corner: toggle bookmark (works even when toolbar is hidden)
+    if (relX > 0.80 && relY < 0.12) {
+      handleToggleBookmark();
+      return;
+    }
     if (relX < 0.33) handlePrev();
     else if (relX > 0.67) handleNext();
     else handleToggleToolbar();
   };
-  const stableOnContentTap = useCallback((relX: number) => handleFoliateContentTapRef.current(relX), []);
+  const stableOnContentTap = useCallback((relX: number, relY: number) => handleFoliateContentTapRef.current(relX, relY), []);
 
   const handleSelectionCapturedRef = useRef((_sel: CapturedSelection | null) => {});
   handleSelectionCapturedRef.current = (sel: CapturedSelection | null) => {
@@ -1290,6 +1306,44 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         onTouchEnd={handleContentTouchEnd}
         onClick={handleContentClick}
       >
+        {/* ─── Bookmark indicator on upper-right corner ─── */}
+        <div
+          className="reader-bookmark-indicator"
+          onClick={(e) => { e.stopPropagation(); handleToggleBookmark(); }}
+          onTouchEnd={(e) => { e.stopPropagation(); }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 12,
+            zIndex: 10,
+            cursor: 'pointer',
+            pointerEvents: 'auto',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            width: 36,
+            padding: 0,
+            opacity: isBookmarked ? 1 : 0.35,
+            transition: 'opacity 0.2s, transform 0.2s',
+            transform: isBookmarked ? 'translateY(0)' : 'translateY(-6px)',
+          }}
+          title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+        >
+          <svg
+            width="28"
+            height="40"
+            viewBox="0 0 28 40"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M0 0H28V38L14 30L0 38V0Z"
+              fill={isBookmarked ? '#e53935' : (isFoliate ? currentTheme.textColor : 'var(--ion-color-medium, #999)')}
+              opacity={isBookmarked ? 1 : 0.5}
+            />
+          </svg>
+        </div>
+
         {loading && (
           <div
             style={{

@@ -156,6 +156,18 @@ html.immersive-mode body {
   margin: 0 !important;
 }
 
+/* ─── Bookmark indicator (upper-right corner) ─── */
+
+.reader-bookmark-indicator {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.reader-bookmark-indicator:active svg {
+  transform: scale(0.9);
+}
+
 /* When toolbar is visible in immersive mode, add semi-transparent background */
 .unified-reader-page.immersive .reader-toolbar-header.toolbar-visible ion-toolbar,
 .unified-reader-page.immersive .reader-toolbar-footer.toolbar-visible ion-toolbar {
