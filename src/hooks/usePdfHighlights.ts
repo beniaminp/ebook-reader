@@ -52,6 +52,7 @@ export function usePdfHighlights({ bookId }: UsePdfHighlightsProps) {
         location: highlight.location.pageNumber
           ? String(highlight.location.pageNumber)
           : highlight.location.cfi || String(highlight.location.position),
+        tags: highlight.tags ? JSON.stringify(highlight.tags) : undefined,
         rects: highlight.rects ? JSON.stringify(highlight.rects) : undefined,
       });
 

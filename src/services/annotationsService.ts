@@ -27,6 +27,7 @@ export interface EpubHighlight {
   text: string;
   color: string;
   note?: string;
+  tags?: string[];
   chapterTitle?: string;
   createdAt: number;
   updatedAt: number;

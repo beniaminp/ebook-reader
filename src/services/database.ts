@@ -2188,6 +2188,7 @@ export async function importDatabase(
           text: highlight.text,
           color: highlight.color,
           note: highlight.note,
+          tags: highlight.tags ? JSON.stringify(highlight.tags) : undefined,
           pageNumber: highlight.location.pageNumber,
         };
         await addHighlight(dbHighlight);

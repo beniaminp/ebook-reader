@@ -3,9 +3,10 @@
  *
  * Displays all highlights for a book in a list format
  * Allows navigation to highlight location, editing, and deletion
+ * Supports tag display and filtering by tags
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   IonList,
   IonItem,
@@ -25,10 +26,11 @@ import {
   IonToast,
   IonBadge,
 } from '@ionic/react';
-import { colorPalette, trashOutline, createOutline, close, bookmarkOutline, chatbubbleOutline, chevronDown, chevronUp } from 'ionicons/icons';
+import { colorPalette, trashOutline, createOutline, close, chatbubbleOutline, chevronDown, chevronUp, pricetagOutline, closeCircle } from 'ionicons/icons';
 
 import type { EpubHighlight } from '../../services/annotationsService';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
+import { TagInput, TagBadges, saveTagsToSuggestions } from '../reader-ui/TagInput';
 
 interface HighlightsPanelProps {
   isOpen: boolean;
@@ -36,7 +38,7 @@ interface HighlightsPanelProps {
   highlights: EpubHighlight[];
   onGoToHighlight: (cfiRange: string) => void;
   onDeleteHighlight: (id: string) => void;
-  onUpdateHighlight: (id: string, updates: { color?: string; note?: string }) => void;
+  onUpdateHighlight: (id: string, updates: { color?: string; note?: string; tags?: string[] }) => void;
 }
 
 export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
@@ -49,22 +51,48 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
+  const [editTags, setEditTags] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>(HIGHLIGHT_COLORS[0].value);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+
+  // Collect all unique tags across highlights
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    highlights.forEach((h) => {
+      if (h.tags) {
+        h.tags.forEach((t) => tagSet.add(t));
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [highlights]);
+
+  // Filter highlights by selected tags
+  const filteredHighlights = useMemo(() => {
+    if (filterTags.length === 0) return highlights;
+    return highlights.filter((h) =>
+      h.tags && filterTags.some((ft) => h.tags!.includes(ft))
+    );
+  }, [highlights, filterTags]);
 
   const handleEdit = (highlight: EpubHighlight) => {
     setEditingId(highlight.id);
     setNoteText(highlight.note || '');
+    setEditTags(highlight.tags || []);
     setSelectedColor(highlight.color);
   };
 
   const handleSave = () => {
     if (editingId) {
-      onUpdateHighlight(editingId, { note: noteText, color: selectedColor });
+      onUpdateHighlight(editingId, { note: noteText, color: selectedColor, tags: editTags });
+      if (editTags.length > 0) {
+        saveTagsToSuggestions(editTags);
+      }
       setEditingId(null);
       setNoteText('');
+      setEditTags([]);
       setToastMessage('Highlight updated');
       setShowToast(true);
     }
@@ -73,6 +101,7 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
   const handleCancelEdit = () => {
     setEditingId(null);
     setNoteText('');
+    setEditTags([]);
   };
 
   const handleDelete = (id: string) => {
@@ -86,12 +115,18 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
     onClose();
   };
 
+  const toggleFilterTag = (tag: string) => {
+    setFilterTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   return (
     <>
       <IonModal isOpen={isOpen} onDidDismiss={onClose}>
         <IonHeader>
           <IonToolbar>
-            <IonTitle>Highlights ({highlights.length})</IonTitle>
+            <IonTitle>Highlights ({filteredHighlights.length})</IonTitle>
             <IonButtons slot="end">
               <IonButton onClick={onClose}>
                 <IonIcon icon={close} />
@@ -101,19 +136,90 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
         </IonHeader>
 
         <IonContent>
-          {highlights.length === 0 ? (
+          {/* Tag filter bar */}
+          {allTags.length > 0 && (
+            <div
+              style={{
+                padding: '8px 12px',
+                borderBottom: '1px solid var(--ion-color-light-shade, #d7d8da)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <IonIcon
+                icon={pricetagOutline}
+                style={{ fontSize: '16px', color: 'var(--ion-color-medium)', flexShrink: 0 }}
+              />
+              {allTags.map((tag) => {
+                const isActive = filterTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleFilterTag(tag)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      border: isActive
+                        ? '1.5px solid var(--ion-color-primary, #3880ff)'
+                        : '1px solid var(--ion-color-light-shade, #d7d8da)',
+                      backgroundColor: isActive
+                        ? 'var(--ion-color-primary-tint, #4c8dff)'
+                        : 'var(--ion-background-color, #fff)',
+                      color: isActive ? '#fff' : 'var(--ion-text-color)',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    #{tag}
+                    {isActive && (
+                      <IonIcon icon={closeCircle} style={{ fontSize: '12px' }} />
+                    )}
+                  </button>
+                );
+              })}
+              {filterTags.length > 0 && (
+                <button
+                  onClick={() => setFilterTags([])}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--ion-color-danger, #eb445a)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--ion-color-danger, #eb445a)',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
+
+          {filteredHighlights.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center' }}>
               <IonIcon
                 icon={colorPalette}
                 style={{ fontSize: '48px', color: 'var(--ion-color-medium)' }}
               />
-              <p style={{ color: 'var(--ion-color-medium)' }}>No highlights yet</p>
-              <IonNote>Select some text to create a highlight</IonNote>
+              <p style={{ color: 'var(--ion-color-medium)' }}>
+                {filterTags.length > 0 ? 'No highlights match the selected tags' : 'No highlights yet'}
+              </p>
+              {filterTags.length === 0 && (
+                <IonNote>Select some text to create a highlight</IonNote>
+              )}
             </div>
           ) : (
             <IonList>
-              {highlights.map((highlight) => {
+              {filteredHighlights.map((highlight) => {
                 const hasNote = !!highlight.note;
+                const hasTags = highlight.tags && highlight.tags.length > 0;
                 const isExpanded = expandedNotes.has(highlight.id);
                 return (
                   <IonItem
@@ -165,12 +271,20 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
                           fontStyle: 'italic',
                         }}
                       >
-                        "{highlight.text}"
+                        &ldquo;{highlight.text}&rdquo;
                       </p>
                       {highlight.chapterTitle && (
                         <IonNote style={{ display: 'block', marginTop: '4px' }}>
                           {highlight.chapterTitle}
                         </IonNote>
+                      )}
+                      {/* Tags display */}
+                      {hasTags && (
+                        <TagBadges
+                          tags={highlight.tags!}
+                          onTagClick={(tag) => toggleFilterTag(tag)}
+                          compact
+                        />
                       )}
                       {/* Inline expandable margin note */}
                       {hasNote && (
@@ -277,6 +391,14 @@ export const HighlightsPanel: React.FC<HighlightsPanelProps> = ({
               placeholder="Add a note for this highlight..."
               autoGrow
             />
+
+            <div style={{ marginTop: '16px' }}>
+              <TagInput
+                tags={editTags}
+                onChange={setEditTags}
+                placeholder="Add tags (e.g. metaphor, research)..."
+              />
+            </div>
           </div>
         </IonContent>
       </IonModal>

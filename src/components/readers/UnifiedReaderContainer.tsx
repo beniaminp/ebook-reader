@@ -84,6 +84,7 @@ import { ChapterScrubber } from '../reader-ui/ChapterScrubber';
 import { useImmersiveMode } from '../../hooks/useImmersiveMode';
 import { HighlightsPanel } from '../common/HighlightsPanel';
 import { BookmarksPanel } from '../common/BookmarksPanel';
+import { TagInput, saveTagsToSuggestions } from '../reader-ui/TagInput';
 import type { EpubBookmark } from '../../services/annotationsService';
 import type { FoliateHighlight } from './FoliateEngine';
 
@@ -173,6 +174,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     startOffset?: number;
     endOffset?: number;
   } | null>(null);
+  const [pendingHighlightColor, setPendingHighlightColor] = useState<string>(HIGHLIGHT_COLORS[0].value);
+  const [pendingHighlightTags, setPendingHighlightTags] = useState<string[]>([]);
 
   // Highlights panel
   const [highlightsPanelOpen, setHighlightsPanelOpen] = useState(false);
@@ -450,6 +453,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             text: h.text,
             color: h.color,
             note: h.note,
+            tags: h.tags ? JSON.stringify(h.tags) : undefined,
             pageNumber: h.pageNumber,
             rects: h.rects ? JSON.stringify(h.rects) : undefined,
           });
@@ -467,8 +471,8 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       for (const h of updatedHighlights) {
         if (prevIds.has(h.id)) {
           const old = prev.find((p) => p.id === h.id);
-          if (old && (old.color !== h.color || old.note !== h.note)) {
-            databaseService.updateHighlight(h.id, { color: h.color, note: h.note });
+          if (old && (old.color !== h.color || old.note !== h.note || JSON.stringify(old.tags) !== JSON.stringify(h.tags))) {
+            databaseService.updateHighlight(h.id, { color: h.color, note: h.note, tags: h.tags });
           }
         }
       }
@@ -673,6 +677,31 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     if (!isFoliate) return;
     engineRef.current?.setFontWeight?.(themeStore.fontWeight);
   }, [themeStore.fontWeight, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setWordSpacing?.(themeStore.wordSpacing);
+  }, [themeStore.wordSpacing, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setMaxLineWidth?.(themeStore.maxLineWidth);
+  }, [themeStore.maxLineWidth, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setDropCaps?.(themeStore.dropCaps);
+  }, [themeStore.dropCaps, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setTwoColumnLayout?.(themeStore.twoColumnLayout);
+  }, [themeStore.twoColumnLayout, isFoliate]);
+
+  useEffect(() => {
+    if (!isFoliate) return;
+    engineRef.current?.setGlobalBold?.(themeStore.globalBold);
+  }, [themeStore.globalBold, isFoliate]);
 
   useEffect(() => {
     if (isPdf) return;
@@ -1171,8 +1200,25 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   return (
     <IonPage
       className={`unified-reader-page${toolbarVisible ? '' : ' fullscreen'}${isImmersive ? ' immersive' : ''}`}
-      style={pageStyle}
+      style={{
+        ...pageStyle,
+        ...(themeStore.colorVisionFilter !== 'none' && isFoliate ? { filter: 'url(#color-vision-filter-main)' } : {}),
+      }}
     >
+      {/* Color Vision Deficiency Filter (for foliate engine) */}
+      {themeStore.colorVisionFilter !== 'none' && isFoliate && (
+        <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+          <defs>
+            <filter id="color-vision-filter-main">
+              <feColorMatrix type="matrix" values={
+                themeStore.colorVisionFilter === 'protanopia' ? '0.567, 0.433, 0, 0, 0, 0.558, 0.442, 0, 0, 0, 0, 0.242, 0.758, 0, 0, 0, 0, 0, 1, 0' :
+                themeStore.colorVisionFilter === 'deuteranopia' ? '0.625, 0.375, 0, 0, 0, 0.7, 0.3, 0, 0, 0, 0, 0.3, 0.7, 0, 0, 0, 0, 0, 1, 0' :
+                '0.95, 0.05, 0, 0, 0, 0, 0.433, 0.567, 0, 0, 0, 0.475, 0.525, 0, 0, 0, 0, 0, 1, 0'
+              } />
+            </filter>
+          </defs>
+        </svg>
+      )}
       {/* ─── Top toolbar ─── */}
       <IonHeader className={`reader-toolbar-header${toolbarVisible ? ' toolbar-visible' : ' toolbar-hidden'}`}>
         <IonToolbar style={toolbarStyle}>
@@ -1511,80 +1557,117 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         }}
       />
 
-      {/* ─── Color Picker Popover ─── */}
+      {/* ─── Color Picker Popover with Tags ─── */}
       <IonPopover
         isOpen={colorPickerOpen}
         onDidDismiss={() => {
           setColorPickerOpen(false);
           setPendingHighlightText('');
           setPendingHighlightMeta(null);
+          setPendingHighlightColor(HIGHLIGHT_COLORS[0].value);
+          setPendingHighlightTags([]);
         }}
       >
-        <div style={{ padding: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <p style={{ width: '100%', textAlign: 'center', margin: '0 0 8px', fontSize: '14px' }}>
+        <div style={{ padding: '12px' }}>
+          <p style={{ textAlign: 'center', margin: '0 0 8px', fontSize: '14px' }}>
             Pick highlight color
           </p>
-          {HIGHLIGHT_COLORS.map((color) => (
-            <button
-              key={color.value}
-              onClick={async () => {
-                const meta = pendingHighlightMeta;
-                const text = pendingHighlightText;
-                if (!meta) return;
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '12px' }}>
+            {HIGHLIGHT_COLORS.map((color) => (
+              <button
+                key={color.value}
+                onClick={() => setPendingHighlightColor(color.value)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: color.value,
+                  border: pendingHighlightColor === color.value ? '3px solid var(--ion-color-dark, #222)' : '2px solid #fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  cursor: 'pointer',
+                  transform: pendingHighlightColor === color.value ? 'scale(1.15)' : 'scale(1)',
+                  transition: 'transform 0.15s, border 0.15s',
+                }}
+                title={color.name}
+              />
+            ))}
+          </div>
+          <TagInput
+            tags={pendingHighlightTags}
+            onChange={setPendingHighlightTags}
+            compact
+            placeholder="Add tags..."
+          />
+          <button
+            onClick={async () => {
+              const meta = pendingHighlightMeta;
+              const text = pendingHighlightText;
+              if (!meta) return;
 
-                // Determine location string
-                let locationStr = '';
-                if (meta.cfi) {
-                  locationStr = meta.cfi;
-                } else if (meta.startOffset !== undefined && meta.endOffset !== undefined) {
-                  locationStr = `${meta.startOffset}-${meta.endOffset}`;
+              // Determine location string
+              let locationStr = '';
+              if (meta.cfi) {
+                locationStr = meta.cfi;
+              } else if (meta.startOffset !== undefined && meta.endOffset !== undefined) {
+                locationStr = `${meta.startOffset}-${meta.endOffset}`;
+              }
+
+              // Save to database
+              const saved = await databaseService.addHighlight({
+                bookId: book.id,
+                location: locationStr,
+                text,
+                color: pendingHighlightColor,
+                tags: pendingHighlightTags.length > 0 ? JSON.stringify(pendingHighlightTags) : undefined,
+              });
+
+              if (saved) {
+                const updated = [...highlights, saved];
+                setHighlights(updated);
+                prevHighlightsRef.current = updated;
+
+                // For EPUB, also add visual annotation
+                if (isFoliate && meta.cfi) {
+                  engineRef.current?.addHighlightAnnotation?.(meta.cfi, pendingHighlightColor);
                 }
 
-                // Save to database
-                const saved = await databaseService.addHighlight({
-                  bookId: book.id,
-                  location: locationStr,
-                  text,
-                  color: color.value,
+                // Persist tags to suggestions
+                if (pendingHighlightTags.length > 0) {
+                  saveTagsToSuggestions(pendingHighlightTags);
+                }
+
+                setToastMessage('Highlight added');
+              }
+
+              setColorPickerOpen(false);
+              setPendingHighlightText('');
+              setPendingHighlightMeta(null);
+              setPendingHighlightColor(HIGHLIGHT_COLORS[0].value);
+              setPendingHighlightTags([]);
+              setCapturedSelectionText('');
+              // Clear native selection in iframes
+              try {
+                engineRef.current?.getContentDocuments?.()?.forEach((d) => {
+                  try { d.getSelection?.()?.removeAllRanges(); } catch { /* */ }
                 });
-
-                if (saved) {
-                  const updated = [...highlights, saved];
-                  setHighlights(updated);
-                  prevHighlightsRef.current = updated;
-
-                  // For EPUB, also add visual annotation
-                  if (isFoliate && meta.cfi) {
-                    engineRef.current?.addHighlightAnnotation?.(meta.cfi, color.value);
-                  }
-
-                  setToastMessage('Highlight added');
-                }
-
-                setColorPickerOpen(false);
-                setPendingHighlightText('');
-                setPendingHighlightMeta(null);
-                setCapturedSelectionText('');
-                // Clear native selection in iframes
-                try {
-                  engineRef.current?.getContentDocuments?.()?.forEach((d) => {
-                    try { d.getSelection?.()?.removeAllRanges(); } catch { /* */ }
-                  });
-                } catch { /* */ }
-                window.getSelection()?.removeAllRanges();
-              }}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: color.value,
-                border: '2px solid #fff',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                cursor: 'pointer',
-              }}
-              title={color.name}
-            />
-          ))}
+              } catch { /* */ }
+              window.getSelection()?.removeAllRanges();
+            }}
+            style={{
+              width: '100%',
+              marginTop: '10px',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: 'var(--ion-color-primary, #3880ff)',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Save Highlight
+          </button>
         </div>
       </IonPopover>
 
@@ -1601,6 +1684,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             text: h.text,
             color: h.color,
             note: h.note,
+            tags: h.tags,
             chapterTitle: undefined,
             createdAt: h.timestamp instanceof Date ? h.timestamp.getTime() : Date.now(),
             updatedAt: h.timestamp instanceof Date ? h.timestamp.getTime() : Date.now(),
