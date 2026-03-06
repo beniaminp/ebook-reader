@@ -571,6 +571,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
               onSelectionCapturedRef.current?.(null);
               return;
             }
+            // Clear any accidental selection created by the tap
+            const tapSel = doc.getSelection?.();
+            if (tapSel && !tapSel.isCollapsed) tapSel.removeAllRanges();
             touchHandledTap = true;
             const relX = toRelativeX(t.clientX);
             const relY = toRelativeY(t.clientY);
@@ -592,6 +595,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
               onSelectionCapturedRef.current?.(null);
               return;
             }
+            // Clear any accidental selection from the click
+            if (sel) sel.removeAllRanges();
             const relX = toRelativeX(ev.clientX);
             const relY = toRelativeY(ev.clientY);
             onContentTapRef.current?.(relX, relY);

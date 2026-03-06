@@ -1307,7 +1307,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         onClick={handleContentClick}
       >
         {/* ─── Bookmark indicator on upper-right corner (only when bookmarked) ─── */}
-        {isBookmarked && (
+        {isBookmarked ? (
           <div
             className="reader-bookmark-indicator"
             onClick={(e) => { e.stopPropagation(); handleToggleBookmark(); }}
@@ -1315,32 +1315,21 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
             style={{
               position: 'absolute',
               top: 0,
-              right: 8,
+              right: 6,
               zIndex: 10,
               cursor: 'pointer',
               pointerEvents: 'auto',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              width: 20,
+              width: 14,
+              height: 20,
               padding: 0,
             }}
             title="Remove bookmark"
           >
-            <svg
-              width="16"
-              height="24"
-              viewBox="0 0 28 40"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M0 0H28V38L14 30L0 38V0Z"
-                fill="#e53935"
-              />
+            <svg width="14" height="20" viewBox="0 0 14 20" fill="none">
+              <path d="M0 0H14V19L7 15L0 19V0Z" fill="#e53935" />
             </svg>
           </div>
-        )}
+        ) : null}
 
         {loading && (
           <div
