@@ -1306,43 +1306,41 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
         onTouchEnd={handleContentTouchEnd}
         onClick={handleContentClick}
       >
-        {/* ─── Bookmark indicator on upper-right corner ─── */}
-        <div
-          className="reader-bookmark-indicator"
-          onClick={(e) => { e.stopPropagation(); handleToggleBookmark(); }}
-          onTouchEnd={(e) => { e.stopPropagation(); }}
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 12,
-            zIndex: 10,
-            cursor: 'pointer',
-            pointerEvents: 'auto',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            width: 36,
-            padding: 0,
-            opacity: isBookmarked ? 1 : 0.35,
-            transition: 'opacity 0.2s, transform 0.2s',
-            transform: isBookmarked ? 'translateY(0)' : 'translateY(-6px)',
-          }}
-          title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-        >
-          <svg
-            width="28"
-            height="40"
-            viewBox="0 0 28 40"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+        {/* ─── Bookmark indicator on upper-right corner (only when bookmarked) ─── */}
+        {isBookmarked && (
+          <div
+            className="reader-bookmark-indicator"
+            onClick={(e) => { e.stopPropagation(); handleToggleBookmark(); }}
+            onTouchEnd={(e) => { e.stopPropagation(); }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 8,
+              zIndex: 10,
+              cursor: 'pointer',
+              pointerEvents: 'auto',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              width: 20,
+              padding: 0,
+            }}
+            title="Remove bookmark"
           >
-            <path
-              d="M0 0H28V38L14 30L0 38V0Z"
-              fill={isBookmarked ? '#e53935' : (isFoliate ? currentTheme.textColor : 'var(--ion-color-medium, #999)')}
-              opacity={isBookmarked ? 1 : 0.5}
-            />
-          </svg>
-        </div>
+            <svg
+              width="16"
+              height="24"
+              viewBox="0 0 28 40"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M0 0H28V38L14 30L0 38V0Z"
+                fill="#e53935"
+              />
+            </svg>
+          </div>
+        )}
 
         {loading && (
           <div
