@@ -151,7 +151,7 @@
 | **Advanced Composable Filters** | Combine multiple filters simultaneously (format AND status AND genre AND rating) | Calibre, Libby, Moon+ Reader |
 | **Search Within Collection** | Scope search bar to the current collection/tag rather than the whole library | Apple Books, Kindle Collections, Kobo |
 | **"Recently Finished" View** | Virtual smart view surfacing books finished in the last 30/90 days | Google Play Books, Kobo Reading Life, Libby |
-| **"Similar Books" Suggestions** | "Find similar" action that opens OPDS pre-filtered by same author/genre | Kindle, Google Play Books, Kobo |
+| **"Similar Books" Suggestions** ✅ | "Find similar" action that opens OPDS pre-filtered by same author/genre | Kindle, Google Play Books, Kobo |
 
 ### 3.4 File Management
 

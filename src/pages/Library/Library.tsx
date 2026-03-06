@@ -126,6 +126,10 @@ const Library: React.FC = () => {
   const [detailSeriesIndex, setDetailSeriesIndex] = useState('');
   const [seriesSaving, setSeriesSaving] = useState(false);
 
+  // Similar books state
+  const [similarBooks, setSimilarBooks] = useState<Array<{ title: string; author: string; coverUrl?: string }>>([]);
+  const [isFindingSimilar, setIsFindingSimilar] = useState(false);
+
   // Cover search state
   const [showCoverSearch, setShowCoverSearch] = useState(false);
   const [coverSearchQuery, setCoverSearchQuery] = useState('');
@@ -2098,6 +2102,74 @@ const Library: React.FC = () => {
                 >
                   {seriesSaving ? 'Saving...' : 'Save Series Info'}
                 </IonButton>
+              </div>
+
+              {/* Similar Books */}
+              <div style={{ marginTop: '16px' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>Similar Books</h3>
+                <IonButton
+                  expand="block"
+                  fill="outline"
+                  size="small"
+                  disabled={isFindingSimilar}
+                  onClick={async () => {
+                    if (!selectedBook) return;
+                    setIsFindingSimilar(true);
+                    setSimilarBooks([]);
+                    try {
+                      const subjects = selectedBook.subgenres?.length
+                        ? selectedBook.subgenres
+                        : selectedBook.genre
+                          ? [selectedBook.genre]
+                          : selectedBook.metadata?.genres || [];
+                      const results = await metadataLookupService.fetchSimilarBooks(
+                        subjects.length > 0 ? subjects : [selectedBook.author]
+                      );
+                      setSimilarBooks(results);
+                    } catch {
+                      setToastColor('danger');
+                      setToastMessage('Failed to find similar books');
+                    } finally {
+                      setIsFindingSimilar(false);
+                    }
+                  }}
+                >
+                  {isFindingSimilar ? <IonSpinner name="dots" /> : 'Find Similar Books'}
+                </IonButton>
+                {similarBooks.length > 0 && (
+                  <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '8px 0', scrollbarWidth: 'none' }}>
+                    {similarBooks.map((sb, i) => (
+                      <div key={i} style={{ flex: '0 0 80px', textAlign: 'center' }}>
+                        {sb.coverUrl ? (
+                          <img
+                            src={sb.coverUrl}
+                            alt={sb.title}
+                            style={{ width: 80, height: 120, objectFit: 'cover', borderRadius: 4 }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 80, height: 120, borderRadius: 4,
+                            background: 'var(--ion-color-light)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <IonIcon icon={bookOutline} style={{ fontSize: 24 }} />
+                          </div>
+                        )}
+                        <p style={{ fontSize: 11, margin: '4px 0 0', lineHeight: 1.2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                          {sb.title}
+                        </p>
+                        <p style={{ fontSize: 10, color: 'var(--ion-color-medium)', margin: 0 }}>
+                          {sb.author}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {similarBooks.length === 0 && !isFindingSimilar && (
+                  <p style={{ fontSize: 13, color: 'var(--ion-color-medium)', margin: '8px 0 0' }}>
+                    Tap to discover books similar to this one
+                  </p>
+                )}
               </div>
             </div>
           )}
