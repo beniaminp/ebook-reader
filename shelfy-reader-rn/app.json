@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Shelfy Reader",
+    "slug": "shelfy-reader",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "shelfy",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#2C5F8A",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shelfyreader.app"
+    },
+    "android": {
+      "package": "com.shelfyreader.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#2C5F8A",
+        "foregroundImage": "./assets/adaptive-icon.png"
+      },
+      "minSdkVersion": 24,
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-document-picker",
+      "expo-font",
+      "expo-secure-store"
+    ]
+  }
+}

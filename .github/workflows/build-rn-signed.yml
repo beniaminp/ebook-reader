@@ -1,0 +1,100 @@
+name: Build React Native Signed APK
+
+on:
+  push:
+    branches:
+      - react-native-migration-plan
+    paths:
+      - 'shelfy-reader-rn/**'
+      - '.github/workflows/build-rn-signed.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-signed-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: shelfy-reader-rn/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        working-directory: shelfy-reader-rn
+        run: npm ci
+
+      - name: Prebuild Android project
+        working-directory: shelfy-reader-rn
+        run: npx expo prebuild --platform android --clean
+
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Compute version
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION="1.0.${COMMIT_COUNT}"
+          echo "VERSION_NAME=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${COMMIT_COUNT}" >> $GITHUB_ENV
+
+      - name: Build signed release APK
+        working-directory: shelfy-reader-rn/android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cat >> gradle.properties <<EOF
+          android.injected.signing.store.file=$ANDROID_KEYSTORE_PATH
+          android.injected.signing.store.password=$ANDROID_KEYSTORE_PASSWORD
+          android.injected.signing.key.alias=$ANDROID_KEY_ALIAS
+          android.injected.signing.key.password=$ANDROID_KEY_PASSWORD
+          EOF
+          ./gradlew assembleRelease \
+            -PversionName="${{ env.VERSION_NAME }}" \
+            -PversionCode="${{ env.VERSION_CODE }}"
+
+      - name: Rename APK
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          APK_SRC=$(find shelfy-reader-rn/android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK_NAME="shelfy-reader-rn-v${{ env.VERSION_NAME }}-${SHORT_SHA}-signed.apk"
+          cp "$APK_SRC" "$APK_NAME"
+          echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shelfy-reader-rn-signed-apk
+          path: ${{ env.APK_NAME }}
+
+      - name: Create or update pre-release
+        run: |
+          TAG="rn-latest"
+          gh release create "$TAG" \
+            --title "React Native Build (Latest)" \
+            --notes "React Native signed APK from commit ${{ github.sha }}" \
+            --prerelease 2>/dev/null || \
+          gh release edit "$TAG" \
+            --title "React Native Build (Latest)" \
+            --notes "React Native signed APK from commit ${{ github.sha }}" \
+            --prerelease
+          gh release upload "$TAG" "$APK_NAME" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
