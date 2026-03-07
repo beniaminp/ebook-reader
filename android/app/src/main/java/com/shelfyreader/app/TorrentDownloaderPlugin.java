@@ -1,6 +1,5 @@
 package com.shelfyreader.app;
 
-import android.util.Base64;
 import android.util.Log;
 
 import com.getcapacitor.JSObject;
@@ -8,6 +7,10 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 @CapacitorPlugin(name = "TorrentDownloader")
 public class TorrentDownloaderPlugin extends Plugin {
@@ -47,10 +50,20 @@ public class TorrentDownloaderPlugin extends Plugin {
 
             @Override
             public void onComplete(byte[] fileData, String fileName) {
-                JSObject result = new JSObject();
-                result.put("fileData", Base64.encodeToString(fileData, Base64.NO_WRAP));
-                result.put("fileName", fileName);
-                call.resolve(result);
+                try {
+                    File tempDir = new File(getContext().getCacheDir(), "torrent_complete");
+                    if (!tempDir.exists()) tempDir.mkdirs();
+                    File tempFile = new File(tempDir, fileName);
+                    try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+                        fos.write(fileData);
+                    }
+                    JSObject result = new JSObject();
+                    result.put("filePath", tempFile.getAbsolutePath());
+                    result.put("fileName", fileName);
+                    call.resolve(result);
+                } catch (IOException e) {
+                    call.reject("Failed to save downloaded file: " + e.getMessage());
+                }
             }
 
             @Override

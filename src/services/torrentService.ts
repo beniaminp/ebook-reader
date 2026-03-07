@@ -229,14 +229,12 @@ class TorrentService {
         });
       }
 
-      // Decode base64 to ArrayBuffer
-      const binaryString = atob(result.fileData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+      // Read the temp file via WebView-accessible URL (avoids large base64 bridge transfer)
+      const fileUrl = Capacitor.convertFileSrc(result.filePath);
+      const response = await fetch(fileUrl);
+      const data = await response.arrayBuffer();
 
-      return { data: bytes.buffer, fileName: result.fileName };
+      return { data, fileName: result.fileName };
     } finally {
       if (listenerHandle) {
         listenerHandle.remove();

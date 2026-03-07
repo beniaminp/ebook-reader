@@ -2,7 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 
 export interface TorrentDownloadResult {
-  fileData: string; // Base64-encoded
+  filePath: string; // Native file path to temp file
   fileName: string;
 }
 
