@@ -5,14 +5,13 @@ import {
   TextInput,
   Pressable,
   Alert,
-  RefreshControl,
   useWindowDimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { useAppStore } from '../../src/stores/useAppStore';
@@ -20,7 +19,6 @@ import { useLibraryPrefsStore } from '../../src/stores/useLibraryPrefsStore';
 import { BookCard } from '../../src/components/library/BookCard';
 import { detectFormat } from '../../src/utils/formatUtils';
 import { storeBookFile } from '../../src/services/fileStorage';
-import * as db from '../../src/services/database';
 import type { Book } from '../../src/types';
 
 export default function LibraryScreen() {
@@ -35,7 +33,7 @@ export default function LibraryScreen() {
 
   const viewMode = useLibraryPrefsStore((s) => s.viewMode);
   const sortBy = useLibraryPrefsStore((s) => s.sortBy);
-  const toggleViewMode = useLibraryPrefsStore((s) => s.toggleViewMode);
+  const setViewMode = useLibraryPrefsStore((s) => s.setViewMode);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -59,20 +57,21 @@ export default function LibraryScreen() {
         return a.title.localeCompare(b.title);
       case 'author':
         return (a.author ?? '').localeCompare(b.author ?? '');
-      case 'recent':
+      case 'lastRead':
         return (
-          new Date(b.lastRead ?? b.createdAt).getTime() -
-          new Date(a.lastRead ?? a.createdAt).getTime()
+          new Date(b.lastRead ?? b.dateAdded).getTime() -
+          new Date(a.lastRead ?? a.dateAdded).getTime()
         );
-      case 'added':
+      case 'dateAdded':
       default:
         return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()
         );
     }
   });
 
-  const numColumns = viewMode === 'grid' ? Math.floor(width / 140) : 1;
+  const cardViewMode: 'grid' | 'list' = viewMode === 'list' ? 'list' : 'grid';
+  const numColumns = cardViewMode === 'grid' ? Math.floor(width / 140) : 1;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -98,8 +97,8 @@ export default function LibraryScreen() {
         }
 
         const bookId = crypto.randomUUID();
-        const fileContent = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.Base64,
+        const fileContent = await LegacyFileSystem.readAsStringAsync(asset.uri, {
+          encoding: LegacyFileSystem.EncodingType.Base64,
         });
         const bytes = Uint8Array.from(atob(fileContent), (c) =>
           c.charCodeAt(0)
@@ -110,18 +109,22 @@ export default function LibraryScreen() {
           bytes.buffer as ArrayBuffer
         );
 
-        const book: Book = {
+        const bookData: Omit<Book, 'dateAdded'> = {
           id: bookId,
           title: asset.name.replace(/\.[^/.]+$/, ''),
+          author: '',
           format,
           filePath,
           fileSize: asset.size ?? 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          totalPages: 0,
+          currentPage: 0,
+          progress: 0,
+          lastRead: new Date(),
+          source: 'local',
+          downloaded: true,
         };
 
-        await db.addBook(book);
-        addBook(book);
+        await addBook(bookData);
       }
     } catch (e) {
       console.error('Import failed:', e);
@@ -156,9 +159,9 @@ export default function LibraryScreen() {
         >
           Library
         </Text>
-        <Pressable onPress={toggleViewMode} style={{ padding: 8 }}>
+        <Pressable onPress={() => setViewMode(cardViewMode === 'grid' ? 'list' : 'grid')} style={{ padding: 8 }}>
           <Ionicons
-            name={viewMode === 'grid' ? 'list' : 'grid'}
+            name={cardViewMode === 'grid' ? 'list' : 'grid'}
             size={22}
             color={theme.text}
           />
@@ -224,20 +227,17 @@ export default function LibraryScreen() {
         <FlashList
           data={sortedBooks}
           numColumns={numColumns}
-          key={`${viewMode}-${numColumns}`}
+          key={`${cardViewMode}-${numColumns}`}
           renderItem={({ item }) => (
             <BookCard
               book={item}
-              viewMode={viewMode}
+              viewMode={cardViewMode}
               onPress={() => router.push(`/reader/${item.id}`)}
             />
           )}
-          estimatedItemSize={viewMode === 'grid' ? 200 : 80}
           keyExtractor={(book) => book.id}
-          contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 80 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
 

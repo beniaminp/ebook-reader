@@ -59,7 +59,6 @@ export default function SearchScreen() {
               onPress={() => router.push(`/reader/${item.id}`)}
             />
           )}
-          estimatedItemSize={80}
           keyExtractor={(b) => b.id}
         />
       ) : query.length > 0 ? (
