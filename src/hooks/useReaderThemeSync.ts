@@ -139,7 +139,6 @@ export function useReaderThemeSync(
 
   useEffect(() => {
     if (isPdf) return;
-    console.log(`[Interlinear] Effect fired: enabled=${themeStore.interlinearMode}, lang=${themeStore.interlinearLanguage}, hasEngine=${!!engineRef.current}`);
     engineRef.current?.setInterlinearMode?.(
       themeStore.interlinearMode,
       themeStore.interlinearLanguage

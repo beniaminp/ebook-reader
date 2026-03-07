@@ -121,7 +121,6 @@ export function initDatabase(): Promise<boolean> {
 async function initDatabaseInternal(): Promise<boolean> {
   try {
     if (!Capacitor.isNativePlatform()) {
-      console.log('Running on web - using localStorage fallback');
       return initWebDatabase();
     }
 
@@ -175,7 +174,6 @@ async function initDatabaseInternal(): Promise<boolean> {
         }
       }
 
-      console.log('Database initialized successfully');
       return true;
     }
 
@@ -216,7 +214,6 @@ export async function getDb(): Promise<SQLiteDBConnection> {
 async function initWebDatabase(): Promise<boolean> {
   try {
     ensureWebInit();
-    console.log('Web database initialized');
     return true;
   } catch (error) {
     console.error('Error initializing web database:', error);

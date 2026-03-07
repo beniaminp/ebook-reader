@@ -122,7 +122,6 @@ class AnnotationsService {
    */
   async initialize(): Promise<void> {
     // Will be implemented to load from database
-    console.log('AnnotationsService initialized');
   }
 
   // ============================================================================
@@ -370,8 +369,6 @@ class AnnotationsService {
     item: EpubBookmark | EpubHighlight | EpubAnnotation
   ): Promise<void> {
     // TODO: Integrate with database service
-    // For now, just log
-    console.log(`Saving ${type} to database:`, item);
   }
 
   private async deleteFromDatabase(
@@ -379,8 +376,6 @@ class AnnotationsService {
     id: string
   ): Promise<void> {
     // TODO: Integrate with database service
-    // For now, just log
-    console.log(`Deleting ${type} from database:`, id);
   }
 
   // ============================================================================

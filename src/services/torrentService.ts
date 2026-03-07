@@ -1,6 +1,19 @@
 import { Capacitor } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 
+/** Timeout (ms) for seed tracker announcement before resolving anyway */
+const SEED_ANNOUNCE_TIMEOUT_MS = 3_000;
+/** Timeout (ms) for the entire seeding operation */
+const SEED_TIMEOUT_MS = 30_000;
+/** Timeout (ms) for metadata resolution (finding peers) */
+const METADATA_TIMEOUT_MS = 30_000;
+/** Timeout (ms) for the overall download operation */
+const DOWNLOAD_TIMEOUT_MS = 180_000;
+/** Interval (ms) between stall detection checks */
+const STALL_CHECK_INTERVAL_MS = 5_000;
+/** Duration (ms) of no activity before declaring a download stalled */
+const STALL_THRESHOLD_MS = 45_000;
+
 const WSS_TRACKERS = [
   'wss://tracker.openwebtorrent.com',
   'wss://tracker.webtorrent.dev',
@@ -18,6 +31,29 @@ export interface TorrentStats {
   timeRemaining: number;
 }
 
+/** Minimal shape of a WebTorrent file object */
+interface TorrentFile {
+  name: string;
+  length: number;
+  arrayBuffer: () => Promise<ArrayBuffer>;
+}
+
+/** Minimal shape of a WebTorrent torrent object */
+interface WebTorrentInstance {
+  magnetURI: string;
+  progress: number;
+  downloadSpeed: number;
+  uploadSpeed: number;
+  numPeers: number;
+  downloaded: number;
+  length: number;
+  timeRemaining: number;
+  files: TorrentFile[];
+  on(event: string, callback: (...args: unknown[]) => void): void;
+  removeListener(event: string, callback: (...args: unknown[]) => void): void;
+  destroy(): void;
+}
+
 const EBOOK_FILE_EXTS = new Set([
   'epub', 'pdf', 'mobi', 'azw3', 'fb2', 'cbz', 'cbr',
   'txt', 'html', 'htm', 'md', 'docx', 'odt',
@@ -29,16 +65,12 @@ function getExt(name: string): string {
   return dot >= 0 ? name.substring(dot + 1).toLowerCase() : '';
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function findBestFile(files: any[]): any {
+function findBestFile(files: TorrentFile[]): TorrentFile | null {
   if (!files || files.length === 0) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let bestEbook: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let bestArchive: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let largest: any = files[0];
+  let bestEbook: TorrentFile | null = null;
+  let bestArchive: TorrentFile | null = null;
+  let largest: TorrentFile = files[0];
 
   for (const f of files) {
     const ext = getExt(f.name);
@@ -54,6 +86,22 @@ function findBestFile(files: any[]): any {
   return bestEbook || bestArchive || largest;
 }
 
+/** Minimal shape of a WebTorrent client */
+interface WebTorrentClient {
+  seed(
+    input: unknown,
+    opts: { announce: string[] },
+    callback: (torrent: WebTorrentInstance) => void
+  ): void;
+  add(
+    magnetURI: string,
+    opts: { announce: string[] },
+    callback: (torrent: WebTorrentInstance) => void
+  ): void;
+  get(magnetURI: string): WebTorrentInstance | null;
+  destroy(): void;
+}
+
 // Lazy-load WebTorrent to avoid crashes on Android WebView
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let WebTorrentModule: any = null;
@@ -66,10 +114,9 @@ async function loadWebTorrent() {
 }
 
 class TorrentService {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private client: any = null;
+  private client: WebTorrentClient | null = null;
   // Prevent concurrent initialization creating multiple clients
-  private clientPromise: Promise<any> | null = null;
+  private clientPromise: Promise<WebTorrentClient> | null = null;
 
   private isNative(): boolean {
     return Capacitor.isNativePlatform();
@@ -83,7 +130,7 @@ class TorrentService {
     return true;
   }
 
-  private async getClient() {
+  private async getClient(): Promise<WebTorrentClient> {
     if (this.isNative()) {
       throw new Error('WebTorrent is not supported on native platforms');
     }
@@ -94,7 +141,7 @@ class TorrentService {
       this.clientPromise = (async () => {
         try {
           const WT = await loadWebTorrent();
-          return new WT({ dht: false, lsd: false } as unknown as Record<string, unknown>);
+          return new WT({ dht: false, lsd: false }) as unknown as WebTorrentClient;
         } catch (err) {
           // Reset so future calls can retry
           this.clientPromise = null;
@@ -113,26 +160,24 @@ class TorrentService {
     return new Promise((resolve, reject) => {
       let settled = false;
       const file = new File([fileData], fileName);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      client.seed(file as unknown as Buffer, { announce: WSS_TRACKERS }, (torrent: any) => {
+      client.seed(file as unknown as Buffer, { announce: WSS_TRACKERS }, (torrent: WebTorrentInstance) => {
         const finish = () => {
           if (settled) return;
           settled = true;
           torrent.removeListener('trackerAnnounce', finish);
-          console.log(`Seeding ${fileName}, magnet: ${torrent.magnetURI}`);
           resolve(torrent.magnetURI);
         };
         // Wait for tracker to acknowledge the announce so peers can find us
         torrent.on('trackerAnnounce', finish);
-        // Fallback: resolve after 3s even without tracker confirmation
-        setTimeout(finish, 3000);
+        // Fallback: resolve after a short delay even without tracker confirmation
+        setTimeout(finish, SEED_ANNOUNCE_TIMEOUT_MS);
       });
       setTimeout(() => {
         if (!settled) {
           settled = true;
           reject(new Error('Seeding timed out'));
         }
-      }, 30000);
+      }, SEED_TIMEOUT_MS);
     });
   }
 
@@ -218,20 +263,19 @@ class TorrentService {
         else resolve(result!);
       };
 
-      // Metadata resolution timeout — if no peers respond in 30s, give up early
+      // Metadata resolution timeout — if no peers respond, give up early
       const metadataTimer = setTimeout(() => {
         finish(undefined, new Error(
           'Could not find peers for this torrent. Browser downloads can only connect to other browser-based peers, which may be unavailable.'
         ));
-      }, 30000);
+      }, METADATA_TIMEOUT_MS);
 
-      // Overall download timeout (3 minutes)
+      // Overall download timeout
       const overallTimer = setTimeout(() => {
         finish(undefined, new Error('Download timed out after 3 minutes.'));
-      }, 180000);
+      }, DOWNLOAD_TIMEOUT_MS);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      client.add(magnetURI, { announce: WSS_TRACKERS }, (torrent: any) => {
+      client.add(magnetURI, { announce: WSS_TRACKERS }, (torrent: WebTorrentInstance) => {
         clearTimeout(metadataTimer);
 
         // Find best file: ebook > archive > largest
@@ -247,12 +291,12 @@ class TorrentService {
           if (torrent.numPeers > 0 || torrent.progress > 0.01) {
             lastActivity = Date.now();
           }
-          if (Date.now() - lastActivity > 45000) {
+          if (Date.now() - lastActivity > STALL_THRESHOLD_MS) {
             finish(undefined, new Error(
               'No peers available to download this torrent. Try a torrent with more seeders.'
             ));
           }
-        }, 5000);
+        }, STALL_CHECK_INTERVAL_MS);
 
         const emitStats = () => {
           if (onProgress) {
@@ -290,8 +334,7 @@ class TorrentService {
             });
           }
 
-          (file as unknown as { arrayBuffer: () => Promise<ArrayBuffer> })
-            .arrayBuffer()
+          file.arrayBuffer()
             .then((data: ArrayBuffer) => {
               finish({ data, fileName: file.name });
             })
@@ -305,8 +348,7 @@ class TorrentService {
 
   async getSeedingStats(magnetURI: string): Promise<TorrentStats | null> {
     if (!this.client) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const torrent = this.client.get(magnetURI) as any;
+    const torrent = this.client.get(magnetURI);
     if (!torrent) return null;
     return {
       progress: torrent.progress,
