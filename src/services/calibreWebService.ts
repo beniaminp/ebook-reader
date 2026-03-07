@@ -7,6 +7,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { Preferences } from '@capacitor/preferences';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { ensureNoMedia } from './noMediaService';
+import { arrayBufferToBase64 } from '../utils/converters';
 import {
   CalibreWebServerConfig,
   CalibreWebBook,
@@ -326,7 +327,7 @@ export class CalibreWebService {
       await ensureNoMedia(Directory.Cache, COVER_DIR);
       await Filesystem.writeFile({
         path: filePath,
-        data: this.arrayBufferToBase64(response.data),
+        data: arrayBufferToBase64(response.data),
         directory: Directory.Cache,
         recursive: true,
       });
@@ -397,7 +398,7 @@ export class CalibreWebService {
       await ensureNoMedia(Directory.Data, BOOKS_DIR);
       await Filesystem.writeFile({
         path: filePath,
-        data: this.arrayBufferToBase64(response.data),
+        data: arrayBufferToBase64(response.data),
         directory: Directory.Data,
         recursive: true,
       });
@@ -692,20 +693,6 @@ export class CalibreWebService {
       .substring(0, 50);
   }
 
-  /**
-   * Convert array buffer to base64
-   */
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    // Process in chunks to avoid O(n²) string concatenation and call stack limits
-    const CHUNK_SIZE = 0x8000;
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i += CHUNK_SIZE) {
-      const chunk = bytes.subarray(i, i + CHUNK_SIZE);
-      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
-    }
-    return btoa(binary);
-  }
 }
 
 // Export singleton instance

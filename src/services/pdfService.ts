@@ -4,6 +4,49 @@ import { PDFDocument, rgb } from 'pdf-lib';
 // Set worker from CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
+/** Default maximum dimension (px) for generated thumbnails */
+const DEFAULT_THUMBNAIL_SIZE = 200;
+/** Default JPEG quality for thumbnail encoding */
+const DEFAULT_THUMBNAIL_QUALITY = 0.8;
+/** Default number of context characters around a search match */
+const DEFAULT_SEARCH_CONTEXT_LENGTH = 50;
+/** Estimated average words per PDF page for reading-time calculation */
+const DEFAULT_WORDS_PER_PAGE = 300;
+/** Average reading speed in words per minute */
+const DEFAULT_WORDS_PER_MINUTE = 250;
+/** Default scale factor for page-to-image export */
+const DEFAULT_IMAGE_SCALE = 2;
+/** Default image quality for page-to-image export */
+const DEFAULT_IMAGE_QUALITY = 0.95;
+
+/** Shape of a text content item that carries a string (as opposed to marked content) */
+interface PdfTextItem {
+  str: string;
+}
+
+/** PDF document info dictionary fields */
+interface PdfInfoDict {
+  Title?: string;
+  Author?: string;
+  Subject?: string;
+  Keywords?: string;
+  Creator?: string;
+  Producer?: string;
+  CreationDate?: string;
+  ModDate?: string;
+}
+
+function isTextItem(item: unknown): item is PdfTextItem {
+  return typeof item === 'object' && item !== null && 'str' in item;
+}
+
+/** Shape of a PDF outline entry from pdfjs-dist */
+interface PdfOutlineEntry {
+  title: string;
+  dest?: string;
+  items?: PdfOutlineEntry[];
+}
+
 export interface PdfPageInfo {
   pageNumber: number;
   width: number;
@@ -94,12 +137,16 @@ export class PdfService {
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();
 
+    const textItems = textContent.items.filter(
+      (item): item is typeof item & PdfTextItem => 'str' in item
+    );
+
     if (preserveWhitespace) {
-      return textContent.items.map((item: any) => item.str).join('');
+      return textItems.map((item) => item.str).join('');
     }
 
-    return textContent.items
-      .map((item: any) => item.str)
+    return textItems
+      .map((item) => item.str)
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -161,7 +208,7 @@ export class PdfService {
   static async searchWithContext(
     pdf: pdfjsLib.PDFDocumentProxy,
     query: string,
-    contextLength: number = 50,
+    contextLength: number = DEFAULT_SEARCH_CONTEXT_LENGTH,
     onProgress?: (current: number, total: number) => void
   ): Promise<PdfSearchMatch[]> {
     const matches: PdfSearchMatch[] = [];
@@ -203,7 +250,7 @@ export class PdfService {
 
     const items: PdfOutlineItem[] = [];
 
-    const processOutline = async (entries: any[], level: number = 0): Promise<void> => {
+    const processOutline = async (entries: PdfOutlineEntry[], level: number = 0): Promise<void> => {
       for (const entry of entries) {
         let pageNumber = 0;
 
@@ -229,7 +276,7 @@ export class PdfService {
       }
     };
 
-    await processOutline(outline);
+    await processOutline(outline as unknown as PdfOutlineEntry[]);
     return items;
   }
 
@@ -238,8 +285,8 @@ export class PdfService {
    */
   static async generateThumbnail(
     page: pdfjsLib.PDFPageProxy,
-    maxSize: number = 200,
-    quality: number = 0.8
+    maxSize: number = DEFAULT_THUMBNAIL_SIZE,
+    quality: number = DEFAULT_THUMBNAIL_QUALITY
   ): Promise<string> {
     const viewport = page.getViewport({ scale: 1 });
     const scale = Math.min(maxSize / viewport.width, maxSize / viewport.height);
@@ -256,9 +303,10 @@ export class PdfService {
     }
 
     await page.render({
-      canvasContext: context as any,
+      canvas: null,
+      canvasContext: context,
       viewport: scaledViewport,
-    } as any).promise;
+    }).promise;
 
     return canvas.toDataURL('image/jpeg', quality);
   }
@@ -269,7 +317,7 @@ export class PdfService {
   static async generateThumbnails(
     pdf: pdfjsLib.PDFDocumentProxy,
     pages: number[],
-    maxSize: number = 200,
+    maxSize: number = DEFAULT_THUMBNAIL_SIZE,
     onProgress?: (current: number, total: number) => void
   ): Promise<Map<number, string>> {
     const thumbnails = new Map<number, string>();
@@ -294,7 +342,7 @@ export class PdfService {
    */
   static async getMetadata(pdf: pdfjsLib.PDFDocumentProxy) {
     const metadata = await pdf.getMetadata();
-    const info = metadata.info as any;
+    const info = metadata.info as unknown as PdfInfoDict | undefined;
 
     return {
       title: info?.Title || '',
@@ -305,7 +353,7 @@ export class PdfService {
       producer: info?.Producer || '',
       creationDate: info?.CreationDate ? new Date(info.CreationDate) : null,
       modificationDate: info?.ModDate ? new Date(info.ModDate) : null,
-      isEncrypted: (metadata as any).isEncrypted || false,
+      isEncrypted: (metadata as unknown as { isEncrypted?: boolean }).isEncrypted || false,
     };
   }
 
@@ -317,8 +365,8 @@ export class PdfService {
       const loadingTask = pdfjsLib.getDocument({ data });
       await loadingTask.promise;
       return false;
-    } catch (err: any) {
-      return err?.name === 'PasswordException';
+    } catch (err: unknown) {
+      return err instanceof Error && err.name === 'PasswordException';
     }
   }
 
@@ -327,8 +375,8 @@ export class PdfService {
    */
   static calculateReadingTime(
     totalPages: number,
-    wordsPerPage: number = 300,
-    wordsPerMinute: number = 250
+    wordsPerPage: number = DEFAULT_WORDS_PER_PAGE,
+    wordsPerMinute: number = DEFAULT_WORDS_PER_MINUTE
   ): {
     minutes: number;
     hours: number;
@@ -368,8 +416,8 @@ export class PdfService {
         isValid: true,
         pageCount,
       };
-    } catch (err: any) {
-      if (err?.name === 'PasswordException') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'PasswordException') {
         return {
           isValid: true,
           pageCount: undefined,
@@ -378,7 +426,7 @@ export class PdfService {
 
       return {
         isValid: false,
-        error: err?.message || 'Invalid PDF file',
+        error: err instanceof Error ? err.message : 'Invalid PDF file',
       };
     }
   }
@@ -502,9 +550,9 @@ export class PdfService {
    */
   static async pageToImage(
     page: pdfjsLib.PDFPageProxy,
-    scale: number = 2,
+    scale: number = DEFAULT_IMAGE_SCALE,
     format: 'png' | 'jpeg' = 'png',
-    quality: number = 0.95
+    quality: number = DEFAULT_IMAGE_QUALITY
   ): Promise<Blob> {
     const viewport = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
@@ -517,9 +565,10 @@ export class PdfService {
     }
 
     await page.render({
-      canvasContext: context as any,
+      canvas: null,
+      canvasContext: context,
       viewport: viewport,
-    } as any).promise;
+    }).promise;
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(

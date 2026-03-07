@@ -4,7 +4,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
-import { storage } from '../config/firebaseConfig';
+import { storage } from '../../config/firebaseConfig';
 
 export async function uploadBook(
   bookId: string,

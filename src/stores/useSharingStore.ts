@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { torrentService, type TorrentStats } from '../services/torrentService';
-import { firebaseStorageService } from '../services/firebaseStorageService';
+import { firebaseStorageService } from '../services/firebase/storage';
 import { sharingService, type SharedBookDoc } from '../services/sharingService';
 import { getUserId } from '../services/userIdentityService';
 import { webFileStorage } from '../services/webFileStorage';

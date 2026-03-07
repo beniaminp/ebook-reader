@@ -195,7 +195,6 @@ export async function applyWordWise(
     el.setAttribute(PROCESSED_ATTR, 'true');
   }
 
-  console.log(`[WordWise] Annotated ${annotatedCount} words at level ${level}`);
 }
 
 /**

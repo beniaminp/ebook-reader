@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { databaseService } from '../services/database';
-import { markDirty } from '../services/firebaseAutoBackupManager';
-import { useReadingGoalsStore } from './useReadingGoalsStore';
+import { markDirty } from '../services/firebase/autoBackup';
+import { handleProgressSideEffects } from '../services/progressService';
 import type { Book, Bookmark, Highlight } from '../types/index';
 
 interface AppState {
@@ -209,19 +209,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         lastReadAt: Math.floor(Date.now() / 1000),
       });
 
-      // Check if book just reached completion (>= 95%) for yearly book goal
       const previousBook = get().books.find((b) => b.id === bookId);
-      const wasFinished = previousBook && previousBook.progress >= 0.95;
-      const isNowFinished = progressPercentage >= 0.95;
-
-      // Update furthest progress if new position exceeds the stored maximum
       const currentFurthest = previousBook?.furthestProgress || 0;
       const newFurthest = Math.max(currentFurthest, progressPercentage);
-      if (progressPercentage > currentFurthest) {
-        databaseService
-          .updateFurthestProgress(bookId, progressPercentage * 100)
-          .catch(() => {});
-      }
 
       set((state) => ({
         books: state.books.map((b) =>
@@ -250,28 +240,23 @@ export const useAppStore = create<AppState>((set, get) => ({
             : state.currentBook,
       }));
 
-      // Auto-track book completion for yearly reading goal
-      if (isNowFinished && !wasFinished) {
-        const goalsStore = useReadingGoalsStore.getState();
-        if (goalsStore.yearlyGoalEnabled && previousBook) {
-          goalsStore.markBookFinished(
-            bookId,
-            previousBook.title || 'Unknown Title',
-            previousBook.author || 'Unknown Author'
-          );
+      // Fire-and-forget side effects (streak tracking, Hardcover sync, etc.)
+      handleProgressSideEffects(
+        {
+          bookId,
+          currentPage: location,
+          totalPages: total,
+          percentage: progressPercentage,
+          locationString: locationStr,
+          chapterTitle,
+        },
+        {
+          title: previousBook?.title,
+          author: previousBook?.author,
+          previousProgress: previousBook?.progress || 0,
+          furthestProgress: currentFurthest,
         }
-      }
-
-      markDirty();
-
-      // Auto-push progress to Hardcover if book is matched
-      try {
-        const { useHardcoverStore } = await import('./hardcoverStore');
-        const hcState = useHardcoverStore.getState();
-        if (hcState.isConnected && hcState.matchedBooks[bookId]) {
-          hcState.pushBookProgress(bookId, progressPercentage * 100);
-        }
-      } catch { /* ignore hardcover push failure */ }
+      ).catch(() => {});
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update progress' });
     }
@@ -299,7 +284,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addBookmark: async (bookId, location, pageNumber, chapterTitle, textPreview) => {
     try {
-      await databaseService.addBookmark({
+      const result = await databaseService.addBookmark({
         id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         bookId,
         location,
@@ -307,7 +292,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         chapter: chapterTitle,
         text: textPreview,
       });
-      await get().loadBookmarks(bookId);
+      if (result && pageNumber !== undefined) {
+        const existing = get().bookmarks.get(bookId) || [];
+        const updated = new Map(get().bookmarks);
+        updated.set(bookId, [...existing, pageNumber]);
+        set({ bookmarks: updated });
+      }
       markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to add bookmark' });
@@ -354,7 +344,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addHighlight: async (bookId, location, text, color, note) => {
     try {
-      await databaseService.addHighlight({
+      const result = await databaseService.addHighlight({
         id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         bookId,
         location,
@@ -362,7 +352,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         color,
         note,
       });
-      await get().loadHighlights(bookId);
+      if (result) {
+        const existing = get().highlights.get(bookId) || [];
+        const entry = {
+          location: result.location?.pageNumber || result.location?.position || 0,
+          text: result.text,
+          color: result.color,
+          note: result.note,
+          id: result.id,
+        };
+        const updated = new Map(get().highlights);
+        updated.set(bookId, [...existing, entry]);
+        set({ highlights: updated });
+      }
       markDirty();
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to add highlight' });
@@ -374,7 +376,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       await databaseService.deleteHighlight(highlightId);
       const currentBook = get().currentBook;
       if (currentBook) {
-        await get().loadHighlights(currentBook.id);
+        const existing = get().highlights.get(currentBook.id) || [];
+        const updated = new Map(get().highlights);
+        updated.set(
+          currentBook.id,
+          existing.filter((h) => (h as { id?: string }).id !== highlightId)
+        );
+        set({ highlights: updated });
       }
       markDirty();
     } catch (error) {

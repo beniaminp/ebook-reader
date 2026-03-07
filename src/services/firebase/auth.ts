@@ -6,7 +6,7 @@ import {
   type User,
   type Unsubscribe,
 } from 'firebase/auth';
-import { auth } from '../config/firebaseConfig';
+import { auth } from '../../config/firebaseConfig';
 
 const googleProvider = new GoogleAuthProvider();
 

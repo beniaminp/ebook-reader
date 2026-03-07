@@ -150,10 +150,8 @@ export async function translateParagraph(
 
     // Ensure target language model is downloaded before translating
     if (!downloadedModels.has(targetLang)) {
-      console.log(`[Interlinear] Downloading MLKit model for "${targetLang}"...`);
       await mlkit.Translation.downloadModel({ language: targetLang as any });
       downloadedModels.add(targetLang);
-      console.log(`[Interlinear] Model for "${targetLang}" ready`);
     }
 
     if (!downloadedModels.has(resolvedSourceLang)) {

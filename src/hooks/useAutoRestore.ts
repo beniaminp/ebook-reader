@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useAppStore } from '../stores/useAppStore';
-import { checkForBackup, type BackupManifest } from '../services/firebaseBackupService';
+import { checkForBackup, type BackupManifest } from '../services/firebase/backup';
 
 interface AutoRestoreState {
   showPrompt: boolean;

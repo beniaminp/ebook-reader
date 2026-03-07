@@ -34,6 +34,7 @@ import {
 
 import type { PdfHighlight } from '../../services/pdfService';
 import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
+import { useToast } from '../../hooks/useToast';
 
 interface PdfHighlightPanelProps {
   isOpen: boolean;
@@ -55,8 +56,7 @@ export const PdfHighlightPanel: React.FC<PdfHighlightPanelProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [selectedColor, setSelectedColor] = useState<string>(HIGHLIGHT_COLORS[0].value);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const toast = useToast();
 
   const handleEdit = (highlight: PdfHighlight) => {
     setEditingId(highlight.id);
@@ -69,8 +69,7 @@ export const PdfHighlightPanel: React.FC<PdfHighlightPanelProps> = ({
       onUpdateHighlight(editingId, { note: noteText, color: selectedColor });
       setEditingId(null);
       setNoteText('');
-      setToastMessage('Highlight updated');
-      setShowToast(true);
+      toast.show('Highlight updated');
     }
   };
 
@@ -81,8 +80,7 @@ export const PdfHighlightPanel: React.FC<PdfHighlightPanelProps> = ({
 
   const handleDelete = (id: string) => {
     onDeleteHighlight(id);
-    setToastMessage('Highlight removed');
-    setShowToast(true);
+    toast.show('Highlight removed');
   };
 
   const handleGoToHighlight = (pageNumber: number) => {
@@ -219,9 +217,9 @@ export const PdfHighlightPanel: React.FC<PdfHighlightPanelProps> = ({
       </IonModal>
 
       <IonToast
-        isOpen={showToast}
-        onDidDismiss={() => setShowToast(false)}
-        message={toastMessage}
+        isOpen={toast.isOpen}
+        onDidDismiss={toast.dismiss}
+        message={toast.message}
         duration={2000}
       />
     </>

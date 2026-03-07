@@ -400,7 +400,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       ? bookLanguageRef.current
       : 'auto';
     const elements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
-    console.log(`[Interlinear] Applying to ${elements.length} elements, source: ${sourceLang}, target: ${targetLang}`);
     let translated_count = 0;
     for (const el of elements) {
       if (el.getAttribute('data-interlinear-processed')) continue;
@@ -420,7 +419,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         console.error('[Interlinear] Translation failed for paragraph:', err);
       }
     }
-    console.log(`[Interlinear] Inserted ${translated_count} translations`);
   }, []);
 
   const removeInterlinear = useCallback((doc: Document) => {
@@ -434,7 +432,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     if (!wordWiseEnabledRef.current) return;
     const level = wordWiseLevelRef.current;
     const targetLang = wordWiseTargetLangRef.current;
-    console.log(`[WordWise] Applying to doc, level: ${level}, targetLang: ${targetLang}`);
     await applyWordWise(doc, level, targetLang);
   }, []);
 
@@ -758,7 +755,6 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         if (Array.isArray(bookLangs) && bookLangs.length > 0 && bookLangs[0]) {
           // Normalize to 2-letter code (e.g. "en-US" → "en")
           bookLanguageRef.current = bookLangs[0].split('-')[0].toLowerCase();
-          console.log(`[Interlinear] Detected book language: ${bookLanguageRef.current}`);
         }
         onLoadCompleteRef.current?.({
           title: metaString(meta?.title) || 'Unknown Title',
