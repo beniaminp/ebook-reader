@@ -15,9 +15,9 @@ import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { useAppStore } from '../../src/stores/useAppStore';
-import { useLibraryPrefsStore } from '../../src/stores/useLibraryPrefsStore';
+import { useLibraryPrefsStore, SortOption } from '../../src/stores/useLibraryPrefsStore';
 import { BookCard } from '../../src/components/library/BookCard';
-import { detectFormat } from '../../src/utils/formatUtils';
+import { detectFormat, formatFileSize, formatDate, getFormatDisplayName, formatPercentage } from '../../src/utils/formatUtils';
 import { storeBookFile } from '../../src/services/fileStorage';
 import type { Book } from '../../src/types';
 
@@ -30,10 +30,13 @@ export default function LibraryScreen() {
   const books = useAppStore((s) => s.books);
   const loadBooks = useAppStore((s) => s.loadBooks);
   const addBook = useAppStore((s) => s.addBook);
+  const removeBook = useAppStore((s) => s.removeBook);
+  const updateBook = useAppStore((s) => s.updateBook);
 
   const viewMode = useLibraryPrefsStore((s) => s.viewMode);
   const sortBy = useLibraryPrefsStore((s) => s.sortBy);
   const setViewMode = useLibraryPrefsStore((s) => s.setViewMode);
+  const setSortBy = useLibraryPrefsStore((s) => s.setSortBy);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -62,6 +65,10 @@ export default function LibraryScreen() {
           new Date(b.lastRead ?? b.dateAdded).getTime() -
           new Date(a.lastRead ?? a.dateAdded).getTime()
         );
+      case 'progress':
+        return (b.progress ?? 0) - (a.progress ?? 0);
+      case 'rating':
+        return (b.metadata?.rating ?? 0) - (a.metadata?.rating ?? 0);
       case 'dateAdded':
       default:
         return (
@@ -78,6 +85,92 @@ export default function LibraryScreen() {
     await loadBooks();
     setRefreshing(false);
   }, [loadBooks]);
+
+  const handleLongPress = useCallback(
+    (book: Book) => {
+      const isRead = book.progress != null && book.progress >= 1.0;
+      Alert.alert(
+        book.title,
+        book.author || undefined,
+        [
+          {
+            text: 'Open',
+            onPress: () => router.push(`/reader/${book.id}`),
+          },
+          {
+            text: 'Book Info',
+            onPress: () => {
+              const info = [
+                `Title: ${book.title}`,
+                `Author: ${book.author || 'Unknown'}`,
+                `Format: ${getFormatDisplayName(book.format)}`,
+                `File Size: ${book.fileSize ? formatFileSize(book.fileSize) : 'Unknown'}`,
+                `Date Added: ${formatDate(book.dateAdded)}`,
+                book.progress != null && book.progress > 0
+                  ? `Progress: ${formatPercentage(book.progress)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join('\n');
+              Alert.alert('Book Info', info);
+            },
+          },
+          {
+            text: isRead ? 'Mark as Unread' : 'Mark as Read',
+            onPress: async () => {
+              const newProgress = isRead ? 0 : 1.0;
+              await updateBook(book.id, { progress: newProgress });
+              await loadBooks();
+            },
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert(
+                'Delete Book',
+                `Are you sure you want to delete "${book.title}"? This cannot be undone.`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await removeBook(book.id);
+                    },
+                  },
+                ]
+              );
+            },
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    },
+    [router, removeBook, updateBook, loadBooks]
+  );
+
+  const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+    { label: 'Title', value: 'title' },
+    { label: 'Author', value: 'author' },
+    { label: 'Date Added', value: 'dateAdded' },
+    { label: 'Last Read', value: 'lastRead' },
+    { label: 'Progress', value: 'progress' },
+  ];
+
+  const handleSort = useCallback(() => {
+    Alert.alert(
+      'Sort By',
+      undefined,
+      [
+        ...SORT_OPTIONS.map((opt) => ({
+          text: `${opt.label}${sortBy === opt.value ? ' ✓' : ''}`,
+          onPress: () => setSortBy(opt.value),
+        })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]
+    );
+  }, [sortBy, setSortBy]);
 
   const importBook = useCallback(async () => {
     try {
@@ -159,6 +252,9 @@ export default function LibraryScreen() {
         >
           Library
         </Text>
+        <Pressable onPress={handleSort} style={{ padding: 8 }}>
+          <Ionicons name="swap-vertical" size={22} color={theme.text} />
+        </Pressable>
         <Pressable onPress={() => setViewMode(cardViewMode === 'grid' ? 'list' : 'grid')} style={{ padding: 8 }}>
           <Ionicons
             name={cardViewMode === 'grid' ? 'list' : 'grid'}
@@ -233,6 +329,7 @@ export default function LibraryScreen() {
               book={item}
               viewMode={cardViewMode}
               onPress={() => router.push(`/reader/${item.id}`)}
+              onLongPress={() => handleLongPress(item)}
             />
           )}
           keyExtractor={(book) => book.id}

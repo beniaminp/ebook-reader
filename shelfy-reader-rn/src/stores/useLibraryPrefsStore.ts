@@ -10,7 +10,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type ViewMode = 'grid' | 'list' | 'shelf';
-export type SortOption = 'title' | 'author' | 'dateAdded' | 'lastRead' | 'rating';
+export type SortOption = 'title' | 'author' | 'dateAdded' | 'lastRead' | 'rating' | 'progress';
 export type ReadStatus = 'all' | 'unread' | 'reading' | 'finished' | 'dnf';
 
 export interface ActiveFilters {
