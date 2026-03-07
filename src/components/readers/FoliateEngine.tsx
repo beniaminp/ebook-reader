@@ -252,6 +252,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
   const dropCapsRef = useRef<boolean>(false);
   const twoColumnRef = useRef<boolean>(false);
   const globalBoldRef = useRef<boolean>(false);
+  const pageCurlEnabledRef = useRef<boolean>(false);
+  const pageCurlColorRef = useRef<string | undefined>(undefined);
   const loadedDocsRef = useRef<Set<Document>>(new Set());
 
   // Track highlight annotations applied to the view
@@ -773,6 +775,12 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
           renderer.setAttribute('margin-top', `${cm.top}px`);
           renderer.setAttribute('margin-bottom', `${cm.bottom}px`);
           renderer.setAttribute('gap', '0%');
+
+          // Apply page curl setting from persisted store
+          if (pageCurlEnabledRef.current) {
+            renderer.setAttribute('page-curl', '');
+            if (pageCurlColorRef.current) renderer.setPageCurlColor?.(pageCurlColorRef.current);
+          }
         }
 
         if (initialLocationRef.current) {
@@ -1152,6 +1160,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         return null;
       },
       setPageCurl: (enabled: boolean, pageColor?: string) => {
+        pageCurlEnabledRef.current = enabled;
+        pageCurlColorRef.current = pageColor;
         try {
           const renderer = (viewRef.current as any)?.renderer;
           if (!renderer) return;
