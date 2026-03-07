@@ -21,7 +21,6 @@ import {
   IonFooter,
   IonToast,
   IonModal,
-  IonSearchbar,
   IonSpinner,
   IonItem,
   IonLabel,
@@ -53,25 +52,24 @@ import { ReadingSettingsPanel } from '../reader-ui/ReadingSettingsPanel';
 import { TranslationPanel } from '../reader-ui/TranslationPanel';
 import { TextSelectionMenu } from '../reader-ui/TextSelectionMenu';
 import { ReadingRuler } from '../reader-ui/ReadingRuler';
-import { autoScrollManager } from '../reader-ui/AutoScrollManager';
 import { DictionaryPanel } from '../dictionary';
+import { ReaderSearch } from './ReaderSearch';
+import { ReaderHighlightFlow } from './ReaderHighlightFlow';
+import type { HighlightMeta } from './ReaderHighlightFlow';
 import { useThemeStore } from '../../stores/useThemeStore';
-import { EPUB_THEMES } from '../../types/epub';
+import { useReaderThemeSync } from '../../hooks/useReaderThemeSync';
 import type {
   ReaderEngineRef,
-  SearchResult,
   ReaderProgress,
   Chapter,
   ReaderFormat,
 } from '../../types/reader';
 import type { Book, Highlight } from '../../types/index';
 import { databaseService } from '../../services/database';
-import { HIGHLIGHT_COLORS } from '../../services/annotationsService';
 import { useAppStore } from '../../stores/useAppStore';
 import { useBrightnessGesture } from '../../hooks/useBrightnessGesture';
 import { useSleepTimer } from '../../hooks/useSleepTimer';
-import { useTTS } from '../../hooks/useTTS';
-import { useTTSHighlighter } from '../../hooks/useTTSHighlighter';
+import { useReaderTTS } from '../../hooks/useReaderTTS';
 import { SleepTimerButton } from '../reader-ui/SleepTimerButton';
 import { SleepTimerWarning } from '../reader-ui/SleepTimerWarning';
 import { SleepTimerOverlay } from '../reader-ui/SleepTimerOverlay';
@@ -84,7 +82,6 @@ import { ChapterScrubber } from '../reader-ui/ChapterScrubber';
 import { useImmersiveMode } from '../../hooks/useImmersiveMode';
 import { HighlightsPanel } from '../common/HighlightsPanel';
 import { BookmarksPanel } from '../common/BookmarksPanel';
-import { TagInput, saveTagsToSuggestions } from '../reader-ui/TagInput';
 import type { EpubBookmark } from '../../services/annotationsService';
 import type { FoliateHighlight } from './FoliateEngine';
 
@@ -149,10 +146,6 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
-  const [searching, setSearching] = useState(false);
 
   // Settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -169,13 +162,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Color picker state
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [pendingHighlightText, setPendingHighlightText] = useState('');
-  const [pendingHighlightMeta, setPendingHighlightMeta] = useState<{
-    cfi?: string;
-    startOffset?: number;
-    endOffset?: number;
-  } | null>(null);
-  const [pendingHighlightColor, setPendingHighlightColor] = useState<string>(HIGHLIGHT_COLORS[0].value);
-  const [pendingHighlightTags, setPendingHighlightTags] = useState<string[]>([]);
+  const [pendingHighlightMeta, setPendingHighlightMeta] = useState<HighlightMeta | null>(null);
 
   // Highlights panel
   const [highlightsPanelOpen, setHighlightsPanelOpen] = useState(false);
@@ -190,162 +177,41 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Captured selection (from FoliateEngine, native selection cleared immediately)
   const [capturedSelectionText, setCapturedSelectionText] = useState('');
 
+  const isFoliate = FOLIATE_FORMATS.has(format);
+  const isPdf = format === 'pdf';
+  const isScroll = SCROLL_FORMATS.has(format);
+
   // Theme
   const themeStore = useThemeStore();
-  const baseTheme = EPUB_THEMES[themeStore.theme] || EPUB_THEMES.light;
-  // Merge custom background color into the effective theme
-  const currentTheme = useMemo(
-    () =>
-      themeStore.customBackgroundColor
-        ? { ...baseTheme, backgroundColor: themeStore.customBackgroundColor }
-        : baseTheme,
-    [baseTheme, themeStore.customBackgroundColor]
-  );
+  const { currentTheme, toolbarStyle, iconColor, pageStyle } = useReaderThemeSync(engineRef, {
+    isFoliate,
+    isPdf,
+    isScroll,
+    ionContentRef,
+  });
 
   // Brightness gesture hook
   const brightnessGesture = useBrightnessGesture({
     enabled: true,
   });
 
-  // TTS state
-  const [ttsActive, setTtsActive] = useState(false);
+  // TTS (text-to-speech) — state and handlers extracted to useReaderTTS hook
   const [rsvpOpen, setRsvpOpen] = useState(false);
-  // Ref to track whether TTS is active (avoids stale closures)
-  const ttsActiveRef = useRef(false);
-  // Ref to track whether we are auto-advancing TTS to the next page
-  const ttsAutoAdvancingRef = useRef(false);
-  // Ref to hold the tts.speak function so onComplete can call it without circular dep
-  const ttsSpeakRef = useRef<((text: string) => void) | null>(null);
-  // Ref to track the last text read by TTS (to detect end-of-book)
-  const ttsLastTextRef = useRef<string>('');
-
-  // TTS word-level highlighter
-  const ttsHighlighter = useTTSHighlighter({
-    getContentDocuments: () => engineRef.current?.getContentDocuments?.() || [],
-    getVisibleRange: () => engineRef.current?.getVisibleRange?.() ?? null,
-    onScrollToHighlight: useCallback((element: HTMLElement, doc: Document) => {
-      try {
-        const win = doc.defaultView;
-        if (!win) return;
-
-        // For iframe content (EPUB/foliate), scrollIntoView on the element
-        // inside the iframe won't help because content is paginated via CSS
-        // columns. The page turn will be handled by auto-advance when TTS
-        // finishes the current page's text. However, for scroll-mode content
-        // (ScrollEngine), we do want to scroll.
-        const isInIframe = win !== win.parent;
-        if (isInIframe) {
-          // Paginated EPUB: no scroll needed within the iframe.
-          // Auto-advance handles page turns when text runs out.
-          return;
-        }
-
-        // ScrollEngine: scroll to the highlighted word within IonContent
-        const ionContent = ionContentRef?.current;
-        if (ionContent) {
-          const rect = element.getBoundingClientRect();
-          const viewHeight = win.innerHeight || doc.documentElement.clientHeight;
-          const isOutOfView =
-            rect.bottom < 0 ||
-            rect.top > viewHeight ||
-            rect.top < 60 ||
-            rect.bottom > viewHeight - 60;
-
-          if (isOutOfView) {
-            // Scroll the IonContent so the element is centered
-            ionContent.getScrollElement().then((scrollEl) => {
-              const scrollTop = scrollEl.scrollTop;
-              const targetTop = scrollTop + rect.top - viewHeight / 2;
-              ionContent.scrollToPoint(0, Math.max(0, targetTop), 200);
-            });
-          }
-        } else {
-          // Fallback: standard scrollIntoView
-          element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest',
-          });
-        }
-      } catch {
-        // ignore scroll errors
-      }
-    }, []),
+  const {
+    ttsActive,
+    tts,
+    handleToggleTTS,
+    handleTTSClose,
+    stopTTSForSleep,
+  } = useReaderTTS({
+    engineRef,
+    ionContentRef,
+    onNoText: useCallback(() => setToastMessage('No text available for TTS'), []),
   });
-
-  // TTS hook with word boundary events for highlighting
-  const tts = useTTS({
-    onWordBoundary: ttsHighlighter.onWordBoundary,
-    onSentenceStart: ttsHighlighter.onSentenceStart,
-    onComplete: useCallback(() => {
-      ttsHighlighter.clearHighlight();
-
-      // Auto-advance to next page and continue reading
-      if (ttsAutoAdvancingRef.current || !ttsActiveRef.current) {
-        return;
-      }
-
-      const engine = engineRef.current;
-      if (!engine) return;
-
-      ttsAutoAdvancingRef.current = true;
-
-      // Navigate to the next page and wait for it to complete
-      const advance = async () => {
-        try {
-          await engine.next();
-        } catch { /* navigation may fail at end of book */ }
-
-        // Small delay to let the DOM settle after page turn
-        await new Promise(r => setTimeout(r, 100));
-
-        ttsAutoAdvancingRef.current = false;
-
-        // Double-check TTS is still active (user may have stopped it)
-        if (!ttsActiveRef.current) return;
-
-        const newText = engine.getVisibleText?.();
-        if (newText && newText.trim().length > 0) {
-          // Check if this is the same text we just read (end of book)
-          const trimmedNew = newText.trim();
-          if (trimmedNew === ttsLastTextRef.current) {
-            // We've reached the end of the book — same page text returned
-            ttsActiveRef.current = false;
-            ttsLastTextRef.current = '';
-            setTtsActive(false);
-            return;
-          }
-          // Continue reading the next page
-          ttsLastTextRef.current = trimmedNew;
-          ttsSpeakRef.current?.(newText);
-        } else {
-          // No more text — end of book or no content
-          ttsActiveRef.current = false;
-          ttsLastTextRef.current = '';
-          setTtsActive(false);
-        }
-      };
-      advance();
-    }, [ttsHighlighter]),
-  });
-
-  // Keep the speak ref in sync
-  ttsSpeakRef.current = tts.speak;
 
   // Sleep timer hook — stop TTS on expiry
   const sleepTimer = useSleepTimer({
-    onExpire: () => {
-      // Stop active TTS playback
-      if (tts.state === 'playing' || tts.state === 'paused') {
-        tts.stop();
-        ttsHighlighter.clearHighlight();
-        ttsActiveRef.current = false;
-        ttsAutoAdvancingRef.current = false;
-        setTtsActive(false);
-      } else if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    },
+    onExpire: stopTTSForSleep,
   });
 
   // Reading speed / time-left hook
@@ -369,10 +235,6 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
 
   // (Overlay removed — tap zones are now handled inside the foliate iframe directly,
   // so text selection works without being blocked by a transparent overlay.)
-
-  const isFoliate = FOLIATE_FORMATS.has(format);
-  const isPdf = format === 'pdf';
-  const isScroll = SCROLL_FORMATS.has(format);
 
   // (Timer cleanup removed — overlay and selection timers no longer exist.)
 
@@ -608,153 +470,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   handlePdfHighlightsChangeRef.current = handlePdfHighlightsChange;
   highlightsRef.current = highlights;
 
-  // ─── Apply theme/font changes to foliate engine ─────────────────────────
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setTheme?.({
-      backgroundColor: currentTheme.backgroundColor,
-      textColor: currentTheme.textColor,
-    });
-  }, [currentTheme, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setCustomBackgroundImage?.(themeStore.customBackgroundImage);
-  }, [themeStore.customBackgroundImage, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setFontSize?.(themeStore.fontSize);
-  }, [themeStore.fontSize, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setFontFamily?.(themeStore.fontFamily);
-  }, [themeStore.fontFamily, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setLineHeight?.(themeStore.lineHeight);
-  }, [themeStore.lineHeight, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setTextAlign?.(themeStore.textAlign);
-  }, [themeStore.textAlign, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setMarginSize?.(themeStore.marginSize);
-  }, [themeStore.marginSize, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setCustomMargins?.(themeStore.customMargins);
-  }, [themeStore.customMargins, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setBionicReading?.(themeStore.bionicReading);
-  }, [themeStore.bionicReading, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setHyphenation?.(themeStore.hyphenation);
-  }, [themeStore.hyphenation, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setParagraphSpacing?.(themeStore.paragraphSpacing);
-  }, [themeStore.paragraphSpacing, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setLetterSpacing?.(themeStore.letterSpacing);
-  }, [themeStore.letterSpacing, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setFontWeight?.(themeStore.fontWeight);
-  }, [themeStore.fontWeight, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setWordSpacing?.(themeStore.wordSpacing);
-  }, [themeStore.wordSpacing, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setMaxLineWidth?.(themeStore.maxLineWidth);
-  }, [themeStore.maxLineWidth, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setDropCaps?.(themeStore.dropCaps);
-  }, [themeStore.dropCaps, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setTwoColumnLayout?.(themeStore.twoColumnLayout);
-  }, [themeStore.twoColumnLayout, isFoliate]);
-
-  useEffect(() => {
-    if (!isFoliate) return;
-    engineRef.current?.setGlobalBold?.(themeStore.globalBold);
-  }, [themeStore.globalBold, isFoliate]);
-
-  useEffect(() => {
-    if (isPdf) return;
-    console.log(`[Interlinear] Effect fired: enabled=${themeStore.interlinearMode}, lang=${themeStore.interlinearLanguage}, hasEngine=${!!engineRef.current}`);
-    engineRef.current?.setInterlinearMode?.(
-      themeStore.interlinearMode,
-      themeStore.interlinearLanguage
-    );
-  }, [themeStore.interlinearMode, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
-
-  useEffect(() => {
-    if (isPdf) return;
-    const targetLang = Capacitor.isNativePlatform() ? themeStore.interlinearLanguage : undefined;
-    engineRef.current?.setWordWise?.(
-      themeStore.wordWiseEnabled,
-      themeStore.wordWiseLevel,
-      targetLang
-    );
-  }, [themeStore.wordWiseEnabled, themeStore.wordWiseLevel, themeStore.interlinearLanguage, isFoliate, isScroll, isPdf]);
-
-  // ─── Page curl animation ─────────────────────────
-  useEffect(() => {
-    if (!isFoliate) return;
-    const enabled = themeStore.pageTransitionType === 'curl';
-    engineRef.current?.setPageCurl?.(enabled, currentTheme.backgroundColor);
-  }, [themeStore.pageTransitionType, isFoliate, currentTheme.backgroundColor]);
-
-  // ─── AutoScroll ─────────────────────────
-
-  useEffect(() => {
-    if (themeStore.autoScroll) {
-      // Get the scrollable element from IonContent
-      const ionContent = ionContentRef?.current;
-      if (ionContent) {
-        ionContent.getScrollElement().then((scrollEl) => {
-          if (scrollEl) {
-            autoScrollManager.start(scrollEl, themeStore.autoScrollSpeed);
-          }
-        });
-      }
-    } else {
-      autoScrollManager.stop();
-    }
-    return () => {
-      autoScrollManager.stop();
-    };
-  }, [themeStore.autoScroll]);
-
-  useEffect(() => {
-    if (themeStore.autoScroll) {
-      autoScrollManager.updateSpeed(themeStore.autoScrollSpeed);
-    }
-  }, [themeStore.autoScrollSpeed, themeStore.autoScroll]);
+  // (Theme/font/style sync effects are handled by useReaderThemeSync hook)
 
   // ─── Content tap zones (for non-foliate formats: PDF, scroll) ─────────────────────────
   // (Foliate tap zones are now handled inside the iframe via FoliateEngine.onContentTap)
@@ -924,84 +640,9 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
   // Keep bookmark ref in sync for tap-zone handlers defined earlier
   handleToggleBookmarkRef.current = handleToggleBookmark;
 
-  // ─── TTS ─────────────────────────
+  // (TTS handlers extracted to useReaderTTS hook)
 
-  const handleToggleTTS = useCallback(() => {
-    if (ttsActive) {
-      // Stop TTS
-      tts.stop();
-      ttsHighlighter.clearHighlight();
-      ttsActiveRef.current = false;
-      ttsAutoAdvancingRef.current = false;
-      ttsLastTextRef.current = '';
-      setTtsActive(false);
-    } else {
-      // Start TTS with visible text
-      const text = engineRef.current?.getVisibleText?.();
-      if (text && text.trim().length > 0) {
-        ttsActiveRef.current = true;
-        ttsLastTextRef.current = text.trim();
-        tts.speak(text);
-        setTtsActive(true);
-      } else {
-        setToastMessage('No text available for TTS');
-      }
-    }
-  }, [ttsActive, tts, ttsHighlighter]);
-
-  const handleTTSClose = useCallback(() => {
-    tts.stop();
-    ttsHighlighter.clearHighlight();
-    ttsActiveRef.current = false;
-    ttsAutoAdvancingRef.current = false;
-    ttsLastTextRef.current = '';
-    setTtsActive(false);
-  }, [tts, ttsHighlighter]);
-
-  // Clean up highlighter on unmount
-  useEffect(() => {
-    return () => {
-      ttsHighlighter.clearHighlight();
-      ttsActiveRef.current = false;
-      ttsAutoAdvancingRef.current = false;
-    };
-  }, [ttsHighlighter]);
-
-  // ─── Search ─────────────────────────
-
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim() || !engineRef.current) return;
-    setSearching(true);
-    try {
-      const results = await engineRef.current.search(searchQuery);
-      setSearchResults(results);
-      setCurrentSearchIndex(0);
-      if (results.length > 0) {
-        engineRef.current.goToLocation(results[0].location);
-      }
-    } catch (err) {
-      console.error('Search error:', err);
-    } finally {
-      setSearching(false);
-    }
-  }, [searchQuery]);
-
-  const goToSearchResult = useCallback(
-    (idx: number) => {
-      if (searchResults.length === 0 || !engineRef.current) return;
-      setCurrentSearchIndex(idx);
-      engineRef.current.goToLocation(searchResults[idx].location);
-    },
-    [searchResults]
-  );
-
-  const goToNextSearchResult = useCallback(() => {
-    goToSearchResult((currentSearchIndex + 1) % searchResults.length);
-  }, [goToSearchResult, currentSearchIndex, searchResults.length]);
-
-  const goToPrevSearchResult = useCallback(() => {
-    goToSearchResult((currentSearchIndex - 1 + searchResults.length) % searchResults.length);
-  }, [goToSearchResult, currentSearchIndex, searchResults.length]);
+  // (Search state/callbacks extracted to ReaderSearch component)
 
   // ─── TOC ─────────────────────────
 
@@ -1180,38 +821,7 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
     stableOnContentTap,
   ]);
 
-  // ─── Toolbar theme styling ─────────────────────────
-
-  const toolbarStyle = isFoliate
-    ? ({
-        '--background': currentTheme.backgroundColor,
-        '--color': currentTheme.textColor,
-        '--border-color': currentTheme.id === 'light' ? '#e0e0e0' : 'rgba(255,255,255,0.12)',
-      } as React.CSSProperties)
-    : undefined;
-
-  const iconColor = isFoliate ? { color: currentTheme.textColor } : undefined;
-
-  // ─── Render ─────────────────────────
-
-  const pageStyle: React.CSSProperties | undefined = isFoliate
-    ? themeStore.customBackgroundImage
-      ? {
-          '--reader-bg': currentTheme.backgroundColor,
-          backgroundImage: `url(${themeStore.customBackgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        } as React.CSSProperties
-      : { '--reader-bg': currentTheme.backgroundColor } as React.CSSProperties
-    : themeStore.customBackgroundImage
-      ? {
-          backgroundImage: `url(${themeStore.customBackgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }
-      : undefined;
+  // (Toolbar/icon/page styles are computed by useReaderThemeSync hook)
 
   return (
     <IonPage
@@ -1416,97 +1026,11 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       </IonFooter>
 
       {/* ─── Search modal ─── */}
-      <IonModal isOpen={searchOpen} onDidDismiss={() => setSearchOpen(false)}>
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>Search</IonTitle>
-            <IonButtons slot="end">
-              <IonButton onClick={() => setSearchOpen(false)}>Close</IonButton>
-            </IonButtons>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent>
-          <div style={{ padding: '16px' }}>
-            <IonSearchbar
-              value={searchQuery}
-              onIonInput={(e) => setSearchQuery(e.detail.value || '')}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearch();
-              }}
-              placeholder="Search in book..."
-              showCancelButton="focus"
-            />
-            <IonButton expand="block" onClick={handleSearch} style={{ marginTop: '8px' }}>
-              Search
-            </IonButton>
-
-            {searching && (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <IonSpinner />
-                <p>Searching...</p>
-              </div>
-            )}
-
-            {!searching && searchResults.length > 0 && (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 0',
-                    marginTop: '16px',
-                    borderBottom: '1px solid var(--ion-color-light-shade)',
-                  }}
-                >
-                  <span>
-                    {currentSearchIndex + 1} of {searchResults.length} results
-                  </span>
-                  <div>
-                    <IonButton size="small" fill="clear" onClick={goToPrevSearchResult}>
-                      <IonIcon icon={chevronBack} />
-                    </IonButton>
-                    <IonButton size="small" fill="clear" onClick={goToNextSearchResult}>
-                      <IonIcon icon={chevronForward} />
-                    </IonButton>
-                  </div>
-                </div>
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                  {searchResults.map((result, idx) => (
-                    <IonItem
-                      key={`${result.location}-${idx}`}
-                      button
-                      onClick={() => {
-                        goToSearchResult(idx);
-                        setSearchOpen(false);
-                      }}
-                      style={{
-                        background:
-                          idx === currentSearchIndex ? 'var(--ion-color-light-tint)' : undefined,
-                      }}
-                    >
-                      <IonLabel>
-                        {result.label && (
-                          <h3 style={{ fontSize: '13px', fontWeight: 600 }}>{result.label}</h3>
-                        )}
-                        <p style={{ fontSize: '12px' }}>{result.excerpt}</p>
-                      </IonLabel>
-                    </IonItem>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {!searching && searchQuery && searchResults.length === 0 && (
-              <p
-                style={{ textAlign: 'center', color: 'var(--ion-color-medium)', marginTop: '20px' }}
-              >
-                No results found for &ldquo;{searchQuery}&rdquo;
-              </p>
-            )}
-          </div>
-        </IonContent>
-      </IonModal>
+      <ReaderSearch
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        engineRef={engineRef}
+      />
 
       {/* ─── TOC popover ─── */}
       <IonPopover isOpen={tocOpen} onDidDismiss={() => setTocOpen(false)}>
@@ -1599,118 +1123,26 @@ export const UnifiedReaderContainer: React.FC<UnifiedReaderContainerProps> = ({
       />
 
       {/* ─── Color Picker Popover with Tags ─── */}
-      <IonPopover
+      <ReaderHighlightFlow
+        bookId={book.id}
         isOpen={colorPickerOpen}
-        onDidDismiss={() => {
+        onClose={() => {
           setColorPickerOpen(false);
           setPendingHighlightText('');
           setPendingHighlightMeta(null);
-          setPendingHighlightColor(HIGHLIGHT_COLORS[0].value);
-          setPendingHighlightTags([]);
         }}
-      >
-        <div style={{ padding: '12px' }}>
-          <p style={{ textAlign: 'center', margin: '0 0 8px', fontSize: '14px' }}>
-            Pick highlight color
-          </p>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '12px' }}>
-            {HIGHLIGHT_COLORS.map((color) => (
-              <button
-                key={color.value}
-                onClick={() => setPendingHighlightColor(color.value)}
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  backgroundColor: color.value,
-                  border: pendingHighlightColor === color.value ? '3px solid var(--ion-color-dark, #222)' : '2px solid #fff',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  cursor: 'pointer',
-                  transform: pendingHighlightColor === color.value ? 'scale(1.15)' : 'scale(1)',
-                  transition: 'transform 0.15s, border 0.15s',
-                }}
-                title={color.name}
-              />
-            ))}
-          </div>
-          <TagInput
-            tags={pendingHighlightTags}
-            onChange={setPendingHighlightTags}
-            compact
-            placeholder="Add tags..."
-          />
-          <button
-            onClick={async () => {
-              const meta = pendingHighlightMeta;
-              const text = pendingHighlightText;
-              if (!meta) return;
-
-              // Determine location string
-              let locationStr = '';
-              if (meta.cfi) {
-                locationStr = meta.cfi;
-              } else if (meta.startOffset !== undefined && meta.endOffset !== undefined) {
-                locationStr = `${meta.startOffset}-${meta.endOffset}`;
-              }
-
-              // Save to database
-              const saved = await databaseService.addHighlight({
-                bookId: book.id,
-                location: locationStr,
-                text,
-                color: pendingHighlightColor,
-                tags: pendingHighlightTags.length > 0 ? JSON.stringify(pendingHighlightTags) : undefined,
-              });
-
-              if (saved) {
-                const updated = [...highlights, saved];
-                setHighlights(updated);
-                prevHighlightsRef.current = updated;
-
-                // For EPUB, also add visual annotation
-                if (isFoliate && meta.cfi) {
-                  engineRef.current?.addHighlightAnnotation?.(meta.cfi, pendingHighlightColor);
-                }
-
-                // Persist tags to suggestions
-                if (pendingHighlightTags.length > 0) {
-                  saveTagsToSuggestions(pendingHighlightTags);
-                }
-
-                setToastMessage('Highlight added');
-              }
-
-              setColorPickerOpen(false);
-              setPendingHighlightText('');
-              setPendingHighlightMeta(null);
-              setPendingHighlightColor(HIGHLIGHT_COLORS[0].value);
-              setPendingHighlightTags([]);
-              setCapturedSelectionText('');
-              // Clear native selection in iframes
-              try {
-                engineRef.current?.getContentDocuments?.()?.forEach((d) => {
-                  try { d.getSelection?.()?.removeAllRanges(); } catch { /* */ }
-                });
-              } catch { /* */ }
-              window.getSelection()?.removeAllRanges();
-            }}
-            style={{
-              width: '100%',
-              marginTop: '10px',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: 'var(--ion-color-primary, #3880ff)',
-              color: '#fff',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Save Highlight
-          </button>
-        </div>
-      </IonPopover>
+        pendingText={pendingHighlightText}
+        pendingMeta={pendingHighlightMeta}
+        isFoliate={isFoliate}
+        engineRef={engineRef}
+        onHighlightCreated={(saved) => {
+          const updated = [...highlights, saved];
+          setHighlights(updated);
+          prevHighlightsRef.current = updated;
+        }}
+        onToast={setToastMessage}
+        onClearSelection={() => setCapturedSelectionText('')}
+      />
 
       {/* ─── Highlights Panel (EPUB / Scroll) ─── */}
       <HighlightsPanel
