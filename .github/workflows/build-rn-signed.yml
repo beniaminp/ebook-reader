@@ -82,7 +82,7 @@ jobs:
 
       - name: Build release APK
         working-directory: shelfy-reader-rn/android
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease || ./gradlew assembleRelease
 
       - name: Rename APK
         run: |

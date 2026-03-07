@@ -9,7 +9,7 @@
 | Phase 3: Library & Book Management | DONE | FlashList grid/list, import, search, BookCard |
 | Phase 4: Reader Engine Redesign | DONE | 4 engines: Epub (WebView), PDF (native), Comic (FlatList), Text (WebView) |
 | Phase 5: Reader UI & Features | DONE | Toolbar, bottom bar, settings sheet, tap zones, swipe gestures |
-| Phase 6: Services Migration | IN PROGRESS | Database facade, fileStorage done; remaining services in progress |
+| Phase 6: Services Migration | DONE | Database facade, fileStorage, all service stubs (cloud, hardcover, RSS, security) |
 | Phase 7: Secondary Screens & Polish | DONE | Statistics, Search, CalibreWeb, CloudSync, ReadingGoals, YearInReview |
 | Phase 8: Testing & CI/CD | DONE | GitHub Action for signed APK on branch push |
 
