@@ -316,7 +316,7 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     );
     // Suppress native context menu / text selection callout so the custom
     // TextSelectionMenu bottom bar is the only UI that appears.
-    rules.push(`body { -webkit-touch-callout: none !important; -webkit-tap-highlight-color: transparent !important; }`);
+    rules.push(`body { -webkit-touch-callout: none !important; -webkit-tap-highlight-color: transparent !important; user-select: none !important; -webkit-user-select: none !important; }`);
     // Style native selection (visible briefly before we capture and clear it)
     rules.push(`::selection { background-color: rgba(255, 213, 79, 0.45) !important; }`);
     rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
@@ -542,10 +542,31 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             touchStart = { x: t.clientX, y: t.clientY, time: Date.now() };
             longPressDetected = false;
             if (longPressTimer) clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => { longPressDetected = true; }, LONG_PRESS_MS);
+            longPressTimer = setTimeout(() => {
+              longPressDetected = true;
+              // Enable text selection only after long press
+              doc.body.style.setProperty('user-select', 'text', 'important');
+              doc.body.style.setProperty('-webkit-user-select', 'text', 'important');
+            }, LONG_PRESS_MS);
           }, { passive: true });
           doc.addEventListener('touchend', (ev: TouchEvent) => {
             if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            // Re-disable text selection after touch ends (unless long press activated it
+            // and there's an active selection the user wants to keep)
+            if (!longPressDetected) {
+              doc.body.style.setProperty('user-select', 'none', 'important');
+              doc.body.style.setProperty('-webkit-user-select', 'none', 'important');
+            } else {
+              // Long press: keep selection enabled briefly, then re-disable
+              // after user lifts finger (selection handles will still work)
+              setTimeout(() => {
+                const sel = doc.getSelection?.();
+                if (!sel || sel.isCollapsed) {
+                  doc.body.style.setProperty('user-select', 'none', 'important');
+                  doc.body.style.setProperty('-webkit-user-select', 'none', 'important');
+                }
+              }, 500);
+            }
             if (!touchStart) return;
             const t = ev.changedTouches[0];
             const dx = Math.abs(t.clientX - touchStart.x);
@@ -558,6 +579,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             const sel = doc.getSelection?.();
             if (sel && !sel.isCollapsed) {
               sel.removeAllRanges();
+              doc.body.style.setProperty('user-select', 'none', 'important');
+              doc.body.style.setProperty('-webkit-user-select', 'none', 'important');
               cachedSelectionRef.current = null;
               onSelectionCapturedRef.current?.(null);
               return;
@@ -583,6 +606,8 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             const sel = doc.getSelection?.();
             if (sel && !sel.isCollapsed) {
               sel.removeAllRanges();
+              doc.body.style.setProperty('user-select', 'none', 'important');
+              doc.body.style.setProperty('-webkit-user-select', 'none', 'important');
               cachedSelectionRef.current = null;
               onSelectionCapturedRef.current?.(null);
               return;
@@ -607,7 +632,9 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
             if (selectionNotifyDebounce) clearTimeout(selectionNotifyDebounce);
             const sel = doc.getSelection?.();
             if (!sel || sel.isCollapsed) {
-              // Selection collapsed — notify parent to hide menu
+              // Selection collapsed — notify parent to hide menu, re-disable user-select
+              doc.body.style.setProperty('user-select', 'none', 'important');
+              doc.body.style.setProperty('-webkit-user-select', 'none', 'important');
               if (cachedSelectionRef.current) {
                 cachedSelectionRef.current = null;
                 onSelectionCapturedRef.current?.(null);
