@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { databaseService } from '../services/database';
-import { markDirty } from '../services/firebaseAutoBackupManager';
+import { markDirty } from '../services/firebase/autoBackup';
 import { handleProgressSideEffects } from '../services/progressService';
 import type { Book, Bookmark, Highlight } from '../types/index';
 

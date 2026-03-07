@@ -1,12 +1,12 @@
 import { doc, setDoc, getDoc, deleteDoc, collection, getDocs } from 'firebase/firestore/lite';
 import { ref, uploadBytes, getBytes, deleteObject, listAll } from 'firebase/storage';
-import { db, storage } from '../config/firebaseConfig';
-import { databaseService } from './database';
-import { webFileStorage } from './webFileStorage';
-import { useThemeStore } from '../stores/useThemeStore';
-import { useLibraryPrefsStore } from '../stores/useLibraryPrefsStore';
-import { useTranslationStore } from '../stores/useTranslationStore';
-import { useSecurityStore } from '../stores/useSecurityStore';
+import { db, storage } from '../../config/firebaseConfig';
+import { databaseService } from '../database';
+import { webFileStorage } from '../webFileStorage';
+import { useThemeStore } from '../../stores/useThemeStore';
+import { useLibraryPrefsStore } from '../../stores/useLibraryPrefsStore';
+import { useTranslationStore } from '../../stores/useTranslationStore';
+import { useSecurityStore } from '../../stores/useSecurityStore';
 
 export interface BackupManifest {
   timestamp: number;

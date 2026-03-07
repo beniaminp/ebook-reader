@@ -4,9 +4,9 @@ import {
   signInWithGoogle,
   signOutUser,
   onAuthStateChanged,
-} from '../services/firebaseAuthService';
-import { performBackup, restoreFromBackup, checkForBackup } from '../services/firebaseBackupService';
-import { startAutoBackup, stopAutoBackup } from '../services/firebaseAutoBackupManager';
+} from '../services/firebase/auth';
+import { performBackup, restoreFromBackup, checkForBackup } from '../services/firebase/backup';
+import { startAutoBackup, stopAutoBackup } from '../services/firebase/autoBackup';
 
 interface AuthState {
   user: User | null;

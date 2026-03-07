@@ -1,5 +1,5 @@
 import { databaseService } from './database';
-import { markDirty } from './firebaseAutoBackupManager';
+import { markDirty } from './firebase/autoBackup';
 
 export interface ProgressUpdate {
   bookId: string;
