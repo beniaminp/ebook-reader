@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../src/theme/ThemeContext';
 
 interface OPDSFeed {
@@ -18,16 +20,18 @@ interface OPDSFeed {
   url: string;
 }
 
+const CUSTOM_FEEDS_KEY = 'custom_opds_feeds';
+
 const DEFAULT_FEEDS: OPDSFeed[] = [
   {
     id: 'gutenberg',
     title: 'Project Gutenberg',
-    url: 'https://m.gutenberg.org/ebooks.opds/',
+    url: 'https://www.gutenberg.org/ebooks.opds/',
   },
   {
     id: 'standard',
     title: 'Standard Ebooks',
-    url: 'https://standardebooks.org/feeds/opds',
+    url: 'https://standardebooks.org/opds',
   },
   {
     id: 'feedbooks',
@@ -39,24 +43,77 @@ const DEFAULT_FEEDS: OPDSFeed[] = [
 export default function CatalogsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [feeds, setFeeds] = useState<OPDSFeed[]>(DEFAULT_FEEDS);
+  const router = useRouter();
+  const [customFeeds, setCustomFeeds] = useState<OPDSFeed[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
 
-  const addFeed = () => {
+  // Load custom feeds on mount and when screen is focused
+  const loadCustomFeeds = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem(CUSTOM_FEEDS_KEY);
+      if (stored) {
+        setCustomFeeds(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCustomFeeds();
+    }, [loadCustomFeeds])
+  );
+
+  const saveCustomFeeds = async (feeds: OPDSFeed[]) => {
+    setCustomFeeds(feeds);
+    await AsyncStorage.setItem(CUSTOM_FEEDS_KEY, JSON.stringify(feeds));
+  };
+
+  const addFeed = async () => {
     if (!newTitle.trim() || !newUrl.trim()) {
       Alert.alert('Error', 'Please enter both title and URL');
       return;
     }
-    setFeeds([
-      ...feeds,
-      { id: Date.now().toString(), title: newTitle.trim(), url: newUrl.trim() },
-    ]);
+    const newFeed: OPDSFeed = {
+      id: Date.now().toString(),
+      title: newTitle.trim(),
+      url: newUrl.trim(),
+    };
+    await saveCustomFeeds([...customFeeds, newFeed]);
     setNewTitle('');
     setNewUrl('');
     setShowAddForm(false);
   };
+
+  const deleteFeed = (feedId: string, feedTitle: string) => {
+    Alert.alert(
+      'Remove Feed',
+      `Remove "${feedTitle}" from your catalogs?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = customFeeds.filter((f) => f.id !== feedId);
+            await saveCustomFeeds(updated);
+          },
+        },
+      ]
+    );
+  };
+
+  const navigateToFeed = (url: string, title: string) => {
+    router.push({
+      pathname: '/opds-browser',
+      params: { url, title },
+    });
+  };
+
+  const allFeeds = [...DEFAULT_FEEDS, ...customFeeds];
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top }}>
@@ -95,9 +152,14 @@ export default function CatalogsScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.content}>
-        {feeds.map((feed) => (
+        {/* Default feeds section */}
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+          DEFAULT CATALOGS
+        </Text>
+        {DEFAULT_FEEDS.map((feed) => (
           <Pressable
             key={feed.id}
+            onPress={() => navigateToFeed(feed.url, feed.title)}
             style={[styles.feedCard, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <View style={[styles.feedIcon, { backgroundColor: theme.surface }]}>
@@ -112,6 +174,52 @@ export default function CatalogsScreen() {
             <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
           </Pressable>
         ))}
+
+        {/* Custom feeds section */}
+        {customFeeds.length > 0 && (
+          <>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: theme.textSecondary, marginTop: 16 },
+              ]}
+            >
+              CUSTOM CATALOGS
+            </Text>
+            {customFeeds.map((feed) => (
+              <Pressable
+                key={feed.id}
+                onPress={() => navigateToFeed(feed.url, feed.title)}
+                style={[
+                  styles.feedCard,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                ]}
+              >
+                <View style={[styles.feedIcon, { backgroundColor: theme.surface }]}>
+                  <Ionicons name="bookmarks" size={24} color={theme.accent} />
+                </View>
+                <View style={styles.feedInfo}>
+                  <Text style={[styles.feedTitle, { color: theme.text }]}>
+                    {feed.title}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.feedUrl, { color: theme.textMuted }]}
+                  >
+                    {feed.url}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => deleteFeed(feed.id, feed.title)}
+                  hitSlop={8}
+                  style={styles.deleteButton}
+                >
+                  <Ionicons name="trash-outline" size={20} color={theme.error} />
+                </Pressable>
+              </Pressable>
+            ))}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -126,7 +234,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   title: { fontSize: 28, fontWeight: '700' },
-  content: { padding: 16 },
+  content: { padding: 16, paddingBottom: 32 },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
   addForm: {
     margin: 16,
     padding: 16,
@@ -166,4 +280,7 @@ const styles = StyleSheet.create({
   feedInfo: { flex: 1, marginLeft: 12 },
   feedTitle: { fontSize: 16, fontWeight: '600' },
   feedUrl: { fontSize: 12, marginTop: 2 },
+  deleteButton: {
+    padding: 8,
+  },
 });

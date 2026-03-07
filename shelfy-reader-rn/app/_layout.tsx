@@ -63,6 +63,10 @@ export default function RootLayout() {
               options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen
+              name="opds-browser"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
               name="year-in-review"
               options={{ animation: 'slide_from_right' }}
             />
