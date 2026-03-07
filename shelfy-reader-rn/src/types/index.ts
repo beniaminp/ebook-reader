@@ -54,6 +54,7 @@ export interface Book {
   fileHash?: string; // SHA-256 hash of first 8KB for duplicate detection
   fileSize?: number; // File size in bytes
   furthestProgress?: number; // Furthest reading position reached (0-1 decimal), prevents accidental progress overwrite
+  lastLocation?: string; // Last reading position (CFI, page number, or scroll %) for resuming
   metadata?: BookMetadata;
 }
 

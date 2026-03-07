@@ -64,16 +64,16 @@ export const useBookmarks = (bookId: string, currentCfi: EpubCfi = ''): UseBookm
   const addBookmark = useCallback(
     async (cfi: EpubCfi, chapterTitle?: string, textPreview?: string): Promise<Bookmark> => {
       const bookmark = await dbAddBookmark({
+        id: `${bookId}-${Date.now()}`,
         bookId,
-        location: {
-          bookId,
-          cfi,
-          position: 0,
-        },
+        location: cfi,
         text: textPreview,
         chapter: chapterTitle,
       });
       await refreshBookmarks();
+      if (!bookmark) {
+        throw new Error('Failed to add bookmark');
+      }
       return bookmark;
     },
     [bookId, refreshBookmarks]
@@ -152,16 +152,15 @@ export const useHighlights = (bookId: string): UseHighlightsReturn => {
     async (cfiRange: string, text: string, color?: HighlightColor, note?: string): Promise<Highlight> => {
       const highlight = await dbAddHighlight({
         bookId,
-        location: {
-          bookId,
-          cfi: cfiRange,
-          position: 0,
-        },
+        location: cfiRange,
         text,
         color: color || HIGHLIGHT_COLORS[0].value,
         note,
       });
       await refreshHighlights();
+      if (!highlight) {
+        throw new Error('Failed to add highlight');
+      }
       return highlight;
     },
     [bookId, refreshHighlights]

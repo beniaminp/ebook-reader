@@ -7,8 +7,9 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { ReaderContainer } from '../../src/components/reader/ui/ReaderContainer';
 import { readBookFile } from '../../src/services/fileStorage';
 import * as db from '../../src/services/database';
-import type { Book, Bookmark, Highlight } from '../../src/types';
+import type { Book, Bookmark, Highlight, ReadingLocation } from '../../src/types';
 import type { ReaderEngineRef } from '../../src/components/reader/engines/types';
+import type { DbBookmark, DbHighlight } from '../../src/db/repositories/bookRepository';
 
 export default function ReaderScreen() {
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
@@ -58,7 +59,7 @@ export default function ReaderScreen() {
       setHighlights(hl);
 
       await db.updateBook(bookId, {
-        lastRead: new Date().toISOString(),
+        lastRead: new Date(),
       });
     } catch (e) {
       console.error('Failed to load book:', e);
@@ -74,12 +75,13 @@ export default function ReaderScreen() {
       const progress = engineRef.current.getProgress();
       if (progress) {
         await db.updateReadingProgress(book.id, {
-          progress: progress.fraction,
+          percentage: progress.fraction * 100,
           currentPage: progress.current,
           totalPages: progress.total,
           location: progress.location,
+          lastReadAt: Math.floor(Date.now() / 1000),
         });
-        useAppStore.getState().updateBookProgress(book.id, progress.fraction);
+        useAppStore.getState().updateProgress(book.id, progress.current, progress.total, progress.location);
       }
     } catch (e) {
       console.error('Failed to save progress:', e);
@@ -93,12 +95,13 @@ export default function ReaderScreen() {
         const progress = engineRef.current?.getProgress();
         if (progress) {
           await db.updateReadingProgress(book.id, {
-            progress: progress.fraction,
+            percentage: progress.fraction * 100,
             currentPage: progress.current,
             totalPages: progress.total,
             location,
+            lastReadAt: Math.floor(Date.now() / 1000),
           });
-          useAppStore.getState().updateBookProgress(book.id, progress.fraction);
+          useAppStore.getState().updateProgress(book.id, progress.current, progress.total, location);
         }
       } catch (e) {
         console.error('Failed to update progress:', e);
@@ -111,9 +114,20 @@ export default function ReaderScreen() {
     async (bookmark: Omit<Bookmark, 'id'>) => {
       if (!book) return;
       const id = crypto.randomUUID();
-      const bm: Bookmark = { ...bookmark, id };
-      await db.addBookmark(bm);
-      setBookmarks((prev) => [...prev, bm]);
+      const location = bookmark.location;
+      const locationStr = typeof location === 'string' ? location : (location?.cfi || JSON.stringify(location));
+      const dbBookmark: DbBookmark = {
+        id,
+        bookId: bookmark.bookId,
+        location: locationStr,
+        chapter: bookmark.chapter,
+        text: bookmark.text,
+      };
+      const result = db.addBookmark(dbBookmark);
+      if (result) {
+        const bm: Bookmark = { ...bookmark, id };
+        setBookmarks((prev) => [...prev, bm]);
+      }
     },
     [book]
   );
@@ -127,9 +141,24 @@ export default function ReaderScreen() {
     async (highlight: Omit<Highlight, 'id'>) => {
       if (!book) return;
       const id = crypto.randomUUID();
-      const hl: Highlight = { ...highlight, id };
-      await db.addHighlight(hl);
-      setHighlights((prev) => [...prev, hl]);
+      const location = highlight.location;
+      const locationStr = typeof location === 'string' ? location : (location?.cfi || JSON.stringify(location));
+      const dbHighlight: DbHighlight = {
+        id,
+        bookId: highlight.bookId,
+        location: locationStr,
+        text: highlight.text,
+        color: highlight.color,
+        note: highlight.note,
+        pageNumber: highlight.pageNumber,
+        rects: highlight.rects ? JSON.stringify(highlight.rects) : undefined,
+        tags: highlight.tags ? JSON.stringify(highlight.tags) : undefined,
+      };
+      const result = db.addHighlight(dbHighlight);
+      if (result) {
+        const hl: Highlight = { ...highlight, id };
+        setHighlights((prev) => [...prev, hl]);
+      }
     },
     [book]
   );

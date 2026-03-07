@@ -10,8 +10,25 @@ import { ReaderToolbar } from './ReaderToolbar';
 import { ReaderBottomBar } from './ReaderBottomBar';
 import { SettingsSheet } from './SettingsSheet';
 import type { ReaderEngineRef, ReaderTheme, Chapter, ReaderProgress } from '../engines/types';
-import type { Book, Bookmark, Highlight } from '../../../types';
-import { isComicFormat, isPdfFormat, isWebViewFormat } from '../../../utils/formatUtils';
+import type { Book, Bookmark, Highlight, ReadingLocation } from '../../../types';
+import { isComicFormat, isPdfFormat, isWebViewFormat, type BookFormat } from '../../../utils/formatUtils';
+
+/** Convert margin size name to pixel value */
+function marginSizeToNumber(size: string): number {
+  switch (size) {
+    case 'small': return 8;
+    case 'large': return 32;
+    case 'medium':
+    default: return 16;
+  }
+}
+
+/** Extract a CFI or location string from a ReadingLocation or string */
+function locationToString(location: ReadingLocation | string | undefined): string {
+  if (!location) return '';
+  if (typeof location === 'string') return location;
+  return location.cfi || String(location.position || 0);
+}
 
 interface ReaderContainerProps {
   book: Book | null;
@@ -65,7 +82,7 @@ export const ReaderContainer = forwardRef<ReaderEngineRef, ReaderContainerProps>
       lineHeight: themeStore.lineHeight,
       letterSpacing: themeStore.letterSpacing,
       textAlign: themeStore.textAlign as any,
-      marginSize: themeStore.marginSize,
+      marginSize: marginSizeToNumber(themeStore.marginSize),
     };
 
     const handleTap = useCallback(
@@ -162,7 +179,7 @@ export const ReaderContainer = forwardRef<ReaderEngineRef, ReaderContainerProps>
           initialLocation={book.lastLocation}
           highlights={highlights.map((h) => ({
             id: h.id,
-            cfi: h.location || '',
+            cfi: locationToString(h.location),
             color: h.color || '#FFF176',
           }))}
           readerTheme={readerTheme}
@@ -188,13 +205,18 @@ export const ReaderContainer = forwardRef<ReaderEngineRef, ReaderContainerProps>
           onSettingsPress={() => setSettingsVisible(true)}
           onBookmarkPress={() => {
             if (!progress) return;
-            const location = engineRef.current?.getCurrentLocation();
+            const currentLoc = engineRef.current?.getCurrentLocation();
+            const cfi = currentLoc?.cfi || String(progress.current);
             onAddBookmark({
               bookId: book.id,
-              location: location?.cfi || String(progress.current),
+              location: {
+                bookId: book.id,
+                cfi,
+                position: progress.fraction || 0,
+              },
               text: '',
-              chapter: location?.chapterLabel,
-              createdAt: new Date().toISOString(),
+              chapter: currentLoc?.chapterLabel,
+              timestamp: new Date(),
             });
           }}
         />

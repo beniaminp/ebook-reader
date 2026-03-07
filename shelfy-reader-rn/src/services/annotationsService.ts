@@ -378,6 +378,7 @@ class AnnotationsService {
         const { addBookmark } = await import('../db/repositories/bookmarkRepository');
         const bm = item as EpubBookmark;
         await addBookmark({
+          id: `${bm.bookId}-${Date.now()}`,
           bookId: bm.bookId,
           location: bm.cfi,
           text: bm.textPreview,

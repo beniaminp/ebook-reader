@@ -8,7 +8,10 @@ export type BookFormat =
   | 'cbr'
   | 'txt'
   | 'html'
+  | 'htm'
   | 'md'
+  | 'markdown'
+  | 'chm'
   | 'docx'
   | 'odt';
 
@@ -57,7 +60,7 @@ export function getFormatDisplayName(format: BookFormat): string {
 }
 
 export function isWebViewFormat(format: BookFormat): boolean {
-  return ['epub', 'mobi', 'azw3', 'fb2', 'txt', 'html', 'md', 'docx', 'odt'].includes(format);
+  return ['epub', 'mobi', 'azw3', 'fb2', 'txt', 'html', 'htm', 'md', 'markdown', 'chm', 'docx', 'odt'].includes(format);
 }
 
 export function isPdfFormat(format: BookFormat): boolean {
