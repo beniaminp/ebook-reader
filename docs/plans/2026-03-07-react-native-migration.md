@@ -66,11 +66,11 @@ Migrate the Shelfy Reader app from React 19 / Ionic 8 / Capacitor 8 to React Nat
 
 | Format | Current | Target | Rationale |
 |---|---|---|---|
-| **EPUB** | foliate-js (iframe + CSS columns) | `react-native-webview` + custom paginator | Keep foliate-js parsing, use WebView for rendering with native gesture bridge |
+| **EPUB** | shelfy-reader (formerly foliate-js) | `react-native-webview` + shelfy-reader lib | Keep our own parsing/rendering lib, run inside WebView with native gesture bridge |
 | **PDF** | PDF.js (canvas) | `react-native-pdf` or `expo-pdf` (if available) | Native PDF renderer, better performance |
-| **MOBI/AZW3** | foliate-js | Convert to EPUB in background, render via EPUB engine | Simplify: one rendering path |
-| **FB2** | foliate-js | Convert to HTML, render via WebView | Reuse EPUB rendering infrastructure |
-| **CBZ/CBR** | foliate-js comic-book.ts | Custom `FlatList` + `expo-image` | Native image scrolling, pinch-zoom |
+| **MOBI/AZW3** | shelfy-reader lib | shelfy-reader lib inside WebView | Same lib handles MOBI/AZW3 parsing natively |
+| **FB2** | shelfy-reader lib | shelfy-reader lib inside WebView | Same lib handles FB2 parsing natively |
+| **CBZ/CBR** | shelfy-reader comic-book.ts | Custom `FlatList` + `expo-image` | Native image scrolling, pinch-zoom |
 | **TXT/HTML/MD** | ScrollEngine.tsx | `react-native-webview` with sanitized HTML | Simple, already works |
 | **DOCX/ODT** | mammoth.js | mammoth.js → HTML → WebView | Keep conversion, change renderer |
 
@@ -113,7 +113,7 @@ Rather than incrementally migrating the Ionic app (which would require maintaini
 - `src/stores/` — All 13 Zustand stores (swap `localStorage` persistence for `AsyncStorage` or `expo-sqlite`)
 - `src/types/` — All TypeScript types
 - `src/services/` — Most services (adapt Capacitor imports to Expo equivalents)
-- `src/libs/foliate-js/` — EPUB/MOBI/FB2 parsing logic (keep for WebView-based rendering)
+- `src/libs/shelfy-reader/` (renamed from `foliate-js`) — Our own EPUB/MOBI/FB2/CBZ parsing & rendering library, bundled into the WebView
 - Business logic in hooks — Reading speed calculation, sleep timer, etc.
 
 ### What Gets Rewritten
@@ -389,7 +389,7 @@ This is the most critical phase. The current reader has three engines (FoliateEn
 │  │  ┌────────────────────────────────────────┐  │ │
 │  │  │         Format Engine (swappable)       │  │ │
 │  │  │                                        │  │ │
-│  │  │  EpubEngine   ← WebView + foliate-js  │  │ │
+│  │  │  EpubEngine   ← WebView + shelfy-reader│  │ │
 │  │  │  PdfEngine    ← native PDF renderer    │  │ │
 │  │  │  ComicEngine  ← FlatList + Image       │  │ │
 │  │  │  TextEngine   ← WebView + HTML         │  │ │
@@ -404,16 +404,33 @@ This is the most critical phase. The current reader has three engines (FoliateEn
 └─────────────────────────────────────────────────┘
 ```
 
-### 7.2 EPUB Engine (WebView-based)
+### 7.2 Shelfy-Reader Library (Renamed from foliate-js)
 
-The EPUB format requires HTML/CSS rendering, so a WebView is still needed. The key improvement is **native gesture bridging**:
+The `src/libs/foliate-js/` directory is **our own code** — a custom fork we maintain and modify freely. As part of the React Native migration, rename it to `src/libs/shelfy-reader/` to reflect project ownership and avoid confusion with upstream foliate-js.
+
+**What gets renamed:**
+- Directory: `src/libs/foliate-js/` → `src/libs/shelfy-reader/`
+- All import paths updated across the codebase
+- Package references in comments and documentation
+- No functional changes to the library code itself
+
+**Why keep our own library:**
+- We've heavily customized the parsing and rendering code for our needs
+- It handles EPUB, MOBI/AZW3, FB2, and CBZ/CBR formats in a unified way
+- The paginator, CFI system, highlight overlayer, and search are battle-tested
+- Rewriting this from scratch or switching to a third-party lib would be high risk with no clear benefit
+- The library's DOM dependencies (`DOMParser`, `document.querySelector`, CSS columns) are satisfied by running inside a WebView
+
+### 7.3 EPUB/MOBI/FB2 Engine (WebView + shelfy-reader)
+
+These formats require HTML/CSS rendering, so a WebView is still needed. The key improvement is **native gesture bridging**:
 
 ```
 Current flow (Ionic):
-  WebView → iframe (Ionic) → iframe (foliate-js) → CSS columns → touch events
+  WebView → iframe (Ionic) → iframe (shelfy-reader) → CSS columns → touch events
 
 New flow (React Native):
-  react-native-webview → foliate-js HTML/CSS → postMessage bridge → RN gesture handler
+  react-native-webview → shelfy-reader HTML/CSS → postMessage bridge → RN gesture handler
 ```
 
 **Key improvements:**
@@ -429,7 +446,7 @@ New flow (React Native):
 - Preload adjacent pages in offscreen WebViews for instant page turns
 
 ```tsx
-// Simplified EPUB engine structure
+// Simplified EPUB engine structure using shelfy-reader lib
 function EpubEngine({ book, location, onLocationChange }) {
   const webViewRef = useRef<WebView>(null);
 
@@ -444,9 +461,9 @@ function EpubEngine({ book, location, onLocationChange }) {
     <GestureDetector gesture={swipeGesture}>
       <WebView
         ref={webViewRef}
-        source={{ html: readerHTML }}
+        source={{ html: shelfyReaderHTML }}
         onMessage={handleBridgeMessage}
-        injectedJavaScript={foliateBootstrap}
+        injectedJavaScript={shelfyReaderBootstrap}
         style={{ flex: 1 }}
       />
     </GestureDetector>
@@ -454,14 +471,32 @@ function EpubEngine({ book, location, onLocationChange }) {
 }
 ```
 
-**Foliate-js adaptation:**
-- Keep the EPUB/MOBI/FB2 parsing code (`epub.ts`, `mobi.ts`, `fb2.ts`)
-- Keep the paginator (`paginator.ts`) and view (`view.ts`)
-- Bundle these into a single HTML file loaded by the WebView
+**Shelfy-reader library integration:**
+- Keep all parsing code as-is (`epub.ts`, `mobi.ts`, `fb2.ts`)
+- Keep the paginator (`paginator.ts`), view (`view.ts`), and overlayer (`overlayer.ts`)
+- Bundle the entire `shelfy-reader` lib into a single HTML file loaded by the WebView
+- The WebView has a full browser engine (Chrome/Safari), so all DOM APIs the lib depends on work natively
 - Communication via `window.ReactNativeWebView.postMessage()`
 - Remove all direct DOM event listeners from React side (handle in RN)
 
-### 7.3 PDF Engine (Native)
+**Files in shelfy-reader that run inside WebView (unchanged):**
+| File | Purpose | DOM Dependencies |
+|---|---|---|
+| `epub.ts` | EPUB ZIP/OPF/NCX parsing | `DOMParser`, `querySelector` |
+| `mobi.ts` | MOBI/AZW3 binary parsing | `DOMParser` |
+| `fb2.ts` | FB2 XML parsing | `DOMParser`, `createElement` |
+| `paginator.ts` | CSS column page layout | Heavy DOM (61 usages) |
+| `view.ts` | Main rendering view | `createElement`, iframe |
+| `overlayer.ts` | Highlight rendering | SVG DOM |
+| `epubcfi.ts` | CFI location system | Minimal DOM |
+| `search.ts` | Full-text search | Text node walking |
+| `tts.ts` | TTS word marking | DOM traversal |
+| `page-curl.ts` | Page flip animation | Canvas/CSS |
+| `fixed-layout.ts` | Fixed-layout EPUB/comics | Heavy DOM |
+| `comic-book.ts` | CBZ/CBR image extraction | Minimal (Blob/URL) |
+| `progress.ts` | Reading time estimation | None (pure logic) |
+
+### 7.4 PDF Engine (Native)
 
 Replace PDF.js canvas rendering with a native PDF renderer:
 
@@ -496,9 +531,9 @@ function PdfEngine({ filePath, page, onPageChange }) {
 - Render highlight rects as absolute-positioned `View` components over the PDF page
 - Tap on highlight to show edit/delete menu
 
-### 7.4 Comic Engine (Native Images)
+### 7.5 Comic Engine (Native Images)
 
-Replace foliate-js comic rendering with native image views:
+Replace shelfy-reader comic rendering with native image views for better performance:
 
 ```tsx
 function ComicEngine({ pages, currentPage, onPageChange }) {
@@ -527,7 +562,7 @@ function ComicEngine({ pages, currentPage, onPageChange }) {
 - Pre-extract images from CBZ/CBR on import (store as individual files)
 - Much better performance than rendering in a WebView
 
-### 7.5 Text/HTML/Markdown Engine
+### 7.6 Text/HTML/Markdown Engine
 
 Simple content goes through WebView with sanitized HTML:
 
@@ -544,7 +579,7 @@ function TextEngine({ htmlContent, theme }) {
 }
 ```
 
-### 7.6 Common Reader Interface
+### 7.7 Common Reader Interface
 
 All engines implement the same ref interface (simplified from current 40+ method `ReaderEngineRef`):
 
@@ -622,14 +657,14 @@ function ReaderToolbar({ visible, book, progress }) {
 | **Reading ruler** | CSS overlay | Animated `View` overlay |
 | **Brightness gesture** | Capacitor screen-brightness | `expo-brightness` |
 | **Pomodoro timer** | Zustand store + setInterval | Same logic |
-| **Page curl animation** | CSS page-curl in foliate-js | `react-native-reanimated` or keep in WebView |
+| **Page curl animation** | CSS page-curl in shelfy-reader | `react-native-reanimated` or keep in WebView |
 
 ### 8.3 Text Selection & Highlights
 
 The text selection flow needs careful handling across the WebView bridge:
 
 ```
-WebView (foliate-js):
+WebView (shelfy-reader):
   1. User long-presses text
   2. Native selection API activates
   3. JS captures selection range + CFI
@@ -902,7 +937,7 @@ These services operate on data structures and don't touch the DOM:
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| **EPUB rendering quality** in WebView differs from iframe-in-Ionic | Book layout may break for some EPUBs | Extensive testing with diverse EPUB files. Keep foliate-js paginator logic. Test with fixed-layout EPUBs, RTL text, MathML. |
+| **EPUB rendering quality** in WebView differs from iframe-in-Ionic | Book layout may break for some EPUBs | Extensive testing with diverse EPUB files. Keep shelfy-reader paginator logic. Test with fixed-layout EPUBs, RTL text, MathML. |
 | **WebView ↔ RN communication latency** for text selection, page turns | Perceived lag on interactions | Batch messages, debounce non-critical updates. Handle gestures in RN layer, not WebView. |
 | **expo-sqlite migration** from Capacitor SQLite | Data loss or schema incompatibility | Write migration tool. Test with real user databases. Keep schema identical. |
 | **Feature parity takes longer than expected** | Delays release | Prioritize core reading experience. Launch with 80% features, add rest incrementally. |
@@ -1028,7 +1063,7 @@ shelfy-reader/
 │   │   └── repositories/        # Domain repositories
 │   ├── hooks/                    # Custom hooks (adapted)
 │   ├── libs/
-│   │   └── foliate-js/           # Book parsing (bundled into WebView)
+│   │   └── shelfy-reader/        # Our own book parsing/rendering lib (bundled into WebView)
 │   ├── services/                 # Business logic services
 │   ├── stores/                   # Zustand stores (adapted persistence)
 │   ├── theme/
