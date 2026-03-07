@@ -167,6 +167,9 @@ function generateUUID(): string {
 }
 
 interface ThemeState extends ReadingSettings {
+  // Convenience alias for `theme` — used by UI components that reference `currentTheme`
+  currentTheme: ThemeType;
+
   // Custom themes
   customThemes: ReaderTheme[];
 
@@ -194,6 +197,7 @@ interface ThemeState extends ReadingSettings {
 
   // Actions
   setTheme: (theme: ThemeType) => void;
+  setCurrentTheme: (theme: ThemeType) => void;
   setFontFamily: (fontFamily: FontFamily) => void;
   setFontSize: (size: number) => void;
   setLineHeight: (height: number) => void;
@@ -299,6 +303,7 @@ export const useThemeStore = create<ThemeState>()(
     (set, get) => ({
       // Initial state from defaults
       theme: DEFAULT_SETTINGS.theme,
+      currentTheme: DEFAULT_SETTINGS.theme,
       fontFamily: DEFAULT_SETTINGS.fontFamily,
       fontSize: DEFAULT_SETTINGS.fontSize,
       lineHeight: DEFAULT_SETTINGS.lineHeight,
@@ -365,7 +370,8 @@ export const useThemeStore = create<ThemeState>()(
       },
 
       // Theme actions
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => set({ theme, currentTheme: theme }),
+      setCurrentTheme: (theme) => set({ theme, currentTheme: theme }),
 
       setFontFamily: (fontFamily) => set({ fontFamily }),
 
@@ -453,11 +459,15 @@ export const useThemeStore = create<ThemeState>()(
       setSwipeThreshold: (swipeThreshold) => set({ swipeThreshold }),
 
       // Bulk actions
-      updateSettings: (settings) => set(settings),
+      updateSettings: (settings) => set({
+        ...settings,
+        ...(settings.theme ? { currentTheme: settings.theme } : {}),
+      }),
 
       resetSettings: () =>
         set({
           theme: DEFAULT_SETTINGS.theme,
+          currentTheme: DEFAULT_SETTINGS.theme,
           fontFamily: DEFAULT_SETTINGS.fontFamily,
           fontSize: DEFAULT_SETTINGS.fontSize,
           lineHeight: DEFAULT_SETTINGS.lineHeight,
@@ -492,7 +502,13 @@ export const useThemeStore = create<ThemeState>()(
           swipeThreshold: 50,
         }),
 
-      applyPreset: (preset) => set(presets[preset]),
+      applyPreset: (preset) => {
+        const p = presets[preset];
+        set({
+          ...p,
+          ...(p.theme ? { currentTheme: p.theme } : {}),
+        });
+      },
 
       // Custom theme management
       addCustomTheme: (theme) =>
@@ -501,10 +517,14 @@ export const useThemeStore = create<ThemeState>()(
         })),
 
       removeCustomTheme: (themeId) =>
-        set((state) => ({
-          customThemes: state.customThemes.filter((t) => t.id !== themeId),
-          theme: state.theme === themeId ? 'light' : state.theme,
-        })),
+        set((state) => {
+          const newTheme = state.theme === themeId ? 'light' as ThemeType : state.theme;
+          return {
+            customThemes: state.customThemes.filter((t) => t.id !== themeId),
+            theme: newTheme,
+            currentTheme: newTheme,
+          };
+        }),
 
       // Custom font management
       addCustomFont: (font) =>
@@ -583,6 +603,7 @@ export const useThemeStore = create<ThemeState>()(
         if (profile) {
           set({
             theme: profile.settings.theme as any,
+            currentTheme: profile.settings.theme as any,
             fontFamily: profile.settings.fontFamily as any,
             fontSize: profile.settings.fontSize,
             lineHeight: profile.settings.lineHeight,
@@ -623,6 +644,7 @@ export const useThemeStore = create<ThemeState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         theme: state.theme,
+        currentTheme: state.theme,
         fontFamily: state.fontFamily,
         fontSize: state.fontSize,
         lineHeight: state.lineHeight,
