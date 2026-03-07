@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useThemeStore } from '../../../stores/useThemeStore';
+import type { ThemeType, TextAlignment } from '../../../services/themeService';
 import { themes, themeNames } from '../../../theme/themes';
 
 interface SettingsSheetProps {
@@ -66,7 +67,7 @@ export function SettingsSheet({
                 return (
                   <Pressable
                     key={name}
-                    onPress={() => store.setCurrentTheme(name)}
+                    onPress={() => store.setCurrentTheme(name as ThemeType)}
                     style={[
                       styles.themeChip,
                       {
@@ -143,7 +144,7 @@ export function SettingsSheet({
               {['left', 'justify', 'center', 'right'].map((align) => (
                 <Pressable
                   key={align}
-                  onPress={() => store.setTextAlign(align)}
+                  onPress={() => store.setTextAlign(align as TextAlignment)}
                   style={[
                     styles.optionChip,
                     {

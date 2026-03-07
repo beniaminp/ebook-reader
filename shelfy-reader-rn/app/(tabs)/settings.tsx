@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { useThemeStore } from '../../src/stores/useThemeStore';
+import type { ThemeType } from '../../src/services/themeService';
 import { themes, themeNames } from '../../src/theme/themes';
 
 function SettingsRow({
@@ -87,7 +88,7 @@ export default function SettingsScreen() {
             return (
               <Pressable
                 key={name}
-                onPress={() => setTheme(name)}
+                onPress={() => setTheme(name as ThemeType)}
                 style={[
                   styles.themeChip,
                   {

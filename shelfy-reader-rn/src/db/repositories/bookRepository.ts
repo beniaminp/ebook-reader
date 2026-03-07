@@ -314,6 +314,14 @@ export function updateBook(id: string, updates: Partial<Book>): boolean {
       fields.push('file_hash = ?');
       values.push(updates.fileHash || null);
     }
+    if (updates.hardcoverId !== undefined) {
+      fields.push('hardcover_id = ?');
+      values.push(updates.hardcoverId ?? null);
+    }
+    if (updates.hardcoverReview !== undefined) {
+      fields.push('hardcover_review = ?');
+      values.push(updates.hardcoverReview || null);
+    }
 
     if (fields.length > 0) {
       fields.push('updated_at = ?');

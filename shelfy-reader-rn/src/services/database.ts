@@ -76,6 +76,31 @@ export {
   getBookTags,
 } from '../db/repositories/tagRepository';
 
+// Hardcover-specific update helper
+export function updateBookHardcoverData(id: string, updates: Record<string, any>): boolean {
+  // Map camelCase Hardcover fields to the appropriate updateBook / updateBookMetadata calls
+  const bookUpdates: Record<string, any> = {};
+  const metadataUpdates: Record<string, any> = {};
+
+  if (updates.hardcoverId !== undefined) bookUpdates.hardcoverId = updates.hardcoverId;
+  if (updates.hardcoverReview !== undefined) bookUpdates.hardcoverReview = updates.hardcoverReview;
+  if (updates.readStatus !== undefined) bookUpdates.readStatus = updates.readStatus;
+  if (updates.coverUrl !== undefined) metadataUpdates.coverUrl = updates.coverUrl;
+  if (updates.communityRating !== undefined) metadataUpdates.communityRating = updates.communityRating;
+  if (updates.communityRatingCount !== undefined) metadataUpdates.communityRatingCount = updates.communityRatingCount;
+  if (updates.pageCount !== undefined) metadataUpdates.pageCount = updates.pageCount;
+  if (updates.rating !== undefined) metadataUpdates.rating = updates.rating;
+
+  let success = true;
+  if (Object.keys(bookUpdates).length > 0) {
+    success = updateBook(id, bookUpdates) && success;
+  }
+  if (Object.keys(metadataUpdates).length > 0) {
+    success = updateBookMetadata(id, metadataUpdates) && success;
+  }
+  return success;
+}
+
 // Convenience aliases used by screens
 export const getBook = getBookById;
 export const updateReadingProgress = upsertReadingProgress;
@@ -195,4 +220,6 @@ export const databaseService = {
   addTagToBook,
   removeTagFromBook,
   getBookTags,
+  // Hardcover
+  updateBookHardcoverData,
 };
