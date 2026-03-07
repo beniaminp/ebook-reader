@@ -8,7 +8,7 @@
  * - Uses AsyncStorage instead of Capacitor Preferences
  */
 
-import * as FileSystem from 'expo-file-system';
+import { Paths, File, Directory } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   CalibreWebServerConfig,
@@ -23,8 +23,8 @@ import {
 // Constants
 const PREF_KEY_SERVERS = 'calibreweb_servers';
 const PREF_KEY_ACTIVE_SERVER = 'calibreweb_active_server';
-const BOOKS_DIR = `${FileSystem.documentDirectory}calibreweb_books/`;
-const COVER_DIR = `${FileSystem.cacheDirectory}calibreweb_covers/`;
+const BOOKS_DIR = new Directory(Paths.document, 'calibreweb_books');
+const COVER_DIR = new Directory(Paths.cache, 'calibreweb_covers');
 
 // API endpoints
 const CALIBRE_WEB_API = {
@@ -320,9 +320,8 @@ export class CalibreWebService {
 
     try {
       // Ensure cover directory exists
-      const dirInfo = await FileSystem.getInfoAsync(COVER_DIR);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(COVER_DIR, { intermediates: true });
+      if (!COVER_DIR.exists) {
+        COVER_DIR.create({ intermediates: true });
       }
 
       const url = coverUrl
@@ -330,17 +329,14 @@ export class CalibreWebService {
         : `${this.currentConfig.serverUrl}/api/cover/${bookId}`;
 
       const fileName = `cover_${bookId}_${this.currentConfig.id}.jpg`;
-      const filePath = `${COVER_DIR}${fileName}`;
+      const destFile = new File(COVER_DIR, fileName);
 
-      const downloadResult = await FileSystem.downloadAsync(url, filePath, {
+      const downloadedFile = await File.downloadFileAsync(url, destFile, {
         headers: this.getHeaders(),
+        idempotent: true,
       });
 
-      if (downloadResult.status >= 200 && downloadResult.status < 300) {
-        return downloadResult.uri;
-      }
-
-      return null;
+      return downloadedFile.uri;
     } catch (error) {
       console.error(`Failed to download cover for book ${bookId}:`, error);
       return null;
@@ -380,9 +376,8 @@ export class CalibreWebService {
 
     try {
       // Ensure books directory exists
-      const dirInfo = await FileSystem.getInfoAsync(BOOKS_DIR);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(BOOKS_DIR, { intermediates: true });
+      if (!BOOKS_DIR.exists) {
+        BOOKS_DIR.create({ intermediates: true });
       }
 
       progress.status = 'downloading';
@@ -390,7 +385,7 @@ export class CalibreWebService {
 
       const ext = format.toLowerCase();
       const fileName = `${this.sanitizeFileName(book.title)}_${book.id}.${ext}`;
-      const filePath = `${BOOKS_DIR}${fileName}`;
+      const destFile = new File(BOOKS_DIR, fileName);
 
       const downloadUrl = formatData.download_url
         ? (formatData.download_url.startsWith('http')
@@ -398,25 +393,19 @@ export class CalibreWebService {
             : `${this.currentConfig.serverUrl}${formatData.download_url}`)
         : `${this.currentConfig.serverUrl}/api/download/${book.id}/${format}`;
 
-      const downloadResult = await FileSystem.downloadAsync(
+      const downloadedFile = await File.downloadFileAsync(
         downloadUrl,
-        filePath,
+        destFile,
         {
           headers: this.getHeaders(),
+          idempotent: true,
         }
       );
 
-      if (downloadResult.status >= 200 && downloadResult.status < 300) {
-        progress.progress = 100;
-        progress.status = 'completed';
-        onProgress?.(progress);
-        return downloadResult.uri;
-      }
-
-      progress.status = 'failed';
-      progress.error = `Download failed with status ${downloadResult.status}`;
+      progress.progress = 100;
+      progress.status = 'completed';
       onProgress?.(progress);
-      return null;
+      return downloadedFile.uri;
     } catch (error) {
       progress.status = 'failed';
       progress.error = error instanceof Error ? error.message : 'Download failed';
@@ -449,8 +438,8 @@ export class CalibreWebService {
 
       for (const format of formats) {
         const fileName = `${this.sanitizeFileName(title)}_${bookId}.${format}`;
-        const info = await FileSystem.getInfoAsync(`${BOOKS_DIR}${fileName}`);
-        if (info.exists) return true;
+        const file = new File(BOOKS_DIR, fileName);
+        if (file.exists) return true;
       }
 
       return false;
@@ -467,9 +456,8 @@ export class CalibreWebService {
 
     for (const format of formats) {
       const fileName = `${this.sanitizeFileName(title)}_${bookId}.${format}`;
-      const filePath = `${BOOKS_DIR}${fileName}`;
-      const info = await FileSystem.getInfoAsync(filePath);
-      if (info.exists) return filePath;
+      const file = new File(BOOKS_DIR, fileName);
+      if (file.exists) return file.uri;
     }
 
     return null;
@@ -483,11 +471,10 @@ export class CalibreWebService {
 
     for (const format of formats) {
       const fileName = `${this.sanitizeFileName(title)}_${bookId}.${format}`;
-      const filePath = `${BOOKS_DIR}${fileName}`;
+      const file = new File(BOOKS_DIR, fileName);
       try {
-        const info = await FileSystem.getInfoAsync(filePath);
-        if (info.exists) {
-          await FileSystem.deleteAsync(filePath, { idempotent: true });
+        if (file.exists) {
+          file.delete();
           return true;
         }
       } catch {

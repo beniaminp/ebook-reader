@@ -423,8 +423,8 @@ class DictionaryService {
       const allKeys = await AsyncStorage.getAllKeys();
       const vocabKeys = allKeys.filter((key) => key.startsWith(VOCAB_PREFIX));
 
-      if (vocabKeys.length > 0) {
-        await AsyncStorage.multiRemove(vocabKeys);
+      for (const key of vocabKeys) {
+        await AsyncStorage.removeItem(key);
       }
     } catch (error) {
       console.error('Failed to clear all vocabulary:', error);

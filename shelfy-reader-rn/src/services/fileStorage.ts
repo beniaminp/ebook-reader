@@ -1,6 +1,6 @@
-import * as FileSystem from 'expo-file-system';
+import { Paths, File, Directory } from 'expo-file-system';
 
-const BOOKS_DIR = `${FileSystem.documentDirectory}books/`;
+const BOOKS_DIR = new Directory(Paths.document, 'books');
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -21,9 +21,8 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 }
 
 export async function ensureBooksDir(): Promise<void> {
-  const info = await FileSystem.getInfoAsync(BOOKS_DIR);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(BOOKS_DIR, { intermediates: true });
+  if (!BOOKS_DIR.exists) {
+    BOOKS_DIR.create({ intermediates: true });
   }
 }
 
@@ -32,28 +31,26 @@ export async function storeBookFile(
   filename: string,
   data: ArrayBuffer
 ): Promise<string> {
-  const dir = `${BOOKS_DIR}${bookId}/`;
-  await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  const path = `${dir}${filename}`;
-  const base64 = arrayBufferToBase64(data);
-  await FileSystem.writeAsStringAsync(path, base64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  return path;
+  const dir = new Directory(BOOKS_DIR, bookId);
+  if (!dir.exists) {
+    dir.create({ intermediates: true });
+  }
+  const file = new File(dir, filename);
+  const bytes = new Uint8Array(data);
+  file.write(bytes);
+  return file.uri;
 }
 
 export async function readBookFile(filePath: string): Promise<ArrayBuffer> {
-  const base64 = await FileSystem.readAsStringAsync(filePath, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const file = new File(filePath);
+  const base64 = await file.base64();
   return base64ToArrayBuffer(base64);
 }
 
 export async function deleteBookFile(bookId: string): Promise<void> {
-  const dir = `${BOOKS_DIR}${bookId}/`;
-  const info = await FileSystem.getInfoAsync(dir);
-  if (info.exists) {
-    await FileSystem.deleteAsync(dir, { idempotent: true });
+  const dir = new Directory(BOOKS_DIR, bookId);
+  if (dir.exists) {
+    dir.delete();
   }
 }
 
@@ -61,21 +58,22 @@ export async function getBookFilePath(
   bookId: string,
   filename: string
 ): Promise<string | null> {
-  const path = `${BOOKS_DIR}${bookId}/${filename}`;
-  const info = await FileSystem.getInfoAsync(path);
-  return info.exists ? path : null;
+  const file = new File(BOOKS_DIR, bookId, filename);
+  return file.exists ? file.uri : null;
 }
 
 export async function getBookFileSize(filePath: string): Promise<number> {
-  const info = await FileSystem.getInfoAsync(filePath, { size: true });
-  return info.exists && 'size' in info ? (info.size ?? 0) : 0;
+  const file = new File(filePath);
+  return file.exists ? file.size : 0;
 }
 
 export async function listBookFiles(bookId: string): Promise<string[]> {
-  const dir = `${BOOKS_DIR}${bookId}/`;
-  const info = await FileSystem.getInfoAsync(dir);
-  if (!info.exists) return [];
-  return FileSystem.readDirectoryAsync(dir);
+  const dir = new Directory(BOOKS_DIR, bookId);
+  if (!dir.exists) return [];
+  const entries = dir.list();
+  return entries
+    .filter((e): e is File => e instanceof File)
+    .map((f) => f.uri.split('/').pop() ?? '');
 }
 
 export async function storeCoverImage(
@@ -83,22 +81,24 @@ export async function storeCoverImage(
   data: ArrayBuffer,
   ext: string = 'jpg'
 ): Promise<string> {
-  const dir = `${BOOKS_DIR}${bookId}/`;
-  await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  const path = `${dir}cover.${ext}`;
-  const base64 = arrayBufferToBase64(data);
-  await FileSystem.writeAsStringAsync(path, base64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  return path;
+  const dir = new Directory(BOOKS_DIR, bookId);
+  if (!dir.exists) {
+    dir.create({ intermediates: true });
+  }
+  const file = new File(dir, `cover.${ext}`);
+  const bytes = new Uint8Array(data);
+  file.write(bytes);
+  return file.uri;
 }
 
 export async function getCoverPath(bookId: string): Promise<string | null> {
-  const dir = `${BOOKS_DIR}${bookId}/`;
-  const info = await FileSystem.getInfoAsync(dir);
-  if (!info.exists) return null;
+  const dir = new Directory(BOOKS_DIR, bookId);
+  if (!dir.exists) return null;
 
-  const files = await FileSystem.readDirectoryAsync(dir);
-  const cover = files.find((f) => f.startsWith('cover.'));
-  return cover ? `${dir}${cover}` : null;
+  const entries = dir.list();
+  const cover = entries.find(
+    (e): e is File =>
+      e instanceof File && e.uri.split('/').pop()?.startsWith('cover.') === true
+  );
+  return cover ? cover.uri : null;
 }
