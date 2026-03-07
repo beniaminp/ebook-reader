@@ -52,23 +52,37 @@ jobs:
           echo "VERSION_NAME=${VERSION}" >> $GITHUB_ENV
           echo "VERSION_CODE=${COMMIT_COUNT}" >> $GITHUB_ENV
 
-      - name: Build signed release APK
+      - name: Configure signing
         working-directory: shelfy-reader-rn/android
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          cat >> gradle.properties <<EOF
-          android.injected.signing.store.file=$ANDROID_KEYSTORE_PATH
-          android.injected.signing.store.password=$ANDROID_KEYSTORE_PASSWORD
-          android.injected.signing.key.alias=$ANDROID_KEY_ALIAS
-          android.injected.signing.key.password=$ANDROID_KEY_PASSWORD
-          EOF
-          ./gradlew assembleRelease \
-            -PversionName="${{ env.VERSION_NAME }}" \
-            -PversionCode="${{ env.VERSION_CODE }}"
+          cat >> gradle.properties <<PROPS
+          MYAPP_UPLOAD_STORE_FILE=${{ runner.temp }}/release.jks
+          MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
+          MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
+          PROPS
+
+      - name: Add signing config to build.gradle
+        working-directory: shelfy-reader-rn/android/app
+        run: |
+          # Insert signingConfigs and apply to release buildType
+          sed -i '/android {/a \
+              signingConfigs {\
+                  release {\
+                      storeFile file(MYAPP_UPLOAD_STORE_FILE)\
+                      storePassword MYAPP_UPLOAD_STORE_PASSWORD\
+                      keyAlias MYAPP_UPLOAD_KEY_ALIAS\
+                      keyPassword MYAPP_UPLOAD_KEY_PASSWORD\
+                  }\
+              }' build.gradle
+
+          sed -i '/buildTypes {/,/release {/ { /release {/a \
+                      signingConfig signingConfigs.release
+          }' build.gradle
+
+      - name: Build release APK
+        working-directory: shelfy-reader-rn/android
+        run: ./gradlew assembleRelease
 
       - name: Rename APK
         run: |

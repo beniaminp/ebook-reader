@@ -1,0 +1,103 @@
+/**
+ * Book Search Service
+ *
+ * Searches for ebooks via public torrent APIs.
+ * Builds magnet links with WebSocket and standard trackers.
+ *
+ * React Native version: uses standard fetch, no DOM dependencies.
+ * No CORS proxy needed since RN has no CORS restrictions.
+ */
+
+const WSS_TRACKERS = [
+  'wss://tracker.openwebtorrent.com',
+  'wss://tracker.webtorrent.dev',
+  'wss://tracker.files.fm:7073/announce',
+  'wss://tracker.btorrent.xyz',
+];
+
+// Standard UDP/HTTP trackers for native BitTorrent clients (Android)
+const STANDARD_TRACKERS = [
+  'udp://tracker.opentrackr.org:1337/announce',
+  'udp://open.tracker.cl:1337/announce',
+  'udp://tracker.openbittorrent.com:6969/announce',
+  'udp://open.stealth.si:80/announce',
+  'udp://exodus.desync.com:6969/announce',
+  'udp://tracker.torrent.eu.org:451/announce',
+];
+
+export interface SearchResult {
+  id: string;
+  name: string;
+  infoHash: string;
+  seeders: number;
+  leechers: number;
+  size: number;
+  numFiles: number;
+  username: string;
+  added: number;
+}
+
+const EBOOK_EXTENSIONS = [
+  'epub', 'pdf', 'mobi', 'azw3', 'fb2', 'cbz', 'cbr',
+  'txt', 'html', 'htm', 'md', 'docx', 'odt', 'chm',
+];
+
+export function detectFormat(name: string): string | null {
+  const lower = name.toLowerCase();
+  for (const ext of EBOOK_EXTENSIONS) {
+    if (lower.includes(`.${ext}`)) return ext;
+  }
+  return null;
+}
+
+export function buildMagnetLink(infoHash: string, name: string): string {
+  const dn = encodeURIComponent(name);
+  const allTrackers = [...WSS_TRACKERS, ...STANDARD_TRACKERS];
+  const trackers = allTrackers.map((t) => `&tr=${encodeURIComponent(t)}`).join('');
+  return `magnet:?xt=urn:btih:${infoHash}&dn=${dn}${trackers}`;
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+export async function searchBooks(query: string): Promise<SearchResult[]> {
+  const url = `https://apibay.org/q.php?q=${encodeURIComponent(query)}&cat=601`;
+
+  // React Native has no CORS restrictions, so fetch directly
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Search failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data)) return [];
+
+  // API returns [{"id":"0","name":"No results..."}] when no results
+  return data
+    .filter((item: { id: string }) => item.id !== '0')
+    .map((item: {
+      id: string;
+      name: string;
+      info_hash: string;
+      seeders: string;
+      leechers: string;
+      size: string;
+      num_files: string;
+      username: string;
+      added: string;
+    }) => ({
+      id: item.id,
+      name: item.name,
+      infoHash: item.info_hash,
+      seeders: parseInt(item.seeders, 10),
+      leechers: parseInt(item.leechers, 10),
+      size: parseInt(item.size, 10),
+      numFiles: parseInt(item.num_files, 10),
+      username: item.username,
+      added: parseInt(item.added, 10),
+    }));
+}

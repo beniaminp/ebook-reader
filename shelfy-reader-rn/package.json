@@ -1,7 +1,7 @@
 {
   "name": "shelfy-reader-rn",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -31,7 +31,7 @@
     "jszip": "^3.10.1",
     "mammoth": "^1.11.0",
     "marked": "^17.0.4",
-    "react": "19.2.0",
+    "react": "^19.2.4",
     "react-native": "0.83.2",
     "react-native-blob-util": "^0.24.7",
     "react-native-gesture-handler": "^2.30.0",

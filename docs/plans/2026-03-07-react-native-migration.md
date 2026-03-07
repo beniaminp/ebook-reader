@@ -1,5 +1,18 @@
 # React Native Migration Plan
 
+## Implementation Status
+
+| Phase | Status | Notes |
+|---|---|---|
+| Phase 1: Scaffolding & Infrastructure | DONE | Expo SDK 55, expo-sqlite, file storage, Zustand stores |
+| Phase 2: Navigation & Theming | DONE | Expo Router, 5 themes, NativeWind, tab layout |
+| Phase 3: Library & Book Management | DONE | FlashList grid/list, import, search, BookCard |
+| Phase 4: Reader Engine Redesign | DONE | 4 engines: Epub (WebView), PDF (native), Comic (FlatList), Text (WebView) |
+| Phase 5: Reader UI & Features | DONE | Toolbar, bottom bar, settings sheet, tap zones, swipe gestures |
+| Phase 6: Services Migration | IN PROGRESS | Database facade, fileStorage done; remaining services in progress |
+| Phase 7: Secondary Screens & Polish | DONE | Statistics, Search, CalibreWeb, CloudSync, ReadingGoals, YearInReview |
+| Phase 8: Testing & CI/CD | DONE | GitHub Action for signed APK on branch push |
+
 ## Executive Summary
 
 Migrate the Shelfy Reader app from React 19 / Ionic 8 / Capacitor 8 to React Native (Expo), while redesigning the reader component for better performance, native feel, and extensibility. The current app runs as a web app (GitHub Pages) and Android APK. The React Native version targets Android and iOS natively, with optional Expo Web for browser support.
