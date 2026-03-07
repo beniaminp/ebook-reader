@@ -6,10 +6,13 @@ import {
   Pressable,
   Switch,
   StyleSheet,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { useThemeStore } from '../../src/stores/useThemeStore';
 import type { ThemeType } from '../../src/services/themeService';
@@ -67,6 +70,8 @@ export default function SettingsScreen() {
   const setTheme = useThemeStore((s) => s.setCurrentTheme);
   const bionicReading = useThemeStore((s) => s.bionicReading);
   const setBionicReading = useThemeStore((s) => s.setBionicReading);
+
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
     <View
@@ -162,7 +167,28 @@ export default function SettingsScreen() {
         />
 
         <SectionHeader title="ABOUT" />
-        <SettingsRow icon="information-circle" label="Version" value="1.0.0" />
+        <SettingsRow icon="information-circle" label="Version" value={appVersion} />
+        <SettingsRow
+          icon="logo-github"
+          label="Source Code"
+          onPress={() => Linking.openURL('https://github.com/beniaminp/ebook-reader')}
+        />
+        <SettingsRow
+          icon="bug"
+          label="Report Issue"
+          onPress={() => Linking.openURL('https://github.com/beniaminp/ebook-reader/issues')}
+        />
+        <SettingsRow
+          icon="heart"
+          label="About Shelfy Reader"
+          onPress={() =>
+            Alert.alert(
+              'Shelfy Reader',
+              `Version ${appVersion}\n\nA free, open-source ebook reader supporting EPUB, PDF, MOBI, CBZ/CBR, and more.\n\nBuilt with React Native & Expo.`,
+              [{ text: 'OK' }]
+            )
+          }
+        />
       </ScrollView>
     </View>
   );
