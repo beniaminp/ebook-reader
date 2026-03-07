@@ -322,7 +322,10 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
     rules.push(`body, p { line-height: ${lineHeightRef.current} !important; }`);
     rules.push(`body, p, div { text-align: ${textAlignRef.current} !important; }`);
     const cm = customMarginsRef.current;
-    rules.push(`body { padding: ${cm.top}px ${cm.right}px ${cm.bottom}px ${cm.left}px !important; }`);
+    // Only set left/right padding on body — top/bottom margins are handled by
+    // the paginator grid rows (--_margin-top / --_margin-bottom) which work
+    // correctly per-page, unlike body padding-top/bottom in column layout.
+    rules.push(`body { padding-left: ${cm.left}px !important; padding-right: ${cm.right}px !important; }`);
     if (hyphenationRef.current) {
       rules.push(`body, p { hyphens: auto !important; -webkit-hyphens: auto !important; }`);
     }
@@ -760,11 +763,15 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
         await view.open(file);
         if (destroyed) return;
 
-        // Remove the paginator's built-in gap/margin so only the body
-        // padding (from customMargins) controls content spacing.
+        // Set paginator margins: top/bottom via grid rows, left/right via body padding.
+        // Body padding-top/bottom doesn't work per-page in column layout,
+        // so we use the paginator's grid rows for vertical spacing.
         const renderer = (view as any)?.renderer;
         if (renderer) {
+          const cm = customMarginsRef.current;
           renderer.setAttribute('margin', '0px');
+          renderer.setAttribute('margin-top', `${cm.top}px`);
+          renderer.setAttribute('margin-bottom', `${cm.bottom}px`);
           renderer.setAttribute('gap', '0%');
         }
 
@@ -914,12 +921,13 @@ export const FoliateEngine = forwardRef<ReaderEngineRef, FoliateEngineProps>((pr
       },
       setCustomMargins: (margins: { top: number; bottom: number; left: number; right: number }) => {
         customMarginsRef.current = margins;
-        // Update the paginator's outer gap/margin to match.
-        // The body padding inside the iframe handles content spacing,
-        // so set paginator gap/margin to 0 to avoid double spacing.
+        // Top/bottom margins via paginator grid rows (works per-page),
+        // left/right via body padding (applied in reapplyStyles).
         const renderer = (viewRef.current as any)?.renderer;
         if (renderer) {
           renderer.setAttribute('margin', '0px');
+          renderer.setAttribute('margin-top', `${margins.top}px`);
+          renderer.setAttribute('margin-bottom', `${margins.bottom}px`);
           renderer.setAttribute('gap', '0%');
         }
         reapplyStyles();
