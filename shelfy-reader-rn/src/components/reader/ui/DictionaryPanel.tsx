@@ -8,8 +8,8 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
+import { copyToClipboard } from '../../../utils/clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import {
@@ -97,7 +97,7 @@ export function DictionaryPanel({ visible, word, onClose }: DictionaryPanelProps
     const fullText = `${result?.word} (${meaning.partOfSpeech}):\n${text}`;
 
     try {
-      await Clipboard.setStringAsync(fullText);
+      await copyToClipboard(fullText);
       setCopiedIndex(meaningIndex);
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (error) {
