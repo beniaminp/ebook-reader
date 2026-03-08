@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../theme/ThemeContext';
 import { formatPercentage } from '../../../utils/formatUtils';
 import type { ReaderProgress } from '../engines/types';
@@ -14,12 +15,18 @@ interface ReaderBottomBarProps {
   visible: boolean;
   progress: ReaderProgress | null;
   onSliderChange?: (value: number) => void;
+  chapterTitle?: string;
+  onPrevChapter?: () => void;
+  onNextChapter?: () => void;
 }
 
 export function ReaderBottomBar({
   visible,
   progress,
   onSliderChange,
+  chapterTitle,
+  onPrevChapter,
+  onNextChapter,
 }: ReaderBottomBarProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -45,6 +52,40 @@ export function ReaderBottomBar({
         },
       ]}
     >
+      {/* Chapter navigation row */}
+      {(chapterTitle || onPrevChapter || onNextChapter) && (
+        <View style={styles.chapterRow}>
+          <Pressable
+            onPress={onPrevChapter}
+            style={[styles.chapterButton, !onPrevChapter && styles.chapterButtonDisabled]}
+            disabled={!onPrevChapter}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={20}
+              color={onPrevChapter ? theme.primary : theme.textMuted}
+            />
+          </Pressable>
+          <Text
+            numberOfLines={1}
+            style={[styles.chapterTitle, { color: theme.textSecondary }]}
+          >
+            {chapterTitle || ''}
+          </Text>
+          <Pressable
+            onPress={onNextChapter}
+            style={[styles.chapterButton, !onNextChapter && styles.chapterButtonDisabled]}
+            disabled={!onNextChapter}
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={onNextChapter ? theme.primary : theme.textMuted}
+            />
+          </Pressable>
+        </View>
+      )}
+
       {progress && (
         <>
           <View style={styles.progressRow}>
@@ -82,6 +123,23 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     zIndex: 100,
+  },
+  chapterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  chapterButton: {
+    padding: 4,
+  },
+  chapterButtonDisabled: {
+    opacity: 0.4,
+  },
+  chapterTitle: {
+    flex: 1,
+    fontSize: 13,
+    textAlign: 'center',
+    marginHorizontal: 4,
   },
   progressRow: {
     flexDirection: 'row',

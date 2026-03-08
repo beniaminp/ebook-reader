@@ -19,7 +19,9 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { useThemeStore } from '../../src/stores/useThemeStore';
 import { useAppStore } from '../../src/stores/useAppStore';
 import { useReadingGoalsStore } from '../../src/stores/useReadingGoalsStore';
+import { useSleepTimerStore } from '../../src/stores/useSleepTimerStore';
 import type { ThemeType, FontFamily, TextAlignment } from '../../src/services/themeService';
+import type { PageTransitionType } from '../../src/stores/useThemeStore';
 import { themes, themeNames } from '../../src/theme/themes';
 
 // ── Reusable components ──────────────────────────────────────
@@ -142,6 +144,22 @@ export default function SettingsScreen() {
   const dailyGoalMinutes = useReadingGoalsStore((s) => s.dailyGoalMinutes);
   const currentStreak = useReadingGoalsStore((s) => s.currentStreak);
 
+  // Sleep timer
+  const sleepTimerActive = useSleepTimerStore((s) => s.isActive);
+  const sleepTimerRemaining = useSleepTimerStore((s) => s.remainingSeconds);
+  const startSleepTimer = useSleepTimerStore((s) => s.startTimer);
+  const stopSleepTimer = useSleepTimerStore((s) => s.stopTimer);
+
+  // Theme store – additional reading features
+  const interlinearMode = useThemeStore((s) => s.interlinearMode);
+  const setInterlinearMode = useThemeStore((s) => s.setInterlinearMode);
+  const wordWiseEnabled = useThemeStore((s) => s.wordWiseEnabled);
+  const setWordWiseEnabled = useThemeStore((s) => s.setWordWiseEnabled);
+  const focusMode = useThemeStore((s) => s.focusMode);
+  const setFocusMode = useThemeStore((s) => s.setFocusMode);
+  const pageTransitionType = useThemeStore((s) => s.pageTransitionType);
+  const setPageTransitionType = useThemeStore((s) => s.setPageTransitionType);
+
   // Local state
   const [isEnriching, setIsEnriching] = useState(false);
   const [isFetchingCovers, setIsFetchingCovers] = useState(false);
@@ -210,6 +228,36 @@ export default function SettingsScreen() {
     } finally {
       setIsFetchingCovers(false);
     }
+  };
+
+  const handleSleepTimerToggle = (enabled: boolean) => {
+    if (enabled) {
+      Alert.alert('Sleep Timer', 'Set timer duration:', [
+        { text: '15 min', onPress: () => startSleepTimer(15) },
+        { text: '30 min', onPress: () => startSleepTimer(30) },
+        { text: '45 min', onPress: () => startSleepTimer(45) },
+        { text: '60 min', onPress: () => startSleepTimer(60) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    } else {
+      stopSleepTimer();
+    }
+  };
+
+  const handlePageTransitionSelect = () => {
+    const options: { value: PageTransitionType; label: string }[] = [
+      { value: 'none', label: 'None' },
+      { value: 'fade', label: 'Fade' },
+      { value: 'slide', label: 'Slide' },
+      { value: 'curl', label: 'Curl' },
+    ];
+    Alert.alert('Page Transition', undefined, [
+      ...options.map((opt) => ({
+        text: `${opt.label}${pageTransitionType === opt.value ? ' \u2713' : ''}`,
+        onPress: () => setPageTransitionType(opt.value),
+      })),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
   };
 
   const handleResetSettings = () => {
@@ -398,6 +446,31 @@ export default function SettingsScreen() {
           <Text style={{ color: theme.textSecondary, fontSize: 14, width: 40, textAlign: 'right' }}>{swipeThreshold}px</Text>
         </View>
 
+        <SettingsRow
+          icon="moon"
+          label="Sleep Timer"
+          subtitle={sleepTimerActive ? `${Math.ceil(sleepTimerRemaining / 60)} min remaining` : 'Auto-stop reading after a set time'}
+          rightElement={<Switch value={sleepTimerActive} onValueChange={handleSleepTimerToggle} trackColor={{ true: theme.primary }} />}
+        />
+        <SettingsRow
+          icon="language"
+          label="Translation"
+          subtitle="Show interlinear translations while reading"
+          rightElement={<Switch value={interlinearMode} onValueChange={setInterlinearMode} trackColor={{ true: theme.primary }} />}
+        />
+        <SettingsRow
+          icon="book"
+          label="Word Wise"
+          subtitle="Show definitions for difficult words"
+          rightElement={<Switch value={wordWiseEnabled} onValueChange={setWordWiseEnabled} trackColor={{ true: theme.primary }} />}
+        />
+        <SettingsRow
+          icon="eye-off"
+          label="Focus Mode"
+          subtitle="Dim surrounding text to reduce distractions"
+          rightElement={<Switch value={focusMode} onValueChange={setFocusMode} trackColor={{ true: theme.primary }} />}
+        />
+
         {/* ─── Reading Goals ───────────────────────────── */}
         <SectionHeader title="READING GOALS" />
         <SettingsRow
@@ -413,6 +486,9 @@ export default function SettingsScreen() {
         <SettingsRow icon="server" label="Calibre-Web" subtitle="Connect to your Calibre-Web server" onPress={() => router.push('/calibre-web')} />
         <SettingsRow icon="stats-chart" label="Reading Statistics" subtitle="View your reading history and progress" onPress={() => router.push('/statistics')} />
         <SettingsRow icon="calendar" label="Year in Review" onPress={() => router.push('/year-in-review')} />
+        <SettingsRow icon="book" label="Hardcover" subtitle="Sync reading status & ratings" onPress={() => router.push('/hardcover')} />
+        <SettingsRow icon="download" label="Data Backup" subtitle="Export or import your library data" onPress={() => router.push('/data-backup')} />
+        <SettingsRow icon="people" label="P2P Sharing" subtitle="Share & discover community books" onPress={() => router.push('/sharing')} />
         <SettingsRow icon="library" label="Library Storage" value={`${books.length} books · ${formatFileSize(totalStorageBytes)}`} />
 
         <SettingsRow
@@ -449,6 +525,12 @@ export default function SettingsScreen() {
             )
           }
         />
+
+        {/* ─── Advanced ──────────────────────────────── */}
+        <SectionHeader title="ADVANCED" />
+        <SettingsRow icon="funnel" label="Smart Shelves" subtitle="Create rules to auto-organize your library" onPress={() => router.push('/smart-shelves')} />
+        <SettingsRow icon="newspaper" label="RSS / Read Later" subtitle="Subscribe to RSS feeds and save articles" onPress={() => router.push('/rss')} />
+        <SettingsRow icon="layers" label="Page Transitions" value={pageTransitionType} onPress={handlePageTransitionSelect} />
 
         {/* ─── About ───────────────────────────────────── */}
         <SectionHeader title="ABOUT" />
