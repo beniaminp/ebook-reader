@@ -53,9 +53,11 @@ async function addRecentVisit(url: string, title: string) {
 export default function OpdsBrowserScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ url: string; title: string }>();
+  const params = useLocalSearchParams<{ url: string; title: string; username?: string; password?: string }>();
   const feedUrl = params.url ?? '';
   const feedTitle = params.title ?? 'OPDS Feed';
+  const feedUsername = params.username;
+  const feedPassword = params.password;
 
   const [feed, setFeed] = useState<OpdsFeed | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,10 @@ export default function OpdsBrowserScreen() {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchOpdsFeed(feedUrl);
+      const result = await fetchOpdsFeed(feedUrl, {
+        username: feedUsername,
+        password: feedPassword,
+      });
       setFeed(result);
       // Track this visit
       await addRecentVisit(feedUrl, feedTitle);
@@ -80,7 +85,7 @@ export default function OpdsBrowserScreen() {
     } finally {
       setLoading(false);
     }
-  }, [feedUrl, feedTitle]);
+  }, [feedUrl, feedTitle, feedUsername, feedPassword]);
 
   useEffect(() => {
     loadFeed();
@@ -122,7 +127,12 @@ export default function OpdsBrowserScreen() {
       if (navLink) {
         router.push({
           pathname: '/opds-browser',
-          params: { url: navLink.href, title: entry.title },
+          params: {
+            url: navLink.href,
+            title: entry.title,
+            ...(feedUsername ? { username: feedUsername } : {}),
+            ...(feedPassword ? { password: feedPassword } : {}),
+          },
         });
       }
     }
@@ -186,7 +196,12 @@ export default function OpdsBrowserScreen() {
     if (feed?.nextPageUrl) {
       router.push({
         pathname: '/opds-browser',
-        params: { url: feed.nextPageUrl, title: feedTitle },
+        params: {
+          url: feed.nextPageUrl,
+          title: feedTitle,
+          ...(feedUsername ? { username: feedUsername } : {}),
+          ...(feedPassword ? { password: feedPassword } : {}),
+        },
       });
     }
   };

@@ -18,6 +18,8 @@ interface OPDSFeed {
   id: string;
   title: string;
   url: string;
+  username?: string;
+  password?: string;
 }
 
 const CUSTOM_FEEDS_KEY = 'custom_opds_feeds';
@@ -48,6 +50,9 @@ export default function CatalogsScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showAuth, setShowAuth] = useState(false);
 
   // Load custom feeds on mount and when screen is focused
   const loadCustomFeeds = useCallback(async () => {
@@ -81,10 +86,15 @@ export default function CatalogsScreen() {
       id: Date.now().toString(),
       title: newTitle.trim(),
       url: newUrl.trim(),
+      ...(newUsername.trim() ? { username: newUsername.trim() } : {}),
+      ...(newPassword.trim() ? { password: newPassword.trim() } : {}),
     };
     await saveCustomFeeds([...customFeeds, newFeed]);
     setNewTitle('');
     setNewUrl('');
+    setNewUsername('');
+    setNewPassword('');
+    setShowAuth(false);
     setShowAddForm(false);
   };
 
@@ -106,10 +116,15 @@ export default function CatalogsScreen() {
     );
   };
 
-  const navigateToFeed = (url: string, title: string) => {
+  const navigateToFeed = (url: string, title: string, username?: string, password?: string) => {
     router.push({
       pathname: '/opds-browser',
-      params: { url, title },
+      params: {
+        url,
+        title,
+        ...(username ? { username } : {}),
+        ...(password ? { password } : {}),
+      },
     });
   };
 
@@ -142,6 +157,42 @@ export default function CatalogsScreen() {
             keyboardType="url"
             style={[styles.input, { color: theme.text, borderColor: theme.border }]}
           />
+          <Pressable
+            onPress={() => setShowAuth(!showAuth)}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}
+          >
+            <Ionicons
+              name={showAuth ? 'chevron-down' : 'chevron-forward'}
+              size={16}
+              color={theme.textSecondary}
+            />
+            <Text style={{ color: theme.textSecondary, fontSize: 14 }}>
+              Authentication (optional)
+            </Text>
+          </Pressable>
+          {showAuth && (
+            <>
+              <TextInput
+                value={newUsername}
+                onChangeText={setNewUsername}
+                placeholder="Username"
+                placeholderTextColor={theme.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              />
+              <TextInput
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Password"
+                placeholderTextColor={theme.textMuted}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              />
+            </>
+          )}
           <Pressable
             onPress={addFeed}
             style={[styles.addButton, { backgroundColor: theme.primary }]}
@@ -189,14 +240,14 @@ export default function CatalogsScreen() {
             {customFeeds.map((feed) => (
               <Pressable
                 key={feed.id}
-                onPress={() => navigateToFeed(feed.url, feed.title)}
+                onPress={() => navigateToFeed(feed.url, feed.title, feed.username, feed.password)}
                 style={[
                   styles.feedCard,
                   { backgroundColor: theme.card, borderColor: theme.border },
                 ]}
               >
                 <View style={[styles.feedIcon, { backgroundColor: theme.surface }]}>
-                  <Ionicons name="bookmarks" size={24} color={theme.accent} />
+                  <Ionicons name={feed.username ? 'lock-closed' : 'bookmarks'} size={24} color={theme.accent} />
                 </View>
                 <View style={styles.feedInfo}>
                   <Text style={[styles.feedTitle, { color: theme.text }]}>
@@ -208,6 +259,11 @@ export default function CatalogsScreen() {
                   >
                     {feed.url}
                   </Text>
+                  {feed.username ? (
+                    <Text style={[styles.feedUrl, { color: theme.textMuted }]}>
+                      Authenticated as {feed.username}
+                    </Text>
+                  ) : null}
                 </View>
                 <Pressable
                   onPress={() => deleteFeed(feed.id, feed.title)}
