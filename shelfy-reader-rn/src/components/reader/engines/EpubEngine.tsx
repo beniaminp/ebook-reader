@@ -66,15 +66,14 @@ export const EpubEngine = forwardRef<ReaderEngineRef, ReaderEngineProps>(
           }
         }
         const base64 = btoa(binary);
-        sendCommand({ type: 'loadBook', data: base64, format });
+        sendCommand({
+          type: 'loadBook',
+          data: base64,
+          format,
+          initialLocation: initialLocation || undefined,
+        });
       }
-    }, [isReady, bookData, format, sendCommand]);
-
-    useEffect(() => {
-      if (isReady && initialLocation) {
-        sendCommand({ type: 'goToLocation', location: initialLocation });
-      }
-    }, [isReady, initialLocation, sendCommand]);
+    }, [isReady, bookData, format, initialLocation, sendCommand]);
 
     useEffect(() => {
       if (isReady) {
@@ -116,11 +115,27 @@ export const EpubEngine = forwardRef<ReaderEngineRef, ReaderEngineProps>(
               setToc(msg.toc);
               onTocLoaded?.(msg.toc);
               break;
+            case 'metadataLoaded':
+              // Metadata available via msg.metadata.title, msg.metadata.author
+              console.log('Book metadata:', msg.metadata);
+              break;
             case 'selection':
               onSelectionChange?.(msg);
               break;
+            case 'selectionCleared':
+              break;
             case 'tap':
               onTap?.(msg.zone);
+              break;
+            case 'chapterChanged':
+              // Chapter navigation info available via msg.label, msg.href
+              break;
+            case 'annotationTapped':
+              // Highlight tapped: msg.value contains the CFI
+              console.log('Annotation tapped:', msg.value);
+              break;
+            case 'searchResults':
+              // Search results available via msg.results
               break;
             case 'error':
               console.error('WebView error:', msg.message);

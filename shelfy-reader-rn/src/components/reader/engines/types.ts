@@ -91,20 +91,23 @@ export type BridgeMessage =
   | { type: 'ready' }
   | { type: 'locationChanged'; location: string; progress: ReaderProgress }
   | { type: 'tocLoaded'; toc: Chapter[] }
+  | { type: 'metadataLoaded'; metadata: { title: string; author: string } }
   | { type: 'selection'; text: string; cfi: string; rect: { x: number; y: number; width: number; height: number } }
   | { type: 'selectionCleared' }
   | { type: 'tap'; zone: 'left' | 'center' | 'right' }
   | { type: 'searchResults'; results: SearchResult[] }
   | { type: 'chapterChanged'; label: string; href: string }
+  | { type: 'annotationTapped'; value: string }
   | { type: 'error'; message: string }
   | { type: 'log'; message: string };
 
 export type BridgeCommand =
-  | { type: 'loadBook'; data: string; format: string }
+  | { type: 'loadBook'; data: string; format: string; initialLocation?: string }
   | { type: 'goToNext' }
   | { type: 'goToPrev' }
   | { type: 'goToLocation'; location: string }
   | { type: 'goToChapter'; href: string }
+  | { type: 'goToFraction'; fraction: number }
   | { type: 'search'; query: string }
   | { type: 'clearSearch' }
   | { type: 'addHighlight'; cfi: string; color: string; id: string }

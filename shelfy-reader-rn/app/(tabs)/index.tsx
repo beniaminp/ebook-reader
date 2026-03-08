@@ -203,7 +203,15 @@ export default function LibraryScreen() {
 
         const sourceFile = new File(asset.uri);
         sourceFile.copy(bookDir);
-        const destFile = new File(bookDir, asset.name);
+
+        // After copy, the file may have a different name than asset.name
+        // (e.g., the source URI basename differs from the display name).
+        // List the directory to find the actual copied file.
+        const entries = bookDir.list();
+        const copiedFile = entries.find(
+          (e): e is File => e instanceof File
+        );
+        const destFile = copiedFile ?? new File(bookDir, asset.name);
         const filePath = destFile.uri;
 
         const bookData: Omit<Book, 'dateAdded'> = {
