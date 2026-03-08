@@ -11,14 +11,14 @@ import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import * as LegacyFileSystem from 'expo-file-system/legacy';
+import * as Crypto from 'expo-crypto';
+import { File, Directory, Paths } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { useAppStore } from '../../src/stores/useAppStore';
 import { useLibraryPrefsStore, SortOption } from '../../src/stores/useLibraryPrefsStore';
 import { BookCard } from '../../src/components/library/BookCard';
 import { detectFormat, formatFileSize, formatDate, getFormatDisplayName, formatPercentage } from '../../src/utils/formatUtils';
-import { storeBookFile } from '../../src/services/fileStorage';
 import type { Book } from '../../src/types';
 
 export default function LibraryScreen() {
@@ -189,18 +189,22 @@ export default function LibraryScreen() {
           continue;
         }
 
-        const bookId = crypto.randomUUID();
-        const fileContent = await LegacyFileSystem.readAsStringAsync(asset.uri, {
-          encoding: LegacyFileSystem.EncodingType.Base64,
-        });
-        const bytes = Uint8Array.from(atob(fileContent), (c) =>
-          c.charCodeAt(0)
-        );
-        const filePath = await storeBookFile(
-          bookId,
-          asset.name,
-          bytes.buffer as ArrayBuffer
-        );
+        const bookId = Crypto.randomUUID();
+
+        // Copy file from cache to permanent books directory
+        const booksDir = new Directory(Paths.document, 'books');
+        if (!booksDir.exists) {
+          booksDir.create({ intermediates: true });
+        }
+        const bookDir = new Directory(booksDir, bookId);
+        if (!bookDir.exists) {
+          bookDir.create({ intermediates: true });
+        }
+
+        const sourceFile = new File(asset.uri);
+        sourceFile.copy(bookDir);
+        const destFile = new File(bookDir, asset.name);
+        const filePath = destFile.uri;
 
         const bookData: Omit<Book, 'dateAdded'> = {
           id: bookId,
@@ -219,9 +223,9 @@ export default function LibraryScreen() {
 
         await addBook(bookData);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Import failed:', e);
-      Alert.alert('Import failed', 'Could not import the file.');
+      Alert.alert('Import failed', e?.message ?? 'Could not import the file.');
     }
   }, [addBook]);
 

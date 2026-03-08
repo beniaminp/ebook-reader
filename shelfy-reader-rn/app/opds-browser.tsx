@@ -8,12 +8,15 @@ import {
   StyleSheet,
   Image,
   Alert,
-  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Crypto from 'expo-crypto';
+import { File, Directory, Paths } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Header } from '../src/components/common/Header';
+import { useAppStore } from '../src/stores/useAppStore';
+import { detectFormat } from '../src/utils/formatUtils';
 import {
   fetchOpdsFeed,
   type OpdsFeed,
@@ -21,6 +24,7 @@ import {
   type OpdsNavEntry,
 } from '../src/services/opdsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Book } from '../src/types';
 
 const RECENTLY_VISITED_KEY = 'opds_recently_visited';
 
@@ -91,13 +95,13 @@ export default function OpdsBrowserScreen() {
         return;
       }
       if (book.downloadLinks.length === 1) {
-        handleDownload(book.downloadLinks[0].href, book.title);
+        handleDownload(book.downloadLinks[0].href, book.title, book.author);
         return;
       }
       // Multiple formats - let user choose
       const options = book.downloadLinks.map((dl) => ({
         text: `${dl.format.toUpperCase()}${dl.title ? ` - ${dl.title}` : ''}`,
-        onPress: () => handleDownload(dl.href, book.title),
+        onPress: () => handleDownload(dl.href, book.title, book.author),
       }));
       Alert.alert('Download Format', `Choose a format for "${book.title}"`, [
         ...options,
@@ -124,11 +128,57 @@ export default function OpdsBrowserScreen() {
     }
   };
 
-  const handleDownload = async (href: string, title: string) => {
+  const addBook = useAppStore((s) => s.addBook);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async (href: string, title: string, author?: string) => {
+    if (downloading) return;
+    setDownloading(true);
     try {
-      await Linking.openURL(href);
-    } catch {
-      Alert.alert('Error', `Could not open download link for "${title}".`);
+      // Extract filename from URL
+      const urlPath = new URL(href).pathname;
+      const filename = decodeURIComponent(urlPath.split('/').pop() || `${title}.epub`);
+      const format = detectFormat(filename);
+      if (!format) {
+        Alert.alert('Unsupported Format', `Cannot import "${filename}" - unsupported format.`);
+        setDownloading(false);
+        return;
+      }
+
+      const bookId = Crypto.randomUUID();
+
+      // Create book directory
+      const booksDir = new Directory(Paths.document, 'books');
+      if (!booksDir.exists) booksDir.create({ intermediates: true });
+      const bookDir = new Directory(booksDir, bookId);
+      bookDir.create({ intermediates: true });
+
+      // Download file directly to books directory
+      const destFile = new File(bookDir, filename);
+      await File.downloadFileAsync(href, destFile);
+
+      const bookData: Omit<Book, 'dateAdded'> = {
+        id: bookId,
+        title: title || filename.replace(/\.[^/.]+$/, ''),
+        author: author || '',
+        format,
+        filePath: destFile.uri,
+        fileSize: destFile.exists ? destFile.size : 0,
+        totalPages: 0,
+        currentPage: 0,
+        progress: 0,
+        lastRead: new Date(),
+        source: 'opds',
+        downloaded: true,
+      };
+
+      await addBook(bookData);
+      Alert.alert('Downloaded', `"${title}" has been added to your library.`);
+    } catch (e: any) {
+      console.error('Download failed:', e);
+      Alert.alert('Download Failed', e?.message ?? `Could not download "${title}".`);
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -218,11 +268,15 @@ export default function OpdsBrowserScreen() {
             </View>
           ) : null}
         </View>
-        <Ionicons
-          name={isBook ? 'download-outline' : 'chevron-forward'}
-          size={20}
-          color={isBook ? theme.primary : theme.textMuted}
-        />
+        {downloading && isBook ? (
+          <ActivityIndicator size="small" color={theme.primary} />
+        ) : (
+          <Ionicons
+            name={isBook ? 'download-outline' : 'chevron-forward'}
+            size={20}
+            color={isBook ? theme.primary : theme.textMuted}
+          />
+        )}
       </Pressable>
     );
   };

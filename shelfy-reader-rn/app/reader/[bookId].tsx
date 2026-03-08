@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Crypto from 'expo-crypto';
 import { useAppStore } from '../../src/stores/useAppStore';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { ReaderContainer } from '../../src/components/reader/ui/ReaderContainer';
@@ -113,7 +114,7 @@ export default function ReaderScreen() {
   const handleAddBookmark = useCallback(
     async (bookmark: Omit<Bookmark, 'id'>) => {
       if (!book) return;
-      const id = crypto.randomUUID();
+      const id = Crypto.randomUUID();
       const location = bookmark.location;
       const locationStr = typeof location === 'string' ? location : (location?.cfi || JSON.stringify(location));
       const dbBookmark: DbBookmark = {
@@ -140,7 +141,7 @@ export default function ReaderScreen() {
   const handleAddHighlight = useCallback(
     async (highlight: Omit<Highlight, 'id'>) => {
       if (!book) return;
-      const id = crypto.randomUUID();
+      const id = Crypto.randomUUID();
       const location = highlight.location;
       const locationStr = typeof location === 'string' ? location : (location?.cfi || JSON.stringify(location));
       const dbHighlight: DbHighlight = {
