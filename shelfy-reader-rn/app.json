@@ -40,7 +40,8 @@
       "expo-sqlite",
       "expo-document-picker",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sharing"
     ]
   }
 }
