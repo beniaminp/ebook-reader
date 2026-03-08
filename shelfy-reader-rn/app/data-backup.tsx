@@ -12,7 +12,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { Paths, File } from 'expo-file-system';
+import { Paths, File, Directory } from 'expo-file-system';
+import JSZip from 'jszip';
 import { useTheme } from '../src/theme/ThemeContext';
 import { Header } from '../src/components/common/Header';
 import {
@@ -65,6 +66,12 @@ interface DataCounts {
   collections: number;
   tags: number;
 }
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const BOOKS_DIR = new Directory(Paths.document, 'books');
 
 // ============================================================================
 // HELPERS
@@ -127,6 +134,23 @@ function gatherReadingStats(): any[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * List all files in a book's directory (book files + covers).
+ * Returns an array of { filename, file } objects.
+ */
+function listBookDirFiles(bookId: string): Array<{ filename: string; file: File }> {
+  const dir = new Directory(BOOKS_DIR, bookId);
+  if (!dir.exists) return [];
+  const entries = dir.list();
+  return entries
+    .filter((e): e is File => e instanceof File)
+    .map((f) => ({
+      filename: f.uri.split('/').pop() ?? '',
+      file: f,
+    }))
+    .filter((f) => f.filename.length > 0);
 }
 
 // ============================================================================
@@ -200,10 +224,10 @@ export default function DataBackupScreen() {
       const bookTags = gatherAllBookTags(books);
       const readingStats = gatherReadingStats();
 
-      setStatusMessage('Creating backup file...');
+      setStatusMessage('Creating backup metadata...');
 
       const exportData: ExportData = {
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         app: 'Shelfy Reader',
         books: books.map((b) => ({
@@ -227,23 +251,63 @@ export default function DataBackupScreen() {
         readingStats,
       };
 
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `shelfy-backup-${timestamp}.json`;
+      // Create ZIP file with JSZip
+      const zip = new JSZip();
 
-      // Write to cache directory using new expo-file-system v55 API
-      const file = new File(Paths.cache, filename);
-      file.write(jsonString);
+      // Add metadata JSON
+      const jsonString = JSON.stringify(exportData, null, 2);
+      zip.file('backup.json', jsonString);
+
+      // Add book files and covers
+      let filesAdded = 0;
+      for (let i = 0; i < books.length; i++) {
+        const book = books[i];
+        setStatusMessage(
+          `Adding book files (${i + 1}/${books.length}): ${book.title.slice(0, 30)}...`
+        );
+
+        const dirFiles = listBookDirFiles(book.id);
+        for (const { filename, file } of dirFiles) {
+          try {
+            const bytes = await file.bytes();
+            zip.file(`books/${book.id}/${filename}`, bytes);
+            filesAdded++;
+          } catch (err) {
+            console.warn(`Could not read file ${filename} for book ${book.id}:`, err);
+          }
+        }
+      }
+
+      setStatusMessage(
+        `Compressing ${filesAdded} files... This may take a moment.`
+      );
+
+      // Generate the ZIP as Uint8Array
+      const zipBytes = await zip.generateAsync({
+        type: 'uint8array',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .slice(0, 19);
+      const filename = `shelfy-backup-${timestamp}.shelfybackup`;
+
+      // Write ZIP to cache directory
+      const outFile = new File(Paths.cache, filename);
+      outFile.write(zipBytes);
 
       setStatusMessage('Opening share dialog...');
 
       // Share the file
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
-        await Sharing.shareAsync(file.uri, {
-          mimeType: 'application/json',
+        await Sharing.shareAsync(outFile.uri, {
+          mimeType: 'application/zip',
           dialogTitle: 'Export Shelfy Backup',
-          UTI: 'public.json',
+          UTI: 'com.pkware.zip-archive',
         });
       } else {
         Alert.alert('Error', 'Sharing is not available on this device.');
@@ -251,8 +315,8 @@ export default function DataBackupScreen() {
 
       // Clean up temp file
       try {
-        if (file.exists) {
-          file.delete();
+        if (outFile.exists) {
+          outFile.delete();
         }
       } catch {
         // Ignore cleanup errors
@@ -277,9 +341,9 @@ export default function DataBackupScreen() {
 
   const handleImport = useCallback(async () => {
     try {
-      // Pick a JSON file
+      // Pick a JSON or ZIP/shelfybackup file
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/json',
+        type: ['application/json', 'application/zip', 'application/octet-stream'],
         copyToCacheDirectory: true,
       });
 
@@ -292,13 +356,13 @@ export default function DataBackupScreen() {
       // Confirm before importing
       Alert.alert(
         'Import Data',
-        'This will import data from the backup file. Existing data for matching books will be overwritten. Continue?',
+        'This will import data from the backup file. Existing data for matching books will be skipped. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Import',
             style: 'destructive',
-            onPress: () => performImport(pickedFile.uri),
+            onPress: () => performImport(pickedFile.uri, pickedFile.name ?? ''),
           },
         ]
       );
@@ -312,20 +376,51 @@ export default function DataBackupScreen() {
   }, []);
 
   const performImport = useCallback(
-    async (fileUri: string) => {
+    async (fileUri: string, fileName: string) => {
       setIsImporting(true);
       setStatusMessage('Reading backup file...');
 
       try {
-        // Read the picked file using the new expo-file-system v55 API
-        const file = new File(fileUri);
-        const jsonString = await file.text();
+        const isZipBackup =
+          fileName.endsWith('.shelfybackup') ||
+          fileName.endsWith('.zip');
 
-        const data: ExportData = JSON.parse(jsonString);
+        let data: ExportData;
+        let zip: JSZip | null = null;
+
+        if (isZipBackup) {
+          // Read ZIP file
+          setStatusMessage('Extracting backup archive...');
+          const zipFile = new File(fileUri);
+          const zipBytes = await zipFile.bytes();
+          zip = await JSZip.loadAsync(zipBytes);
+
+          // Read backup.json from inside the ZIP
+          const backupJsonFile = zip.file('backup.json');
+          if (!backupJsonFile) {
+            Alert.alert(
+              'Invalid Backup',
+              'This archive does not contain a backup.json file.'
+            );
+            setIsImporting(false);
+            setStatusMessage('');
+            return;
+          }
+          const jsonString = await backupJsonFile.async('string');
+          data = JSON.parse(jsonString);
+        } else {
+          // Legacy JSON import
+          const file = new File(fileUri);
+          const jsonString = await file.text();
+          data = JSON.parse(jsonString);
+        }
 
         // Validate
         if (!data.version || !data.app || data.app !== 'Shelfy Reader') {
-          Alert.alert('Invalid Backup', 'This file does not appear to be a valid Shelfy Reader backup.');
+          Alert.alert(
+            'Invalid Backup',
+            'This file does not appear to be a valid Shelfy Reader backup.'
+          );
           setIsImporting(false);
           setStatusMessage('');
           return;
@@ -338,20 +433,73 @@ export default function DataBackupScreen() {
         let importedSettings = 0;
         let importedCollections = 0;
         let importedTags = 0;
+        let importedFiles = 0;
 
         // Import books
         if (data.books?.length) {
           setStatusMessage(`Importing ${data.books.length} books...`);
-          for (const bookData of data.books) {
+          for (let i = 0; i < data.books.length; i++) {
+            const bookData = data.books[i];
             try {
               const existing = getAllBooks().find((b) => b.id === bookData.id);
               if (!existing) {
+                // If we have a ZIP, extract book files first
+                let newFilePath = bookData.filePath;
+                let newCoverPath = bookData.coverPath;
+
+                if (zip) {
+                  setStatusMessage(
+                    `Extracting files (${i + 1}/${data.books.length}): ${(bookData.title ?? '').slice(0, 30)}...`
+                  );
+
+                  // Find all files for this book in the ZIP
+                  const bookPrefix = `books/${bookData.id}/`;
+                  const bookEntries = Object.keys(zip.files).filter(
+                    (path) => path.startsWith(bookPrefix) && !zip!.files[path].dir
+                  );
+
+                  if (bookEntries.length > 0) {
+                    // Ensure the book directory exists
+                    const bookDir = new Directory(BOOKS_DIR, bookData.id);
+                    if (!bookDir.exists) {
+                      bookDir.create({ intermediates: true });
+                    }
+
+                    for (const entryPath of bookEntries) {
+                      const entryFilename = entryPath.slice(bookPrefix.length);
+                      if (!entryFilename) continue;
+
+                      try {
+                        const entryData = await zip.files[entryPath].async(
+                          'uint8array'
+                        );
+                        const outFile = new File(bookDir, entryFilename);
+                        outFile.write(entryData);
+
+                        // Update file path references to point to the new location
+                        const isCover = entryFilename.startsWith('cover.');
+                        if (isCover) {
+                          newCoverPath = outFile.uri;
+                        } else {
+                          newFilePath = outFile.uri;
+                        }
+                        importedFiles++;
+                      } catch (err) {
+                        console.warn(
+                          `Could not extract ${entryPath}:`,
+                          err
+                        );
+                      }
+                    }
+                  }
+                }
+
                 const book: Omit<Book, 'dateAdded'> = {
                   id: bookData.id,
                   title: bookData.title,
                   author: bookData.author,
-                  filePath: bookData.filePath,
-                  coverPath: bookData.coverPath,
+                  filePath: newFilePath,
+                  coverPath: newCoverPath,
                   format: bookData.format,
                   totalPages: bookData.totalPages || 0,
                   currentPage: bookData.currentPage || 0,
@@ -360,7 +508,7 @@ export default function DataBackupScreen() {
                   source: bookData.source || 'local',
                   sourceId: bookData.sourceId,
                   sourceUrl: bookData.sourceUrl,
-                  downloaded: bookData.downloaded ?? false,
+                  downloaded: zip ? true : (bookData.downloaded ?? false),
                   genre: bookData.genre,
                   subgenres: bookData.subgenres,
                   series: bookData.series,
@@ -546,6 +694,7 @@ export default function DataBackupScreen() {
           'Import Complete',
           [
             importedBooks > 0 ? `${importedBooks} books` : '',
+            importedFiles > 0 ? `${importedFiles} book files` : '',
             importedBookmarks > 0 ? `${importedBookmarks} bookmarks` : '',
             importedHighlights > 0 ? `${importedHighlights} highlights` : '',
             importedProgress > 0 ? `${importedProgress} progress entries` : '',
@@ -605,8 +754,8 @@ export default function DataBackupScreen() {
         <View style={[styles.infoBanner, { backgroundColor: theme.primary + '12', borderColor: theme.primary + '30' }]}>
           <Ionicons name="information-circle" size={20} color={theme.primary} />
           <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-            Export your library data as a JSON file for backup or transfer to another device.
-            Book files are not included -- only metadata, progress, and annotations.
+            Export a full backup including all book files, covers, metadata, progress, and
+            annotations. The backup is saved as a single compressed archive.
           </Text>
         </View>
 
@@ -658,7 +807,7 @@ export default function DataBackupScreen() {
           ) : (
             <>
               <Ionicons name="download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.actionButtonText}>Export All Data</Text>
+              <Text style={styles.actionButtonText}>Export Full Backup</Text>
             </>
           )}
         </Pressable>
@@ -684,15 +833,15 @@ export default function DataBackupScreen() {
           ) : (
             <>
               <Ionicons name="push-outline" size={20} color={theme.primary} style={{ marginRight: 8 }} />
-              <Text style={[styles.actionButtonText, { color: theme.primary }]}>Import Data</Text>
+              <Text style={[styles.actionButtonText, { color: theme.primary }]}>Import Backup</Text>
             </>
           )}
         </Pressable>
 
         {/* Disclaimer */}
         <Text style={[styles.disclaimer, { color: theme.textMuted }]}>
-          Backup files contain metadata only. To transfer actual book files, use Cloud Sync
-          or manually copy them to the new device.
+          Full backups include book files, covers, and all metadata. Legacy JSON-only backups
+          are also supported for import.
         </Text>
       </ScrollView>
     </View>
