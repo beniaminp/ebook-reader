@@ -2,24 +2,6 @@ import { Paths, File, Directory } from 'expo-file-system';
 
 const BOOKS_DIR = new Directory(Paths.document, 'books');
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
 export async function ensureBooksDir(): Promise<void> {
   if (!BOOKS_DIR.exists) {
     BOOKS_DIR.create({ intermediates: true });
@@ -43,8 +25,8 @@ export async function storeBookFile(
 
 export async function readBookFile(filePath: string): Promise<ArrayBuffer> {
   const file = new File(filePath);
-  const base64 = await file.base64();
-  return base64ToArrayBuffer(base64);
+  const bytes = await file.bytes();
+  return bytes.buffer;
 }
 
 export async function deleteBookFile(bookId: string): Promise<void> {

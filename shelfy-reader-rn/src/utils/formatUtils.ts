@@ -51,8 +51,20 @@ export function detectFormat(filename: string, mimeType?: string): BookFormat | 
   if (mimeType && FORMAT_MIME_TYPES[mimeType]) {
     return FORMAT_MIME_TYPES[mimeType];
   }
-  const ext = filename.toLowerCase().match(/\.[^.]+$/)?.[0];
-  return ext ? FORMAT_EXTENSIONS[ext] ?? null : null;
+  const lower = filename.toLowerCase();
+  // Check last extension first
+  const lastExt = lower.match(/\.[^.]+$/)?.[0];
+  if (lastExt && FORMAT_EXTENSIONS[lastExt]) {
+    return FORMAT_EXTENSIONS[lastExt];
+  }
+  // Check for known format extension anywhere in the filename
+  // (handles Gutenberg-style names like "84.epub.noimages", "84.epub.images")
+  for (const [ext, format] of Object.entries(FORMAT_EXTENSIONS)) {
+    if (lower.includes(ext)) {
+      return format;
+    }
+  }
+  return null;
 }
 
 export function getFormatDisplayName(format: BookFormat): string {

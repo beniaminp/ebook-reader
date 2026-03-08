@@ -55,9 +55,17 @@ export const EpubEngine = forwardRef<ReaderEngineRef, ReaderEngineProps>(
 
     useEffect(() => {
       if (isReady && bookData) {
-        const base64 = btoa(
-          String.fromCharCode(...new Uint8Array(bookData))
-        );
+        // Convert ArrayBuffer to base64 in chunks to avoid call stack overflow
+        const bytes = new Uint8Array(bookData);
+        const CHUNK_SIZE = 8192;
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+          const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.length));
+          for (let j = 0; j < chunk.length; j++) {
+            binary += String.fromCharCode(chunk[j]);
+          }
+        }
+        const base64 = btoa(binary);
         sendCommand({ type: 'loadBook', data: base64, format });
       }
     }, [isReady, bookData, format, sendCommand]);

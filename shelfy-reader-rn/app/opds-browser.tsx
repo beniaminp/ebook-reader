@@ -145,14 +145,20 @@ export default function OpdsBrowserScreen() {
     if (downloading) return;
     setDownloading(true);
     try {
-      // Extract filename from URL
+      // Extract filename from URL and normalize it
       const urlPath = new URL(href).pathname;
-      const filename = decodeURIComponent(urlPath.split('/').pop() || `${title}.epub`);
+      let filename = decodeURIComponent(urlPath.split('/').pop() || `${title}.epub`);
       const format = detectFormat(filename);
       if (!format) {
         Alert.alert('Unsupported Format', `Cannot import "${filename}" - unsupported format.`);
         setDownloading(false);
         return;
+      }
+      // Normalize filename: strip extra suffixes (e.g. "84.epub.noimages" → "84.epub")
+      const formatExt = `.${format}`;
+      const extIdx = filename.toLowerCase().indexOf(formatExt);
+      if (extIdx >= 0) {
+        filename = filename.substring(0, extIdx + formatExt.length);
       }
 
       const bookId = Crypto.randomUUID();
