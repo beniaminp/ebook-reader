@@ -70,6 +70,18 @@ export default function RootLayout() {
               name="year-in-review"
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="rss"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="smart-shelves"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="collections"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
           <Toast />
         </ThemeProvider>

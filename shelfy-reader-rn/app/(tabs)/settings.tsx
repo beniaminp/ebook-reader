@@ -529,6 +529,7 @@ export default function SettingsScreen() {
         {/* ─── Advanced ──────────────────────────────── */}
         <SectionHeader title="ADVANCED" />
         <SettingsRow icon="funnel" label="Smart Shelves" subtitle="Create rules to auto-organize your library" onPress={() => router.push('/smart-shelves')} />
+        <SettingsRow icon="folder" label="Collections" subtitle="Manually organize books into groups" onPress={() => router.push('/collections')} />
         <SettingsRow icon="newspaper" label="RSS / Read Later" subtitle="Subscribe to RSS feeds and save articles" onPress={() => router.push('/rss')} />
         <SettingsRow icon="layers" label="Page Transitions" value={pageTransitionType} onPress={handlePageTransitionSelect} />
 
