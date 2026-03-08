@@ -272,5 +272,12 @@ export interface VocabularyWord {
   context?: string;
 }
 
+// Translation selection (RN-adapted: no DOMRect/Range)
+export interface TranslationSelection {
+  text: string;
+  /** Bounding rectangle of the selection, if available */
+  rect?: { x: number; y: number; width: number; height: number };
+}
+
 // Cloud sync types
 export * from './cloudSync';
